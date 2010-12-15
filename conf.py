@@ -5,38 +5,53 @@ import pygame as pg
 # timing
 FPS = 10
 FRAME = 1. / FPS
+MENU_FPS = 30
+MENU_FRAME = 1. / MENU_FPS
 
 # paths
 LEVEL_DIR = 'lvl' + os.sep
+FONT_DIR = 'font' + os.sep
+
+# CLI
+DEBUG = False
+SILENT = True
 
 # window
-RES_W = (640, 480)
 RES_F = pg.display.list_modes()[0]
+RES_W = (640, 480)
+MIN_RES_W = (320, 240)
 RESIZABLE = True
 FULLSCREEN = False
 WINDOW_ICON = None
 WINDOW_TITLE = 'Puzzle game thing'
+MAX_RATIO = 3
 
 # input
-KEYS_PAUSE = (pg.K_ESCAPE,)
-KEYS_UNPAUSE = (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER)
-KEYS_CONTINUE = set(KEYS_UNPAUSE) | set((pg.K_RIGHT, pg.K_DOWN))
-KEYS_RESET = (pg.K_r,)
 KEYS_MINIMISE = (pg.K_F10,)
 KEYS_FULLSCREEN = (pg.K_F11,)
+KEYS_BACK = (pg.K_BACKSPACE, pg.K_ESCAPE)
+KEYS_NEXT = (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER)
 KEYS_LEFT = (pg.K_LEFT,)
 KEYS_UP = (pg.K_UP,)
 KEYS_RIGHT = (pg.K_RIGHT,)
 KEYS_DOWN = (pg.K_DOWN,)
+KEYS_RESET = (pg.K_r,)
+
+MOVE_INITIAL_DELAY = .2
+MOVE_REPEAT_DELAY = .1
+MENU_INITIAL_DELAY = .3
+MENU_REPEAT_DELAY = .15
 
 # mechanics
 FORCE_MOVE = 2
 FORCE_ARROW = 2
-
-MOVE_INITIAL_DELAY = .2
-MOVE_REPEAT_DELAY = .1
+RAND_B_RATIO = 0.1
+RAND_S_RATIO = 0.1
 
 # IDs
+MIN_ID = -4
+MAX_ID = 4
+
 S_STANDARD = -1
 S_SLIDE = -2
 S_LEFT = -3
@@ -53,9 +68,11 @@ B_BOUNCE = 4
 
 WALL = 99
 
-# appearance
+# display
+BG = (255, 255, 255)
 surface_colours = {
     S_STANDARD: (255, 255, 255),
+    S_SLIDE: (200, 200, 255),
     S_LEFT: (255, 200, 200),
     S_UP: (200, 255, 200)
 }
@@ -66,3 +83,10 @@ block_colours = {
     B_SLIDE: (150, 150, 255),
     B_BOUNCE: (100, 255, 100)
 }
+PUZZLE_FONT = 'orbitron-black.otf'
+PUZZLE_TEXT_COLOUR = (0, 0, 0)
+PUZZLE_TEXT_SELECTED_COLOUR = (150, 0, 0)
+PUZZLE_TEXT_UPPER = True
+MIN_CHAR_ID = 32
+MAX_CHAR_ID = 126
+SELECTED_CHAR_ID_OFFSET = 128
