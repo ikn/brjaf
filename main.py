@@ -229,7 +229,7 @@ If the running backend is the last (root) one, exit the game.
             self.res = (w, h)
         if conf.RESIZABLE:
             flags |= pygame.RESIZABLE
-        self.screen = pygame.display.refresh_display(self.res, flags)
+        self.screen = pygame.display.set_mode(self.res, flags)
         try:
             self.backend.dirty = True
         except AttributeError:
