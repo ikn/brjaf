@@ -71,6 +71,7 @@ class Level:
             self.msg = d.strip()
         else:
             self.msg = None
+        self.winning = False
 
     def move (self, event, direction):
         # key callback to move player
@@ -87,9 +88,24 @@ class Level:
 
     def update (self):
         self.puzzle.step()
-        if not any([[(s, b) for (s, b) in col if s >= 0 and (not isinstance(b, Block) or s != b.type)] for col in self.puzzle.grid]):
-            self.game.quit_backend()
-        # TODO: check victory conditions
+        # check for surfaces with their corresponding Block types on them
+        win = True
+        for col in self.puzzle.grid:
+            for s, b in col:
+                # goal surfaces have IDs starting at 0
+                if s >= 0 and (not isinstance(b, Block) or s != b.type):
+                    win = False
+                    break
+        # need to stay winning for one frame  - that is, blocks must have
+        # stopped on the goals, not just be moving past them
+        if win:
+            if self.winning:
+                # TODO: handle victory
+                self.game.quit_backend()
+            else:
+                self.winning = True
+        else:
+            self.winning = False
 
     def _mk_msg (self, screen, w, h):
         if self.msg is None:
