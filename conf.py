@@ -68,7 +68,7 @@ B_BOUNCE = 4
 
 WALL = 99
 
-# display
+# puzzle colours
 BG = (255, 255, 255)
 surface_colours = {
     S_STANDARD: (255, 255, 255),
@@ -83,10 +83,20 @@ block_colours = {
     B_SLIDE: (150, 150, 255),
     B_BOUNCE: (100, 255, 100)
 }
+
+# menu text
 PUZZLE_FONT = 'orbitron-black.otf'
 PUZZLE_TEXT_COLOUR = (0, 0, 0)
-PUZZLE_TEXT_SELECTED_COLOUR = (150, 0, 0)
+PUZZLE_TEXT_SELECTED_COLOUR = (255, 0, 0)
 PUZZLE_TEXT_UPPER = True
 MIN_CHAR_ID = 32
 MAX_CHAR_ID = 126
 SELECTED_CHAR_ID_OFFSET = 128
+
+# puzzle messages
+MSG_FONT = 'orbitron-black.otf'
+MSG_TEXT_COLOUR = (0, 0, 0)
+MSG_LINE_HEIGHT = .1 # proportion of smaller screen dimension
+MSG_PADDING_TOP = .02 # proportion of smaller screen dimension
+MSG_PADDING_BOTTOM = .01 # proportion of smaller screen dimension
+MSG_MAX_HEIGHT = .2 # proportion of screen height

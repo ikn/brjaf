@@ -23,6 +23,7 @@ class Fonts:
 
     def add (self, font, force_reload = False):
         """Load a font and add it to the collection."""
+        font = tuple(font)
         if force_reload or font not in self.fonts:
             fn, size, bold = font
             self.fonts[font] = pygame.font.Font(conf.FONT_DIR + sep + fn, int(size), bold = bold)
@@ -42,6 +43,7 @@ just: if the text has multiple lines, justify: 0 = left, 1 = centre, 2 = right.
 minimise: if width is set, treat it as a minimum instead of absolute width.
 
 """
+        font = tuple(font)
         self.add(font)
         font, lines = self.fonts[font], []
         if shadow is None:
