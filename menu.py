@@ -366,13 +366,13 @@ class MainMenu (Menu):
         #print conf.get('saved_levels', [])
         Menu.init(self, (
             (
-                Button('Play', self.game.start_backend, level.Level, 1),
+                Button('Play', self.set_page, 1),#self.game.start_backend, level.Level, (False, 1)),
                 Button('Options', self.set_page, 2),
                 Button('Quit', self.game.quit_backend)
-            ), (
-                Text('Title'),
-                Option('What')
-            ), (
+            ), [
+                Button(str(lvl), self.game.start_backend, level.Level,
+                (False, str(lvl))) for lvl in level.get_levels()
+            ], (
                 Button('Input', self.set_page, 3),
                 Button('Sound', self.set_page, 4)
             ), (

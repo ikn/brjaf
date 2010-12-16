@@ -10,6 +10,8 @@ MENU_FRAME = 1. / MENU_FPS
 
 # paths
 LEVEL_DIR = 'lvl' + os.sep
+LEVEL_DIR_MAIN = LEVEL_DIR + 'main' + os.sep
+LEVEL_DIR_CUSTOM = LEVEL_DIR + 'custom' + os.sep
 FONT_DIR = 'font' + os.sep
 CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
 CONF_FILE = CONF_DIR + 'conf'

@@ -1,3 +1,5 @@
+from glob import glob
+
 import evthandler as eh
 
 import menu
@@ -21,6 +23,10 @@ import conf
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
 #   "Keep trying" / "Do it for me"
+
+def get_levels (custom = False):
+    path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN
+    return [lvl[len(path):] for lvl in glob(path + '*')]
 
 class Level:
     def __init__ (self, game, event_handler, ID = None, definition = None):
@@ -49,7 +55,8 @@ class Level:
         # load a level
         if ID is not None:
             # get data from file
-            with open(conf.LEVEL_DIR + str(ID)) as f:
+            path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
+            with open(path + str(ID[1])) as f:
                 definition = f.read()
         self.puzzle = Puzzle(self.game, definition, True, border = 1)
         self.players = [b for b in self.puzzle.blocks
