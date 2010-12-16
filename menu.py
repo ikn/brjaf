@@ -13,6 +13,7 @@ import conf
 # select options by first letter
 # text placement needs fixing for smaller pages (centre on both axes)
 # scrollable element sets - set maximum number and scroll if exceed it
+# grid: just pass a 2D list as the page.  If contains Select, Menu throws an error.  Use for level select.
 
 # Text (.size, .text)
 # | Option (.attach(event, handler))
@@ -366,7 +367,7 @@ class MainMenu (Menu):
         #print conf.get('saved_levels', [])
         Menu.init(self, (
             (
-                Button('Play', self.set_page, 1),#self.game.start_backend, level.Level, (False, 1)),
+                Button('Play', self.set_page, 1),
                 Button('Options', self.set_page, 2),
                 Button('Quit', self.game.quit_backend)
             ), [
