@@ -18,7 +18,7 @@ CONF_FILE = CONF_DIR + 'conf'
 
 # CLI
 DEBUG = False
-SILENT = True
+SILENT = False
 
 # window
 RES_F = pg.display.list_modes()[0]
@@ -92,10 +92,13 @@ block_colours = {
 PUZZLE_FONT = 'orbitron-black.otf'
 PUZZLE_TEXT_COLOUR = (0, 0, 0)
 PUZZLE_TEXT_SELECTED_COLOUR = (255, 0, 0)
+PUZZLE_TEXT_SPECIAL_COLOUR = (0, 180, 0)
 PUZZLE_TEXT_UPPER = True
 MIN_CHAR_ID = 32
 MAX_CHAR_ID = 126
 SELECTED_CHAR_ID_OFFSET = 128
+SPECIAL_CHAR_ID_OFFSET = 256
+NUM_UNCOMPLETED_LEVELS = 5
 
 # puzzle messages
 MSG_FONT = 'orbitron-black.otf'

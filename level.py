@@ -53,6 +53,7 @@ class Level:
 
     def load (self, ID = None, definition = None):
         # load a level
+        self.ID = None if (ID is None or ID[0]) else str(ID[1])
         if ID is not None:
             # get data from file
             path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
@@ -100,7 +101,14 @@ class Level:
         # stopped on the goals, not just be moving past them
         if win:
             if self.winning:
-                # TODO: handle victory
+                # save to disk
+                if self.ID is not None:
+                    levels = conf.get('completed_levels', [])
+                    print self.ID, levels
+                    if self.ID not in levels:
+                        levels.append(self.ID)
+                        conf.set('completed_levels', levels)
+                        self.game.set_backend_attrs(menu.MainMenu, 're_init', True)
                 self.game.quit_backend()
             else:
                 self.winning = True

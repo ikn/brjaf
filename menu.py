@@ -31,9 +31,10 @@ class Text:
 
     CONSTRUCTOR
 
-Text(text)
+Text(text, special = False)
 
 text: the text to display.
+special: whether to display in a different style.
 
     ATTRIBUTES
 
@@ -43,18 +44,15 @@ selectable: whether the widget can be selected (always False).
 pos: the position of the first character in the grid display, or None if
      unknown.
 puzzle: the Puzzle instance the widget exists in, or None if unknown.
+special: whether the text is displayed in a different style.
 
 """
 
-    def __str__ (self):
-        return '<{0}: \'{1}\'>'.format(self.__class__.__name__, self.text)
-
-    __repr__ = __str__
-
-    def __init__ (self, text):
+    def __init__ (self, text, special = False):
         chars = []
         for c in text:
-            if ord(c) >= conf.MIN_CHAR_ID and ord(c) <= conf.MAX_CHAR_ID:
+            o = ord(c)
+            if o >= conf.MIN_CHAR_ID and o <= conf.MAX_CHAR_ID:
                 chars.append(c)
             else:
                 chars.append(' ')
@@ -63,6 +61,12 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
         self.selectable = False
         self.pos = None
         self.puzzle = None
+        self.special = special
+
+    def __str__ (self):
+        return '<{0}: \'{1}\'>'.format(self.__class__.__name__, self.text)
+
+    __repr__ = __str__
 
 class Option (Text):
     """A selectable widget.  Inherits from Text.
@@ -124,7 +128,11 @@ args: arguments to pass to the handler; no other arguments are passed.
         pos = list(self.pos)
         for dx in xrange(self.size):
             change.add(tuple(pos))
-            ID = ord(self.text[dx]) + conf.SELECTED_CHAR_ID_OFFSET * selected
+            ID = ord(self.text[dx])
+            if selected:
+                ID += conf.SELECTED_CHAR_ID_OFFSET
+            elif self.special:
+                ID += conf.SPECIAL_CHAR_ID_OFFSET
             self.puzzle.grid[pos[0]][pos[1]][1].type = ID
             pos[0] += 1
         self.puzzle.tiler.change(*change)
@@ -185,6 +193,8 @@ class Menu:
         self.set_page(0)
 
     def init (self, pages):
+        if not conf.SILENT:
+            print 'init', self
         self.pages = pages
         self.re_init = False
         self.dirty = True
@@ -212,9 +222,6 @@ class Menu:
         self.grids = {}
 
     def set_page (self, page):
-        if self.re_init:
-            # pages might have changed
-            self.init()
         # change the current menu page and its associated elements
         if page == self.page_ID:
             return
@@ -278,7 +285,10 @@ class Menu:
             text.pos = (x0, y0 + 2 * y)
             for x, c in enumerate(text.text):
                 # just replace any blocks that might be here already
-                things[(x0 + x, y0 + 2 * y)] = ord(c)
+                o = ord(c)
+                if text.special:
+                    o += conf.SPECIAL_CHAR_ID_OFFSET
+                things[(x0 + x, y0 + 2 * y)] = o
         # generate expected format definition
         definition = definition[0] + '\n\n'.join(
             '\n'.join(
@@ -347,7 +357,11 @@ class Menu:
             option.click()
 
     def update (self):
-        pass
+        if self.re_init:
+            # pages might have changed
+            ID = self.page_ID
+            self.init()
+            self.set_page(ID)
 
     def draw (self, screen):
         if self.dirty:
@@ -363,17 +377,12 @@ class Menu:
 
 class MainMenu (Menu):
     def init (self):
-        #print conf.get('completed_levels', [])
-        #print conf.get('saved_levels', [])
-        Menu.init(self, (
+        pages = (
             (
                 Button('Play', self.set_page, 1),
                 Button('Options', self.set_page, 2),
                 Button('Quit', self.game.quit_backend)
-            ), [
-                Button(str(lvl), self.game.start_backend, level.Level,
-                (False, str(lvl))) for lvl in level.get_levels()
-            ], (
+            ), [], (
                 Button('Input', self.set_page, 3),
                 Button('Sound', self.set_page, 4)
             ), (
@@ -387,7 +396,21 @@ class MainMenu (Menu):
                 Option('Sound 50'),
                 Button('Save', self.back)
             )
-        ))
+        )
+        completed = conf.get('completed_levels', [])
+        uncompleted_to_show = conf.NUM_UNCOMPLETED_LEVELS
+        for lvl in level.get_levels():
+            lvl = str(lvl)
+            b = Button(lvl, self.game.start_backend, level.Level, (False, lvl))
+            if lvl in completed:
+                b.special = True
+            else:
+                uncompleted_to_show -= 1
+            pages[1].append(b)
+            if uncompleted_to_show == 0:
+                # only show a certain number of uncompleted levels
+                break
+        Menu.init(self, pages)
 
 class PauseMenu (Menu):
     def init (self):

@@ -197,6 +197,22 @@ If the running backend is the last (root) one, exit the game.
         if depth:
             self.quit_backend(depth)
 
+    def set_backend_attrs (self, cls, attr, val, current = True, inherit = True):
+        """Set an attribute of all backends with a specific class.
+
+set_backend_attrs(cls, attr, val, current = True, inherit = True)
+
+cls: the backend class to look for.
+attr: the name of the attribute to set.
+val: the value to set the attribute to.
+current: include the current backend in the search.
+inherit: also apply to all classes that inherit from the given class.
+
+        """
+        for backend in self.backends + ([self.backend] if current else []):
+            if isinstance(backend, cls) if inherit else (backend == cls):
+                setattr(backend, attr, val)
+
     def _quit (self, event = None):
         """pygame.QUIT event callback."""
         self.running = False

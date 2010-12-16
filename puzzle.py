@@ -413,15 +413,19 @@ class Puzzle:
                 pygame.draw.circle(surface, conf.block_colours[b.type], p, int(r * .8))
             else:
                 c = b.type
-                selected = c > conf.MAX_CHAR_ID
-                if selected:
+                if c < conf.SELECTED_CHAR_ID_OFFSET:
+                    # normal
+                    colour = conf.PUZZLE_TEXT_COLOUR
+                elif c < conf.SPECIAL_CHAR_ID_OFFSET:
+                    # selected
                     c -= conf.SELECTED_CHAR_ID_OFFSET
-                # render character
-                c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
-                if selected:
                     colour = conf.PUZZLE_TEXT_SELECTED_COLOUR
                 else:
-                    colour = conf.PUZZLE_TEXT_COLOUR
+                    # special
+                    c -= conf.SPECIAL_CHAR_ID_OFFSET
+                    colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR
+                # render character
+                c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
                 text = self.render_text((conf.PUZZLE_FONT, rect[3], False),
                                         c, colour)
                 # centre inside tile rect
