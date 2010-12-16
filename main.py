@@ -127,9 +127,13 @@ backends: a list of previous (nested) backends, most 'recent' last.
 """
 
     def __init__ (self):
+        self.running = False
+        # load display settings
+        conf.FULLSCREEN = conf.get('fullscreen', conf.FULLSCREEN)
+        conf.RES_W = conf.get('res', conf.RES_W)
         self.refresh_display()
-        self.running = True
         self.fonts = Fonts()
+        # start first backend
         self.backends = []
         self.start_backend(MainMenu)
 
@@ -163,7 +167,7 @@ EventHandler_instance in its event_handler attribute.
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN)
-        ])
+        ], False, self._quit)
         try:
             self.backends.append(self.backend)
         except AttributeError:
@@ -193,6 +197,10 @@ If the running backend is the last (root) one, exit the game.
         if depth:
             self.quit_backend(depth)
 
+    def _quit (self, event = None):
+        """pygame.QUIT event callback."""
+        self.running = False
+
     def _update (self):
         """Run the backend's update method."""
         self.backend.update()
@@ -216,6 +224,9 @@ If the running backend is the last (root) one, exit the game.
             t1 = time()
             wait(int(1000 * (self.backend.FRAME - t1 + t0)))
             t0 += self.backend.FRAME
+        # save display settings
+        conf.set('fullscreen', conf.FULLSCREEN)
+        conf.set('res', conf.RES_W)
 
     def refresh_display (self):
         """Update the display mode from conf, and notify the backend."""

@@ -335,7 +335,6 @@ class Menu:
 
     def back (self, event = None):
         # go back one page, if possible
-        self.re_init = True
         self.set_page(-1)
 
     def select (self, event = None):
@@ -363,11 +362,9 @@ class Menu:
 
 class MainMenu (Menu):
     def init (self):
-        try:
-            self.n += 1
-        except AttributeError:
-            self.n = 0
-        Menu.init(self, ((Text('test'),) * self.n +
+        #print conf.get('completed_levels', [])
+        #print conf.get('saved_levels', [])
+        Menu.init(self, (
             (
                 Button('Play', self.game.start_backend, level.Level, 1),
                 Button('Options', self.set_page, 2),

@@ -11,6 +11,8 @@ MENU_FRAME = 1. / MENU_FPS
 # paths
 LEVEL_DIR = 'lvl' + os.sep
 FONT_DIR = 'font' + os.sep
+CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
+CONF_FILE = CONF_DIR + 'conf'
 
 # CLI
 DEBUG = False
@@ -100,3 +102,24 @@ MSG_LINE_HEIGHT = .1 # proportion of smaller screen dimension
 MSG_PADDING_TOP = .02 # proportion of smaller screen dimension
 MSG_PADDING_BOTTOM = .01 # proportion of smaller screen dimension
 MSG_MAX_HEIGHT = .2 # proportion of screen height
+
+def load_conf ():
+    try:
+        with open(CONF_FILE) as f:
+            return eval(f.read())
+    except:
+        return {}
+
+def save_conf (conf):
+    if not os.path.exists(CONF_DIR):
+        os.makedirs(CONF_DIR)
+    with open(CONF_FILE, 'w') as f:
+        f.write(str(conf))
+
+def get (key, default = None):
+    return load_conf().get(key, default)
+
+def set (key, value):
+    conf = load_conf()
+    conf[key] = value
+    save_conf(conf)
