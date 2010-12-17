@@ -13,7 +13,6 @@ import conf
 # select options by first letter
 # text placement needs fixing for smaller pages (centre on both axes)
 # scrollable element sets - set maximum number and scroll if exceed it
-# grid: just pass a 2D list as the page.  If contains Select, Menu throws an error.  Use for level select.
 
 # Text (.size, .text)
 # | Option (.attach(event, handler))
@@ -170,6 +169,12 @@ CLICK_EVENT: the button was clicked.
         """Trigger handlers attached to CLICK_EVENT."""
         self._throw_event(Button.CLICK_EVENT)
 
+class Select (Option):
+    pass
+
+class Image:
+    pass
+
 class Menu:
     def __init__ (self, game, event_handler):
         args = (
@@ -195,10 +200,15 @@ class Menu:
     def init (self, pages):
         if not conf.SILENT:
             print 'init', self
-        self.pages = pages
+        self.pages = []
+        for page in pages:
+            if isinstance(page[0], (Text, Image)):
+                # one column
+                page = [page]
+            self.pages.append(page)
         self.re_init = False
         self.dirty = True
-        self.selected = None
+        self.sel = None
         self.page_ID = None
         self.page = None
         self.definition = None
@@ -207,10 +217,11 @@ class Menu:
         w = 0
         h = 0
         for page in self.pages:
-            w = max(w, max(text.size for text in page))
-            h = max(h, len(page))
+            page_w = sum(max(text.size + 1 for text in c) for c in page)
+            w = max(w, page_w)
+            h = max(h, *(len(col) for col in page))
         # add padding
-        self.w = w + 2
+        self.w = w + 1
         self.h = 2 * h + 1
         # create grid
         self.grid_w = max(self.w, int(ceil(self.h * conf.MAX_RATIO)))
@@ -236,7 +247,7 @@ class Menu:
                 return
         elif self.page_ID is not None:
             # save current selection
-            self.last_pages.append((self.page_ID, self.selected))
+            self.last_pages.append((self.page_ID, self.sel))
         # clear selection on current page
         self.set_selected(None)
         # create grid if need to
@@ -250,9 +261,7 @@ class Menu:
         # set selection
         if select is None:
             # select first selectable option if possible
-            selectable = [t for t in self.page if isinstance(t, Option)]
-            if selectable:
-                select = self.page.index(selectable[0])
+            select = [0, 0]
         self.set_selected(select)
         self.dirty = True
 
@@ -281,14 +290,16 @@ class Menu:
         # letters count as blocks; add to the right part of the definition
         x0 = (self.grid_w - self.w) / 2 + 1
         y0 = (self.grid_h - self.h) / 2 + 1
-        for y, text in enumerate(self.page):
-            text.pos = (x0, y0 + 2 * y)
-            for x, c in enumerate(text.text):
-                # just replace any blocks that might be here already
-                o = ord(c)
-                if text.special:
-                    o += conf.SPECIAL_CHAR_ID_OFFSET
-                things[(x0 + x, y0 + 2 * y)] = o
+        for col in self.page:
+            for y, text in enumerate(col):
+                text.pos = (x0, y0 + 2 * y)
+                for x, c in enumerate(text.text):
+                    # just replace any blocks that might be here already
+                    o = ord(c)
+                    if text.special:
+                        o += conf.SPECIAL_CHAR_ID_OFFSET
+                    things[(x0 + x, y0 + 2 * y)] = o
+            x0 += max(0, *(text.size + 1 for text in col))
         # generate expected format definition
         definition = definition[0] + '\n\n'.join(
             '\n'.join(
@@ -298,51 +309,80 @@ class Menu:
         )
         self.grid = Puzzle(self.game, definition, False, overflow = 'grow')
         # Texts need a reference to Tiler to change their appearance
-        for text in self.page:
-            text.puzzle = self.grid
+        for col in self.page:
+            for text in col:
+                text.puzzle = self.grid
 
-    def set_selected (self, selected):
+    def selected (self, sel = None):
+        if sel is None:
+            sel = self.sel
+        try:
+            return self.page[sel[0]][sel[1]]
+        except IndexError:
+            return None
+
+    def set_selected (self, sel):
         # set the currently selected option
-        if selected != self.selected:
-            if self.selected is not None:
+        if sel != self.sel:
+            if self.sel is not None:
                 # deselect current option
-                self.page[self.selected].set_selected(False)
-            if selected is not None:
+                self.selected().set_selected(False)
+            if sel is not None:
                 # select new option
-                option = self.page[selected]
+                option = self.selected(sel)
                 if not option.selectable:
-                    # select next selectable option if possible
-                    selectable = [t for t in self.page if isinstance(t, Option)]
+                    # select next selectable element if possible
+                    # get list of selectable elements
+                    selectable = []
+                    for i in xrange(len(self.page)):
+                        for j in xrange(len(self.page[i])):
+                            element = self.page[i][j]
+                            if isinstance(element, Option):
+                                selectable.append([i, j])
                     if selectable:
-                        index = selectable.index(min(selectable))
-                        selected = self.page.index(selectable[index])
+                        # check if any elements before the end are selectable
+                        following = [x for x in selectable if x > sel]
+                        if following:
+                            sel = min(following)
+                        else:
+                            sel = min(selectable)
                     else:
-                        selected = None
-                if selected is not None:
-                    self.page[selected].set_selected(True)
-            self.selected = selected
+                        sel = None
+                if sel is not None:
+                    self.selected(sel).set_selected(True)
+            self.sel = sel
 
-    def move_selection (self, event, amount):
+    def move_selection (self, event, amount, axis = 1):
         # change the selected option
-        if self.selected is None:
+        if self.sel is None:
             return
-        selected = self.selected
+        sel = self.sel[:]
         direction = 1 if amount > 0 else -1
-        num_elements = len(self.page)
+        if axis == 0:
+            num_elements = len(self.page)
+        else:
+            num_elements = max(len(col) for col in self.page)
         while amount:
-            selected += amount
-            selected %= num_elements
-            # skip non-selectable elements
-            while not self.page[selected].selectable:
-                selected += amount
-                selected %= num_elements
+            sel[axis] += amount
+            sel[axis] %= num_elements
+            selected = self.selected(sel)
+            # skip non-existent and non-selectable elements
+            while selected is None or not selected.selectable:
+                sel[axis] += amount
+                sel[axis] %= num_elements
+                selected = self.selected(sel)
             amount -= direction
         # change selection
-        self.set_selected(selected)
+        self.set_selected(sel)
 
     def alter (self, event, amount):
-        if self.selected is None:
+        if self.sel is None:
             return
+        element = self.page[self.sel[0]][self.sel[1]]
+        if not isinstance(element, Select):
+            self.move_selection(None, amount, 0)
+            return
+        # TODO: alter
 
     def back (self, event = None):
         # go back one page, if possible
@@ -350,9 +390,9 @@ class Menu:
 
     def select (self, event = None):
         # choose the currently selected option, if any
-        if self.selected is None:
+        if self.sel is None:
             return
-        option = self.page[self.selected]
+        option = self.page[self.sel[0]][self.sel[1]]
         if hasattr(option, 'click'):
             option.click()
 
@@ -360,7 +400,7 @@ class Menu:
         if self.re_init:
             # pages might have changed
             ID = self.page_ID
-            selected = self.selected
+            selected = self.sel[:]
             self.init()
             self.set_page(ID)
             self.set_selected(selected)
