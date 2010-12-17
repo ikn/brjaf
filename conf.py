@@ -88,7 +88,7 @@ block_colours = {
     B_BOUNCE: (100, 255, 100)
 }
 
-# menu text
+# menu
 PUZZLE_FONT = 'orbitron-black.otf'
 PUZZLE_TEXT_COLOUR = (0, 0, 0)
 PUZZLE_TEXT_SELECTED_COLOUR = (255, 0, 0)
@@ -98,6 +98,7 @@ MIN_CHAR_ID = 32
 MAX_CHAR_ID = 126
 SELECTED_CHAR_ID_OFFSET = 128
 SPECIAL_CHAR_ID_OFFSET = 256
+LEVEL_SELECT_COLS = 5
 NUM_UNCOMPLETED_LEVELS = 5
 
 # puzzle messages

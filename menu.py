@@ -205,6 +205,7 @@ class Menu:
             if isinstance(page[0], (Text, Image)):
                 # one column
                 page = [page]
+            page = [col for col in page if col]
             self.pages.append(page)
         self.re_init = False
         self.dirty = True
@@ -441,17 +442,23 @@ class MainMenu (Menu):
         )
         completed = conf.get('completed_levels', [])
         uncompleted_to_show = conf.NUM_UNCOMPLETED_LEVELS
-        for lvl in level.get_levels():
+        lvls = level.get_levels()
+        col = 0
+        for i in xrange(conf.LEVEL_SELECT_COLS):
+            pages[1].append([])
+        for lvl in lvls:
             lvl = str(lvl)
             b = Button(lvl, self.game.start_backend, level.Level, (False, lvl))
             if lvl in completed:
                 b.special = True
             else:
                 uncompleted_to_show -= 1
-            pages[1].append(b)
+            pages[1][col].append(b)
             if uncompleted_to_show == 0:
                 # only show a certain number of uncompleted levels
                 break
+            col += 1
+            col %= conf.LEVEL_SELECT_COLS
         Menu.init(self, pages)
 
 class PauseMenu (Menu):
