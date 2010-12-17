@@ -360,8 +360,10 @@ class Menu:
         if self.re_init:
             # pages might have changed
             ID = self.page_ID
+            selected = self.selected
             self.init()
             self.set_page(ID)
+            self.set_selected(selected)
 
     def draw (self, screen):
         if self.dirty:

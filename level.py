@@ -104,7 +104,6 @@ class Level:
                 # save to disk
                 if self.ID is not None:
                     levels = conf.get('completed_levels', [])
-                    print self.ID, levels
                     if self.ID not in levels:
                         levels.append(self.ID)
                         conf.set('completed_levels', levels)

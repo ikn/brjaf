@@ -18,7 +18,7 @@ CONF_FILE = CONF_DIR + 'conf'
 
 # CLI
 DEBUG = False
-SILENT = False
+SILENT = True
 
 # window
 RES_F = pg.display.list_modes()[0]
