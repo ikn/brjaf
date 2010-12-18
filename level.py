@@ -26,7 +26,7 @@ import conf
 
 def get_levels (custom = False):
     path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN
-    return [lvl[len(path):] for lvl in glob(path + '*')]
+    return sorted(lvl[len(path):] for lvl in glob(path + '*'))
 
 class Level:
     def __init__ (self, game, event_handler, ID = None, definition = None):

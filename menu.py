@@ -11,7 +11,6 @@ import conf
 # TODO:
 # document Menu and derivatives
 # select options by first letter
-# text placement needs fixing for smaller pages (centre on both axes)
 # scrollable element sets - set maximum number and scroll if exceed it
 
 # Text (.size, .text)
@@ -215,15 +214,8 @@ class Menu:
         self.definition = None
 
         # get maximum page width and height
-        w = 0
-        h = 0
-        for page in self.pages:
-            page_w = sum(max(text.size + 1 for text in c) for c in page)
-            w = max(w, page_w)
-            h = max(h, *(len(col) for col in page))
-        # add padding
-        self.w = w + 1
-        self.h = 2 * h + 1
+        self.w, self.h = (max(self.page_dim(page)[i] for page in self.pages)
+                          for i in xrange(2))
         # create grid
         self.grid_w = max(self.w, int(ceil(self.h * conf.MAX_RATIO)))
         self.grid_h = max(self.h, int(ceil(self.w * conf.MAX_RATIO)))
@@ -232,6 +224,10 @@ class Menu:
         if self.grid_h % 2 != self.h % 2:
             self.grid_h += 1
         self.grids = {}
+
+    def page_dim (self, page):
+        return (sum(max(text.size + 1 for text in col) for col in page) + 1,
+                2 * max(len(col) for col in page) + 1)
 
     def set_page (self, page):
         # change the current menu page and its associated elements
@@ -289,8 +285,9 @@ class Menu:
             definition = self.definition
         things = dict(definition[1])
         # letters count as blocks; add to the right part of the definition
-        x0 = (self.grid_w - self.w) / 2 + 1
-        y0 = (self.grid_h - self.h) / 2 + 1
+        w, h = self.page_dim(self.page)
+        x0 = (self.grid_w - w) / 2 + 1
+        y0 = (self.grid_h - h) / 2 + 1
         for col in self.page:
             for y, text in enumerate(col):
                 text.pos = (x0, y0 + 2 * y)
