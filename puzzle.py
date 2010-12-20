@@ -33,9 +33,13 @@ Returns False if the image is completely transparent.
     return (b[0], b[1], b[2] - b[0], b[3] - b[1])
 
 def is_immoveable (tile):
-    is_block = isinstance(tile, Block)
-    is_immoveable_block = is_block and tile.type == conf.B_IMMOVEABLE
-    return tile == conf.WALL or is_immoveable_block
+    if isinstance(tile, Block):
+        surface = tile.level.grid[tile.pos[0]][tile.pos[1]][0]
+        # immoveable blocks can be moved on slippery surfaces
+        immoveable = tile.type == conf.B_IMMOVEABLE and surface != conf.S_SLIDE
+    else:
+        immoveable = False
+    return tile == conf.WALL or immoveable
 
 def force_dir (axis, force):
     return axis + (2 if force > 0 else 0)
