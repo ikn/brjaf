@@ -384,7 +384,8 @@ class Puzzle:
             # remove
             change.add(tuple(b.pos))
             self.grid[b.pos[0]][b.pos[1]][1] = None
-            if b.type in (conf.B_SLIDE, conf.B_BOUNCE):
+            slide = self.grid[pos[0]][pos[1]][0] == conf.S_SLIDE
+            if b.type in (conf.B_SLIDE, conf.B_BOUNCE) or slide:
                 retain_forces.append(b)
         for pos, b in dest.iteritems():
             # add

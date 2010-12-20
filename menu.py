@@ -13,9 +13,9 @@ import conf
 # select options by first letter
 # scrollable element sets - set maximum number and scroll if exceed it
 
-# Text (.size, .text)
-# | Option (.attach(event, handler))
-# | | Button (.select; event:select)
+# Text
+# | Option
+# | | Button
 # | | Select (abstract; .wrap; event:change; put arrows in edge blocks; text contains %x to replace with current value)
 # | | | DiscreteSelect (.options)
 # | | | RangeSelect (.min, .max, .step)
@@ -29,20 +29,20 @@ class Text:
 
     CONSTRUCTOR
 
-Text(text, special = False)
+Text(text)
 
 text: the text to display.
-special: whether to display in a different style.
 
     ATTRIBUTES
 
 text: the widget's text.
 size: the length of the text.
 selectable: whether the widget can be selected (always False).
+special: whether the text is displayed in a different style; defaults to False.
+         Call update after changing to redraw.
 pos: the position of the first character in the grid display, or None if
      unknown.
 puzzle: the Puzzle instance the widget exists in, or None if unknown.
-special: whether the text is displayed in a different style.
 
 """
 
@@ -59,12 +59,28 @@ special: whether the text is displayed in a different style.
         self.selectable = False
         self.pos = None
         self.puzzle = None
-        self.special = special
+        self.special = False
 
     def __str__ (self):
         return '<{0}: \'{1}\'>'.format(self.__class__.__name__, self.text)
 
     __repr__ = __str__
+
+    def update (self):
+        """Make any colour changes (selected, special) visible."""
+        # move blocks
+        change = set()
+        pos = list(self.pos)
+        for dx in xrange(self.size):
+            change.add(tuple(pos))
+            ID = ord(self.text[dx])
+            if self.selected:
+                ID += conf.SELECTED_CHAR_ID_OFFSET
+            elif self.special:
+                ID += conf.SPECIAL_CHAR_ID_OFFSET
+            self.puzzle.grid[pos[0]][pos[1]][1].type = ID
+            pos[0] += 1
+        self.puzzle.tiler.change(*change)
 
 class Option (Text):
     """A selectable widget.  Inherits from Text.
@@ -121,20 +137,8 @@ args: arguments to pass to the handler; no other arguments are passed.
         """Set the widget's selected state."""
         if selected == self.selected:
             return
-        # move blocks
-        change = set()
-        pos = list(self.pos)
-        for dx in xrange(self.size):
-            change.add(tuple(pos))
-            ID = ord(self.text[dx])
-            if selected:
-                ID += conf.SELECTED_CHAR_ID_OFFSET
-            elif self.special:
-                ID += conf.SPECIAL_CHAR_ID_OFFSET
-            self.puzzle.grid[pos[0]][pos[1]][1].type = ID
-            pos[0] += 1
-        self.puzzle.tiler.change(*change)
         self.selected = selected
+        self.update()
         self._throw_event(Option.SELECT_EVENT)
 
 class Button (Option):
