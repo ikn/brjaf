@@ -1,3 +1,5 @@
+from os.path import exists
+
 import pygame
 
 from tiler import Tiler
@@ -7,7 +9,6 @@ import conf
 # document
 # bouncing blocks
 # block orientation - set after motion, use in draw_tile
-# images for blocks
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -263,6 +264,7 @@ class Puzzle:
                            **tiler_kw_args)
         self.physics = physics
         self.render_text = game.fonts.text
+        self.img = game.img
         self.init()
 
     def init (self):
@@ -401,22 +403,44 @@ class Puzzle:
         for b in self.blocks:
             b.reset(b in retain_forces)
 
+    def _draw_from_img (self, surface, rect, prefix, ID):
+        ID = prefix + str(ID)
+        fn = conf.IMG_DIR + ID + '.png'
+        if exists(fn):
+            # image might be transparent
+            if prefix == 's':
+                surface.fill(conf.BG, rect)
+            surface.blit(self.img(ID, fn, rect), rect)
+            return True
+        return False
+
     def draw_tile (self, surface, rect, i, j):
         # draw a single tile; called by Tiler
         s, b = self.grid[i][j]
+        # surface
         if s < 0:
-            colour = conf.surface_colours[s]
+            # blit image if exists, else use colour
+            if self._draw_from_img(surface, rect, 's', s):
+                colour = ()
+            else:
+                colour = conf.surface_colours[s]
         else:
+            # goal: use block colour
             colour = conf.block_colours[s]
-        surface.fill(colour, rect)
+        if colour:
+            surface.fill(colour, rect)
+        # block
         if b is not None:
             if b.type < conf.MIN_CHAR_ID:
-                rect = pygame.Rect(rect)
-                p = rect.center
-                r = rect.w / 2
-                pygame.draw.circle(surface, (0, 0, 0), p, r)
-                pygame.draw.circle(surface, conf.block_colours[b.type], p, int(r * .8))
+                # blit image if exists, else use colour
+                if not self._draw_from_img(surface, rect, 'b', b.type):
+                    rect = pygame.Rect(rect)
+                    p = rect.center
+                    r = rect.w / 2
+                    pygame.draw.circle(surface, (0, 0, 0), p, r)
+                    pygame.draw.circle(surface, conf.block_colours[b.type], p, int(r * .8))
             else:
+                # draw character in tile
                 c = b.type
                 if c < conf.SELECTED_CHAR_ID_OFFSET:
                     # normal
@@ -431,8 +455,8 @@ class Puzzle:
                     colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
-                text = self.render_text((conf.PUZZLE_FONT, rect[3], False),
-                                        c, colour)
+                text = self.img((b.type, rect[3]), ((conf.PUZZLE_FONT, rect[3], False), c,
+                                         colour), text = True)
                 # centre inside tile rect
                 source = autocrop(text)
                 if source: # else blank

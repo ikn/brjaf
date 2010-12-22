@@ -9,12 +9,13 @@ MENU_FPS = 30
 MENU_FRAME = 1. / MENU_FPS
 
 # paths
+CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
+CONF_FILE = CONF_DIR + 'conf'
+IMG_DIR = 'img' + os.sep
 LEVEL_DIR = 'lvl' + os.sep
 LEVEL_DIR_MAIN = LEVEL_DIR + 'main' + os.sep
 LEVEL_DIR_CUSTOM = LEVEL_DIR + 'custom' + os.sep
 FONT_DIR = 'font' + os.sep
-CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
-CONF_FILE = CONF_DIR + 'conf'
 
 # CLI
 DEBUG = False
@@ -53,7 +54,7 @@ RAND_B_RATIO = 0.1
 RAND_S_RATIO = 0.1
 
 # IDs
-MIN_ID = -4
+MIN_ID = -6
 MAX_ID = 4
 
 S_STANDARD = -1
@@ -76,9 +77,7 @@ WALL = 99
 BG = (255, 255, 255)
 surface_colours = {
     S_STANDARD: (255, 255, 255),
-    S_SLIDE: (200, 200, 255),
-    S_LEFT: (255, 200, 200),
-    S_UP: (200, 255, 200)
+    S_SLIDE: (200, 200, 255)
 }
 block_colours = {
     B_PLAYER: (200, 0, 0),

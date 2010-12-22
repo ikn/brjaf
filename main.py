@@ -128,6 +128,7 @@ backends: a list of previous (nested) backends, most 'recent' last.
 
     def __init__ (self):
         self.running = False
+        self.imgs = {}
         # load display settings
         conf.FULLSCREEN = conf.get('fullscreen', conf.FULLSCREEN)
         conf.RES_W = conf.get('res', conf.RES_W)
@@ -212,6 +213,49 @@ inherit: also apply to all classes that inherit from the given class.
         for backend in self.backends + ([self.backend] if current else []):
             if isinstance(backend, cls) if inherit else (backend == cls):
                 setattr(backend, attr, val)
+
+    def img (self, ID, data, size = None, text = False):
+        """Load or render an image, or retrieve it from cache.
+
+img(ID, data[, size], text = False) -> surface
+
+ID: a string identifier unique to the expected result, ignoring size.
+data: if text is True, a tuple of args to pass to Fonts.text, else a filename
+      to load.
+size: if given, scale the image to this size.  Can be a rect, in which case its
+      dimension is used.
+text: determine how to get the required image (what to do with data).
+
+"""
+        if size is not None:
+            if len(size) == 4:
+                # rect
+                size = size[2:]
+            size = tuple(size)
+        key = (ID, size)
+        if key in self.imgs:
+            return self.imgs[key]
+        # else new: load/render
+        if text:
+            img = self.fonts.text(*data)
+        else:
+            # also cache loaded images to reduce file I/O
+            if data in self.imgs:
+                img = self.imgs[data]
+            else:
+                img = pygame.image.load(data)
+                self.imgs[data] = img
+        # scale
+        if size is not None:
+            img = pygame.transform.smoothscale(img, size)
+        # speed up blitting
+        if img.get_alpha() is None:
+            img = img.convert()
+        else:
+            img = img.convert_alpha()
+        # add to cache
+        self.imgs[key] = img
+        return img
 
     def _quit (self, event = None):
         """pygame.QUIT event callback."""
