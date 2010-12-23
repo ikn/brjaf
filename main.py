@@ -4,9 +4,7 @@ from time import time
 
 import pygame
 from pygame.time import wait
-
 pygame.init()
-
 import evthandler as eh
 
 from menu import MainMenu
@@ -123,12 +121,15 @@ running: set to False to exit the main loop (Game.run).
 fonts: a Fonts instance.
 backend: the current running backend.
 backends: a list of previous (nested) backends, most 'recent' last.
+imgs: image cache.
+files: loaded image cache (before resize).
 
 """
 
     def __init__ (self):
         self.running = False
         self.imgs = {}
+        self.files = {}
         # load display settings
         conf.FULLSCREEN = conf.get('fullscreen', conf.FULLSCREEN)
         conf.RES_W = conf.get('res', conf.RES_W)
@@ -240,11 +241,11 @@ text: determine how to get the required image (what to do with data).
             img = self.fonts.text(*data)
         else:
             # also cache loaded images to reduce file I/O
-            if data in self.imgs:
-                img = self.imgs[data]
+            if data in self.files:
+                img = self.files[data]
             else:
                 img = pygame.image.load(data)
-                self.imgs[data] = img
+                self.files[data] = img
         # scale
         if size is not None:
             img = pygame.transform.smoothscale(img, size)
@@ -307,6 +308,8 @@ text: determine how to get the required image (what to do with data).
             self.backend.dirty = True
         except AttributeError:
             pass
+        # clear image cache
+        self.imgs = {}
 
     def minimise (self, event):
         """Minimise the window or fullscreen display, pausing if possible."""

@@ -5,7 +5,6 @@ import evthandler as eh
 
 import level
 from puzzle import Puzzle
-
 import conf
 
 # TODO:
