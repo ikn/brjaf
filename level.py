@@ -73,19 +73,24 @@ class Level:
         else:
             self.msg = None
         self.winning = False
+        self.solving_index = None
 
     def move (self, event, direction):
         # key callback to move player
-        for player in self.players:
-            player.add_force(direction, conf.FORCE_MOVE)
+        if self.solving_index is None:
+            for player in self.players:
+                player.add_force(direction, conf.FORCE_MOVE)
+        # else solving (ignore input)
 
     def pause (self, event = None):
         self.game.start_backend(menu.PauseMenu)
 
     def reset (self, event = None):
-        self.puzzle.init()
-        self.players = [b for b in self.puzzle.blocks
-                        if b.type == conf.B_PLAYER]
+        if self.solving_index is None:
+            self.puzzle.init()
+            self.players = [b for b in self.puzzle.blocks
+                            if b.type == conf.B_PLAYER]
+        # else solving (ignore input)
 
     def update (self):
         self.puzzle.step()

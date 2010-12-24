@@ -1,6 +1,7 @@
 from math import ceil
 from random import randrange, randint
 
+import pygame
 import evthandler as eh
 
 import level
@@ -9,7 +10,7 @@ import conf
 
 # TODO:
 # document Menu and derivatives
-# select options by first letter
+# home/end keys
 # scrollable element sets - set maximum number and scroll if exceed it
 
 # Text
@@ -184,6 +185,9 @@ class Menu:
             max(int(conf.MENU_INITIAL_DELAY * conf.MENU_FPS), 1),
             max(int(conf.MENU_REPEAT_DELAY * conf.MENU_FPS), 1)
         )
+        event_handler.add_event_handlers({
+            pygame.KEYDOWN: self._access_keys
+        })
         event_handler.add_key_handlers([
             (conf.KEYS_LEFT, [(self.alter, (-1,))]) + args,
             (conf.KEYS_UP, [(self.move_selection, (-1,))]) + args,
@@ -228,9 +232,12 @@ class Menu:
             self.grid_h += 1
         self.grids = {}
 
-    def page_dim (self, page):
-        return (sum(max(text.size + 1 for text in col) for col in page) + 1,
-                2 * max(len(col) for col in page) + 1)
+    def page_dim (self, page, padding = True):
+        if padding:
+            return (sum(max(text.size + 1 for text in c) for c in page) + 1,
+                    2 * max(len(c) for c in page) + 1)
+        else:
+            return (len(page), max(len(c) for c in page))
 
     def set_page (self, page):
         # change the current menu page and its associated elements
@@ -258,6 +265,19 @@ class Menu:
         except KeyError:
             self.generate_grid()
             self.grids[self.page_ID] = self.grid
+        # compile options' first letters for access keys
+        self.keys = {}
+        for i, col in enumerate(self.page):
+            for j, element in enumerate(col):
+                if isinstance(element, Option):
+                    # ignore caps - add for each variation
+                    c = element.text[0]
+                    ks = set((c, c.lower(), c.upper()))
+                    for k in ks:
+                        try:
+                            self.keys[k].append((i, j))
+                        except KeyError:
+                            self.keys[k] = [(i, j)]
         # set selection
         if select is None:
             # select first selectable option if possible
@@ -324,6 +344,8 @@ class Menu:
 
     def set_selected (self, sel):
         # set the currently selected option
+        if sel is not None:
+            sel = list(sel)
         if sel != self.sel:
             if self.sel is not None:
                 # deselect current option
@@ -396,6 +418,25 @@ class Menu:
         option = self.page[self.sel[0]][self.sel[1]]
         if hasattr(option, 'click'):
             option.click()
+
+    def _access_keys (self, event):
+        # select options by pressing their first letter
+        try:
+            elements = self.keys[event.unicode]
+        except KeyError:
+            # no matches
+            return
+        if len(elements) == 1:
+            # one match: select it and try to click it
+            self.set_selected(elements[0])
+            self.select()
+        else:
+            # multiple matches: select next one
+            x, y = self.sel
+            w, h = self.page_dim(self.page, False)
+            sel = min(((j - y) % h, (i - x) % w, i, j)
+                      for i, j in elements if i != x or j != y)[2:]
+            self.set_selected(sel)
 
     def update (self):
         if self.re_init:
