@@ -198,6 +198,9 @@ If the running backend is the last (root) one, exit the game.
         depth -= 1
         if depth:
             self.quit_backend(depth)
+        else:
+            # need to update new backend before drawing
+            self.update_again = True
 
     def set_backend_attrs (self, cls, attr, val, current = True, inherit = True):
         """Set an attribute of all backends with a specific class.
@@ -264,6 +267,7 @@ text: determine how to get the required image (what to do with data).
 
     def _update (self):
         """Run the backend's update method."""
+        self.backend.event_handler.update()
         self.backend.update()
 
     def _draw (self):
@@ -277,10 +281,12 @@ text: determine how to get the required image (what to do with data).
     def run (self):
         """Main loop."""
         self.running = True
+        self.update_again = False
         t0 = time()
         while self.running:
-            self.backend.event_handler.update()
             self._update()
+            if self.update_again:
+                self._update()
             self._draw()
             t1 = time()
             wait(int(1000 * (self.backend.FRAME - t1 + t0)))
