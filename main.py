@@ -281,9 +281,9 @@ text: determine how to get the required image (what to do with data).
     def run (self):
         """Main loop."""
         self.running = True
-        self.update_again = False
         t0 = time()
         while self.running:
+            self.update_again = False
             self._update()
             if self.update_again:
                 self._update()
