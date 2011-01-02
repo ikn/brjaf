@@ -173,10 +173,15 @@ class Block (BoringBlock):
             del sources[source]
         # redistribute diagonal forces
         targets = set(self.unhandled_targets[axis] + self.targets[axis].keys())
-        for target in targets:
-            if target.pos[not axis] != self.pos[not axis]:
-                # diagonal: remove
-                self.rm_targets(axis, target)
+        u = self.unhandled_targets
+        t = self.targets
+        for axis in (0, 1):
+            targets = set(u[axis] + t[axis].keys())
+            for target in targets:
+                p = target.pos
+                if p[0] != self.pos[0] and p[1] != self.pos[1]:
+                    # diagonal: remove
+                    self.rm_targets(axis, target)
         # propagate reaction
         for b in react_on:
             b.reaction(react_dir)
