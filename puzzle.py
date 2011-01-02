@@ -263,7 +263,14 @@ class Block (BoringBlock):
 class Puzzle:
     def __init__ (self, game, definition, physics = False, **tiler_kw_args):
         self.lines = definition.split('\n')
-        self.w, self.h = self._next_ints(self.lines)
+        first = self._next_ints(self.lines)
+        try:
+            self.w, self.h = first
+        except ValueError:
+            # also got default surface
+            self.w, self.h, self.default_s = first
+        else:
+            self.default_s = conf.DEFAULT_SURFACE
         # grid handler
         self.tiler = Tiler(self.w, self.h, self.draw_tile, track_tiles = False,
                            **tiler_kw_args)
@@ -275,12 +282,12 @@ class Puzzle:
     def init (self):
         self.tiler.reset()
         lines = self.lines[:]
-        # create default grid (contains surface types and blocks)
+        # create grid with default surface
         self.grid = []
         for i in xrange(self.w):
             col = []
             for j in xrange(self.h):
-                col.append([conf.S_STANDARD, None])
+                col.append([self.default_s, None])
             self.grid.append(col)
         # create Block instances and place in grid
         self.blocks = []

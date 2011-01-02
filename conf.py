@@ -57,13 +57,14 @@ RAND_S_RATIO = 0.1
 MIN_ID = -6
 MAX_ID = 4
 
-S_STANDARD = -1
+S_BLANK = -1
 S_SLIDE = -2
 S_LEFT = -3
 S_UP = -4
 S_RIGHT = -5
 S_DOWN = -6
 S_ARROWS = (S_LEFT, S_UP, S_RIGHT, S_DOWN)
+DEFAULT_SURFACE = S_BLANK
 
 B_PLAYER = 0
 B_IMMOVEABLE = 1
@@ -76,7 +77,7 @@ WALL = 99
 # puzzle colours
 BG = (255, 255, 255)
 surface_colours = {
-    S_STANDARD: (255, 255, 255),
+    S_BLANK: (255, 255, 255),
     S_SLIDE: (200, 200, 255)
 }
 block_colours = {
