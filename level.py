@@ -28,6 +28,16 @@ def get_levels (custom = False):
     path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN
     return sorted(lvl[len(path):] for lvl in glob(path + '*'))
 
+class PauseMenu (menu.Menu):
+    def init (self):
+        menu.Menu.init(self, (
+            (
+                menu.Button('Continue', self.game.quit_backend),
+                menu.Button('Help', self.set_page, 1),
+                menu.Button('Quit', self.game.quit_backend, 2)
+            ),
+        ))
+
 class Level:
     def __init__ (self, game, event_handler, ID = None, definition = None):
         # add gameplay key handlers
@@ -48,7 +58,6 @@ class Level:
 
         self.game = game
         self.FRAME = conf.FRAME
-        self.bg_colour = (255, 255, 255)
         self.load(ID, definition)
 
     def load (self, ID = None, definition = None):
@@ -83,7 +92,7 @@ class Level:
         # else solving (ignore input)
 
     def pause (self, event = None):
-        self.game.start_backend(menu.PauseMenu)
+        self.game.start_backend(PauseMenu)
 
     def reset (self, event = None):
         if self.solving_index is None:
@@ -97,12 +106,12 @@ class Level:
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:
-            for s, b in col:
+            for s, b, sel in col:
                 # goal surfaces have IDs starting at 0
                 if s >= 0 and (not isinstance(b, Block) or s != b.type):
                     win = False
                     break
-        # need to stay winning for one frame  - that is, blocks must have
+        # need to stay winning for one frame - that is, blocks must have
         # stopped on the goals, not just be moving past them
         if win:
             if self.winning:

@@ -4,7 +4,6 @@ from random import randrange, randint
 import pygame
 import evthandler as eh
 
-import level
 from puzzle import Puzzle
 import conf
 
@@ -12,6 +11,8 @@ import conf
 # document Menu and derivatives
 # home/end keys
 # scrollable element sets - set maximum number and scroll if exceed it
+# u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
+# keys should select next option, like u/d, l/r: flatten with others removed
 
 # Text
 # | Option
@@ -180,14 +181,12 @@ class Image:
 
 class Menu:
     def __init__ (self, game, event_handler):
+        event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
         args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MENU_INITIAL_DELAY * conf.MENU_FPS), 1),
             max(int(conf.MENU_REPEAT_DELAY * conf.MENU_FPS), 1)
         )
-        event_handler.add_event_handlers({
-            pygame.KEYDOWN: self._access_keys
-        })
         event_handler.add_key_handlers([
             (conf.KEYS_LEFT, [(self.alter, (-1,))]) + args,
             (conf.KEYS_UP, [(self.move_selection, (-1,))]) + args,
@@ -459,16 +458,26 @@ class Menu:
         self.dirty = False
         return drawn
 
+import level
+import editor
+
 class MainMenu (Menu):
     def init (self):
         pages = (
             (
                 Button('Play', self.set_page, 1),
-                Button('Options', self.set_page, 2),
+                Button('Options', self.set_page, 6),
                 Button('Quit', self.game.quit_backend)
+            ), (
+                Button('Main', self.set_page, 2),
+                Button('Custom', self.set_page, 3)
             ), [], (
-                Button('Input', self.set_page, 3),
-                Button('Sound', self.set_page, 4)
+                Button('New', self.game.start_backend, editor.Editor),
+                Button('Edit', self.set_page, 4),
+                Button('Play', self.set_page, 5)
+            ), [], [], (
+                Button('Input', self.set_page, 7),
+                Button('Sound', self.set_page, 8)
             ), (
                 Text('Key repeat'),
                 Option('Delay 0.2'), # 0.1 - 1.0 | FloatSelect('Delay %x', .1, 1, .1)
@@ -481,33 +490,40 @@ class MainMenu (Menu):
                 Button('Save', self.back)
             )
         )
-        completed = conf.get('completed_levels', [])
-        uncompleted_to_show = conf.NUM_UNCOMPLETED_LEVELS
-        lvls = level.get_levels()
-        col = 0
-        for i in xrange(conf.LEVEL_SELECT_COLS):
-            pages[1].append([])
-        for lvl in lvls:
-            lvl = str(lvl)
-            b = Button(lvl, self.game.start_backend, level.Level, (False, lvl))
-            if lvl in completed:
-                b.special = True
-            else:
-                uncompleted_to_show -= 1
-            pages[1][col].append(b)
-            if uncompleted_to_show == 0:
-                # only show a certain number of uncompleted levels
-                break
-            col += 1
-            col %= conf.LEVEL_SELECT_COLS
-        Menu.init(self, pages)
+        # create level pages
+        for page, custom, backend in ((2, False, level.Level),
+                                      (4, True, editor.Editor),
+                                      (5, True, level.Level)):
+            lvls = level.get_levels(custom)
+            page = pages[page]
+            if not lvls:
+                # nothing to show
+                page.append(Text('Empty'))
+                continue
+            if not custom:
+                completed = conf.get('completed_levels', [])
+                uncompleted_to_show = conf.NUM_UNCOMPLETED_LEVELS
+            # create columns
+            col = 0
+            for i in xrange(conf.LEVEL_SELECT_COLS):
+                page.append([])
+            # add buttons
+            for lvl in lvls:
+                lvl = str(lvl)
+                ID = (custom, lvl)
+                b = Button(lvl, self.game.start_backend, backend, ID)
+                page[col].append(b)
+                if not custom:
+                    # highlight completed levels
+                    if lvl in completed:
+                        b.special = True
+                    else:
+                        # only show a few unfinished levels
+                        uncompleted_to_show -= 1
+                        if uncompleted_to_show == 0:
+                            # only show a certain number of uncompleted levels
+                            break
+                col += 1
+                col %= conf.LEVEL_SELECT_COLS
 
-class PauseMenu (Menu):
-    def init (self):
-        Menu.init(self, (
-            (
-                Button('Continue', self.game.quit_backend),
-                Button('Hint', self.set_page, 1),
-                Button('Quit', self.game.quit_backend, 2)
-            ),
-        ))
+        Menu.init(self, pages)

@@ -2,13 +2,14 @@ from os.path import exists
 
 import pygame
 
-from tiler import Tiler
+from tiler import Tiler, draw_rect
 import conf
 
 # TODO:
 # document
 # bouncing blocks
 # block orientation - set after motion, use in draw_tile
+# crop characters to fit in tiles
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -35,7 +36,7 @@ Returns False if the image is completely transparent.
 
 def is_immoveable (tile):
     if isinstance(tile, Block):
-        surface = tile.level.grid[tile.pos[0]][tile.pos[1]][0]
+        surface = tile.puzzle.grid[tile.pos[0]][tile.pos[1]][0]
         # immoveable blocks can be moved on slippery surfaces
         immoveable = tile.type == conf.B_IMMOVEABLE and surface != conf.S_SLIDE
     else:
@@ -54,9 +55,9 @@ def opposite_dir (direction):
     return (direction + 2) % 4
 
 class BoringBlock:
-    def __init__ (self, type_ID, level, pos, orientation = None):
+    def __init__ (self, type_ID, puzzle, pos, orientation = None):
         self.type = type_ID
-        self.pos = pos
+        self.pos = list(pos)
         self.dir = orientation
 
     def __str__ (self):
@@ -65,9 +66,9 @@ class BoringBlock:
     __repr__ = __str__
 
 class Block (BoringBlock):
-    def __init__ (self, type_ID, level, pos, orientation = None):
-        BoringBlock.__init__ (self, type_ID, level, pos, orientation)
-        self.level = level
+    def __init__ (self, type_ID, puzzle, pos, orientation = None):
+        BoringBlock.__init__ (self, type_ID, puzzle, pos, orientation)
+        self.puzzle = puzzle
         self.reset()
 
     def reset (self, keep_resultant = False):
@@ -154,8 +155,8 @@ class Block (BoringBlock):
             if resultant[axis]:
                 pos[axis] += 1 if resultant[axis] > 0 else -1
         # check if calculated target is inside grid
-        if 0 <= pos[0] < self.level.w and 0 <= pos[1] < self.level.h:
-            return self.level.grid[pos[0]][pos[1]][1]
+        if 0 <= pos[0] < self.puzzle.w and 0 <= pos[1] < self.puzzle.h:
+            return self.puzzle.grid[pos[0]][pos[1]][1]
         else:
             return conf.WALL
 
@@ -271,13 +272,29 @@ class Puzzle:
             self.w, self.h, self.default_s = first
         else:
             self.default_s = conf.DEFAULT_SURFACE
+        self.size = (self.w, self.h)
         # grid handler
         self.tiler = Tiler(self.w, self.h, self.draw_tile, track_tiles = False,
                            **tiler_kw_args)
         self.physics = physics
+        self.selected = None
         self.render_text = game.fonts.text
         self.img = game.img
         self.init()
+
+    def _next_ints (self, lines):
+        try:
+            line = lines.pop(0).strip()
+        except IndexError:
+            return None
+        if line and line[0] == '#':
+            # comment
+            return self._next_ints(lines)
+        else:
+            try:
+                return [int(c) for c in line.split(' ') if c]
+            except ValueError:
+                return False
 
     def init (self):
         self.tiler.reset()
@@ -287,7 +304,7 @@ class Puzzle:
         for i in xrange(self.w):
             col = []
             for j in xrange(self.h):
-                col.append([self.default_s, None])
+                col.append([self.default_s, None, False])
             self.grid.append(col)
         # create Block instances and place in grid
         self.blocks = []
@@ -305,24 +322,58 @@ class Puzzle:
             self.grid[i][j][0] = ID
             line = self._next_ints(lines)
 
-    def _next_ints (self, lines):
-        try:
-            line = lines.pop(0).strip()
-        except IndexError:
-            return None
-        if line and line[0] == '#':
-            # comment
-            return self._next_ints(lines)
-        else:
-            try:
-                return [int(c) for c in line.split(' ') if c]
-            except ValueError:
-                return False
+    def add_block (self, block, x, y):
+        # create and add a block
+        block.pos = [x, y]
+        self.grid[x][y][1] = block
+        self.blocks.append(block)
+        self.tiler.change((x, y))
+
+    def rm_block (self, block):
+        # remove a block
+        x, y = block.pos
+        self.grid[x][y][1] = None
+        self.blocks.remove(block)
+        self.tiler.change((x, y))
+
+    def mv_block (self, block, x, y):
+        # move a block
+        self.rm_block(block)
+        self.add_block(block, x, y)
+
+    def set_surface (self, x, y, surface = None):
+        # set the surface at a tile
+        if surface is None:
+            surface = self.default_s
+        self.grid[x][y] = surface
+        self.tiler.change((x, y))
+
+    def select (self, x, y):
+        # set selected tile
+        if self.selected is not None:
+            self.deselect()
+        self.grid[x][y][2] = True
+        self.selected = [x, y]
+        self.tiler.change(self.selected)
+
+    def deselect (self):
+        # deselect currently selected tile
+        x, y = self.selected
+        self.grid[x][y][2] = False
+        self.tiler.change(self.selected)
+
+    def move_selected (self, direction, amount = 1):
+        # move selection relative to current position
+        selected = list(self.selected)
+        axis = direction % 2
+        selected[axis] += amount * (1 if direction > 1 else -1)
+        selected[axis] %= self.size[axis]
+        self.select(*selected)
 
     def step (self):
         # apply arrow forces
         for col in self.grid:
-            for s, b in col:
+            for s, b, sel in col:
                 if b is not None and s in conf.S_ARROWS:
                     b.add_force(conf.S_ARROWS.index(s), conf.FORCE_ARROW)
 
@@ -428,7 +479,7 @@ class Puzzle:
 
     def draw_tile (self, surface, rect, i, j):
         # draw a single tile; called by Tiler
-        s, b = self.grid[i][j]
+        s, b, selected = self.grid[i][j]
         # surface
         if s < 0:
             # blit image if exists, else use colour
@@ -441,6 +492,10 @@ class Puzzle:
             colour = conf.block_colours[s]
         if colour:
             surface.fill(colour, rect)
+        # selection ring
+        if selected:
+            width = max(int(rect[2] * conf.SEL_WIDTH), conf.MIN_SEL_WIDTH)
+            draw_rect(surface, conf.SEL_COLOUR, rect, width)
         # block
         if b is not None:
             if b.type < conf.MIN_CHAR_ID:

@@ -20,6 +20,7 @@ FONT_DIR = 'font' + os.sep
 # CLI
 DEBUG = False
 SILENT = True
+SILENT = SILENT and not DEBUG
 
 # window
 RES_F = pg.display.list_modes()[0]
@@ -41,6 +42,7 @@ KEYS_UP = (pg.K_UP,)
 KEYS_RIGHT = (pg.K_RIGHT,)
 KEYS_DOWN = (pg.K_DOWN,)
 KEYS_RESET = (pg.K_r,)
+KEYS_NUM = range(pg.K_0, pg.K_9 + 1)
 
 MOVE_INITIAL_DELAY = .2
 MOVE_REPEAT_DELAY = .1
@@ -100,6 +102,12 @@ SELECTED_CHAR_ID_OFFSET = 128
 SPECIAL_CHAR_ID_OFFSET = 256
 LEVEL_SELECT_COLS = 5
 NUM_UNCOMPLETED_LEVELS = 5
+
+# editor
+BLANK_LEVEL = '5 5'
+SEL_COLOUR = (255, 0, 0)
+MIN_SEL_WIDTH = 1
+SEL_WIDTH = .05 # proportion of tile size
 
 # puzzle messages
 MSG_FONT = 'orbitron-black.otf'
