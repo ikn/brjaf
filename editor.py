@@ -44,6 +44,17 @@ class Editor:
         ])
         self.event_handler = event_handler
 
+        # create block/surface selection grid
+        blocks = xrange(conf.MAX_ID + 1)
+        surfaces = xrange(conf.MIN_ID, 0)
+        definition = '3 {0}\n{1}\n\n{2}\n{3}'.format(
+            max(len(blocks), len(surfaces)),
+            '\n'.join('{0} 0 {1}'.format(b, i) for i, b in enumerate(blocks)),
+            '\n'.join('{0} 1 {1}'.format(b, i) for i, b in enumerate(blocks)),
+            '\n'.join('{0} 2 {1}'.format(s, i) for i, s in enumerate(surfaces))
+        )
+        self.selector = Puzzle(game, definition, border = 1)
+
         self.game = game
         self.FRAME = conf.FRAME
         self.load(ID)
@@ -61,7 +72,6 @@ class Editor:
                 definition = f.read()
         self.puzzle = Puzzle(self.game, definition, border = 1)
         self.puzzle.select(0, 0)
-        self.puzzle.grid[0][0][2] = True
         self.dirty = True
 
     def insert (self, event):
