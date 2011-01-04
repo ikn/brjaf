@@ -130,6 +130,7 @@ files: loaded image cache (before resize).
         self.running = False
         self.imgs = {}
         self.files = {}
+        self.mod_ctrl = self.mod_shift = self.mod_alt = False
         # load display settings
         conf.FULLSCREEN = conf.get('fullscreen', conf.FULLSCREEN)
         conf.RES_W = conf.get('res', conf.RES_W)
@@ -165,11 +166,15 @@ backend_class(Game_instance, EventHandler_instance, *args), and should store
 EventHandler_instance in its event_handler attribute.
 
 """
+        h = eh.MODE_HELD
         event_handler = eh.EventHandler({
             pygame.VIDEORESIZE: self._resize_cb, # EVENT_ENDMUSIC: self.play_music
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
-            (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN)
+            (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
+            (conf.KEYS_CTRL, lambda e: setattr(self, 'mod_ctrl', True), h),
+            (conf.KEYS_SHIFT, lambda e: setattr(self, 'mod_shift', True), h),
+            (conf.KEYS_ALT, lambda e: setattr(self, 'mod_alt', True), h)
         ], False, self._quit)
         try:
             self.backends.append(self.backend)
@@ -268,6 +273,7 @@ text: determine how to get the required image (what to do with data).
 
     def _update (self):
         """Run the backend's update method."""
+        self.mod_ctrl = self.mod_shift = self.mod_alt = False
         self.backend.event_handler.update()
         self.backend.update()
 

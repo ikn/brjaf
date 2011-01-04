@@ -387,6 +387,60 @@ class Puzzle:
         selected[axis] %= self.size[axis]
         self.select(*selected)
 
+    def resize (self, amount, direction):
+        if amount == 0:
+            return
+        # resize one tile at a time
+        # get new grid size
+        axis = direction % 2
+        sign = 1 if amount > 0 else -1
+        size = list(self.size)
+        size[axis] += sign
+        if size[axis] == 0:
+            # can't shrink
+            return
+        # get amount to offset everything by
+        offset = [0, 0]
+        offset[axis] += (sign - (1 if direction > 1 else -1)) / 2
+        self.size = (self.w, self.h) = size
+        # resize tiler
+        self.tiler.w = self.w
+        self.tiler.h = self.h
+        self.tiler.reset()
+        # create new grid
+        grid = []
+        di, dj = offset
+        for i in xrange(self.w):
+            col = []
+            for j in xrange(self.h):
+                i -= di
+                j -= dj
+                if 0 <= i < self.w and 0 <= j < self.h:
+                    col.append(self.grid[i][j])
+                else:
+                    # doesn't come from current grid
+                    col.append([self.default_s, None, False])
+            grid.append(col)
+        self.grid = grid
+        if self.selected is not None:
+            # offset self.selected
+            self.selected[0] += di
+            self.selected[1] += dj
+            x, y = self.selected
+            # push selection back onto the grid
+            if 0 <= x < self.w and 0 <= y < self.h:
+                selected = list(self.selected)
+            else:
+                selected = self.selected
+                self.selected = None
+            for axis in (0, 1):
+                if selected[axis] < 0:
+                    selected[axis] = 0
+                elif selected[axis] >= self.size[axis]:
+                    selected[axis] = self.size[axis] - 1
+            self.select(*selected)
+        self.resize(amount - sign, direction)
+
     def step (self):
         # apply arrow forces
         for col in self.grid:

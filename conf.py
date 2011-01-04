@@ -33,6 +33,9 @@ WINDOW_TITLE = 'Puzzle game thing'
 MAX_RATIO = 3
 
 # input
+KEYS_SHIFT = (pg.K_LSHIFT, pg.K_RSHIFT)
+KEYS_CTRL = (pg.K_LCTRL, pg.K_RCTRL)
+KEYS_ALT = (pg.K_LALT, pg.K_RALT)
 KEYS_MINIMISE = (pg.K_F10,)
 KEYS_FULLSCREEN = (pg.K_F11,)
 KEYS_BACK = (pg.K_BACKSPACE, pg.K_ESCAPE)

@@ -10,11 +10,11 @@ import conf
 # insert:
 #  tab to another grid containing every block/goal/surface and KEY_CONTINUE or K_i on main grid to insert; or
 #  press a number to insert that ID and use b/g/s to switch between block, goal and surface modes
-# undo/redo with u/v (store grid each step up to conf.UNDO_LEVELS and just restore then set puzzle dirty)
+# undo/redo with u/ctrl-u (store grid each step up to conf.UNDO_LEVELS and just restore then set puzzle dirty)
 # reset to blank with r
 # quicksave with q - no need to solve, goes into drafts, gets autonamed
-# save menu option (doesn't quit)
-# menu should have new/edit, then under each puzzle get play/edit/delete/rename
+# save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve)
+# menu should have new/load, then under each puzzle get play/edit/delete/rename
 
 class PauseMenu (menu.Menu):
     def init (self):
@@ -35,15 +35,17 @@ class Editor:
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
             max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
         )
+        od = eh.MODE_ONDOWN
+        held = eh.MODE_HELD
         event_handler.add_key_handlers([
             (conf.KEYS_LEFT, [(self.move, (0,))]) + args,
             (conf.KEYS_UP, [(self.move, (1,))]) + args,
             (conf.KEYS_RIGHT, [(self.move, (2,))]) + args,
             (conf.KEYS_DOWN, [(self.move, (3,))]) + args,
-            (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN),
-            (conf.KEYS_TAB, self.switch_puzzle, eh.MODE_ONDOWN),
-            (conf.KEYS_INSERT, self.insert_simple, eh.MODE_ONDOWN),
-            (conf.KEYS_DEL, self.del_block, eh.MODE_ONDOWN)
+            (conf.KEYS_BACK, self.pause, od),
+            (conf.KEYS_TAB, self.switch_puzzle, od),
+            (conf.KEYS_INSERT, self.insert_simple, od),
+            (conf.KEYS_DEL, self.del_block, od)
         ])
         self.event_handler = event_handler
 
@@ -114,7 +116,14 @@ class Editor:
             self.editor.rm_block(None, *self.editor.selected)
 
     def move (self, event, direction):
-        self.puzzle.move_selected(direction)
+        """Callback for arrow keys."""
+        shrink, grow = self.game.mod_alt, self.game.mod_shift
+        if shrink ^ grow:
+            self.editor.resize(1 if grow else -1, direction)
+            self.dirty = True
+        else:
+            # move selection
+            self.puzzle.move_selected(direction)
 
     def switch_puzzle (self, event = None):
         self.editing = not self.editing
