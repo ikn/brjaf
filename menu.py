@@ -466,8 +466,7 @@ class MainMenu (Menu):
         pages = (
             (
                 Button('Play', self.set_page, 1),
-                Button('Options', self.set_page, 6),
-                Button('Quit', self.game.quit_backend)
+                Button('Options', self.set_page, 6)
             ), (
                 Button('Main', self.set_page, 2),
                 Button('Custom', self.set_page, 3)

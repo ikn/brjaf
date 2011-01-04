@@ -43,6 +43,9 @@ KEYS_RIGHT = (pg.K_RIGHT,)
 KEYS_DOWN = (pg.K_DOWN,)
 KEYS_RESET = (pg.K_r,)
 KEYS_NUM = range(pg.K_0, pg.K_9 + 1)
+KEYS_TAB = (pg.K_TAB, pg.K_F8, pg.K_SLASH, pg.K_BACKSLASH)
+KEYS_INSERT = KEYS_NEXT + (pg.K_i,)
+KEYS_DEL = (pg.K_DELETE, pg.K_d)
 
 MOVE_INITIAL_DELAY = .2
 MOVE_REPEAT_DELAY = .1

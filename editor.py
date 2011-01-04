@@ -2,7 +2,7 @@ import pygame
 import evthandler as eh
 
 import menu
-from puzzle import Puzzle
+from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
@@ -40,13 +40,16 @@ class Editor:
             (conf.KEYS_UP, [(self.move, (1,))]) + args,
             (conf.KEYS_RIGHT, [(self.move, (2,))]) + args,
             (conf.KEYS_DOWN, [(self.move, (3,))]) + args,
-            (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN)
+            (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN),
+            (conf.KEYS_TAB, self.switch_puzzle, eh.MODE_ONDOWN),
+            (conf.KEYS_INSERT, self.insert_simple, eh.MODE_ONDOWN),
+            (conf.KEYS_DEL, self.del_block, eh.MODE_ONDOWN)
         ])
         self.event_handler = event_handler
 
         # create block/surface selection grid
         blocks = xrange(conf.MAX_ID + 1)
-        surfaces = xrange(conf.MIN_ID, 0)
+        surfaces = xrange(-1, conf.MIN_ID - 1, -1)
         definition = '3 {0}\n{1}\n\n{2}\n{3}'.format(
             max(len(blocks), len(surfaces)),
             '\n'.join('{0} 0 {1}'.format(b, i) for i, b in enumerate(blocks)),
@@ -54,6 +57,7 @@ class Editor:
             '\n'.join('{0} 2 {1}'.format(s, i) for i, s in enumerate(surfaces))
         )
         self.selector = Puzzle(game, definition, border = 1)
+        self.selector.select(0, 0)
 
         self.game = game
         self.FRAME = conf.FRAME
@@ -70,16 +74,55 @@ class Editor:
             path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
             with open(path + str(ID[1])) as f:
                 definition = f.read()
-        self.puzzle = Puzzle(self.game, definition, border = 1)
-        self.puzzle.select(0, 0)
+        self.editor = Puzzle(self.game, definition, border = 1)
+        self.editor.select(0, 0)
+        self.puzzle = self.editor
+        self.editing = True
         self.dirty = True
 
+    def insert_simple (self, event = None):
+        if not self.editing:
+            return
+        # get type and ID of selected tile in selector puzzle
+        col, row = self.selector.selected
+        x, y = self.editor.selected
+        is_block = col == 0 and row <= conf.MAX_ID
+        if is_block:
+            ID = row
+        elif col == 1:
+            ID = row
+            if ID > conf.MAX_ID:
+                ID = conf.DEFAULT_SURFACE
+        else:
+            ID = -row - 1
+            if ID >= 0:
+                ID = conf.DEFAULT_SURFACE
+        # make changes to selected tile in editor puzzle
+        if is_block:
+            self.editor.add_block((BoringBlock, ID), x, y)
+        else:
+            self.editor.set_surface(x, y, ID)
+
     def insert (self, event):
-        if event.key in conf.KEYS_NUM:
-            print 'insert', event.unicode
+        if not self.editing or event.key not in conf.KEYS_NUM:
+            return
+        print 'insert', event.unicode
+
+    def del_block (self, event = None):
+        """Delete any block in the currently selected tile."""
+        if self.editing:
+            self.editor.rm_block(None, *self.editor.selected)
 
     def move (self, event, direction):
         self.puzzle.move_selected(direction)
+
+    def switch_puzzle (self, event = None):
+        self.editing = not self.editing
+        if self.editing:
+            self.puzzle = self.editor
+        else:
+            self.puzzle = self.selector
+        self.dirty = True
 
     def pause (self, event = None):
         self.game.start_backend(PauseMenu)

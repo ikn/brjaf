@@ -323,18 +323,35 @@ class Puzzle:
             line = self._next_ints(lines)
 
     def add_block (self, block, x, y):
-        # create and add a block
-        block.pos = [x, y]
+        # add a block, optionally creating it first
+        pos = [x, y]
+        if isinstance(block, BoringBlock):
+            block.pos = pos
+        else:
+            # create block first; got (class, *args) tuple
+            cls, type_ID = block[:2]
+            args = block[2:]
+            block = cls(type_ID, self, pos, *args)
+        # remove existing block, if any
+        self.rm_block(None, x, y)
+        # add new block
         self.grid[x][y][1] = block
         self.blocks.append(block)
         self.tiler.change((x, y))
 
-    def rm_block (self, block):
+    def rm_block (self, block = None, x = None, y = None):
         # remove a block
-        x, y = block.pos
-        self.grid[x][y][1] = None
-        self.blocks.remove(block)
-        self.tiler.change((x, y))
+        if block is None:
+            if None not in (x, y):
+                block = self.grid[x][y][1]
+            # else got nothing
+        else:
+            x, y = block.pos
+        if block is not None:
+            self.grid[x][y][1] = None
+            self.blocks.remove(block)
+            self.tiler.change((x, y))
+        # else passed nothing or tile has no block
 
     def mv_block (self, block, x, y):
         # move a block
@@ -345,7 +362,7 @@ class Puzzle:
         # set the surface at a tile
         if surface is None:
             surface = self.default_s
-        self.grid[x][y] = surface
+        self.grid[x][y][0] = surface
         self.tiler.change((x, y))
 
     def select (self, x, y):
