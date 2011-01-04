@@ -75,7 +75,7 @@ class Block (BoringBlock):
         # reset some stuff to get ready for the next step
         if keep_resultant:
             resultant = self.resultant()
-            self.sources = [{None: resultant[axis]} for axis in xrange(2)]
+            self.sources = [{None: resultant[axis]} for axis in (0, 1)]
             self.handled = False
         else:
             self.sources = [{}, {}]
@@ -86,7 +86,7 @@ class Block (BoringBlock):
 
     def resultant (self):
         # calculate resultant force on each axis
-        return [sum(self.sources[axis].values()) for axis in xrange(2)]
+        return [sum(self.sources[axis].values()) for axis in (0, 1)]
 
     def add_force (self, direction, force):
         # wrapper for adding non-Block force sources
@@ -151,7 +151,7 @@ class Block (BoringBlock):
         if resultant is None:
             resultant = self.resultant()
         pos = self.pos[:]
-        for axis in xrange(2):
+        for axis in (0, 1):
             if resultant[axis]:
                 pos[axis] += 1 if resultant[axis] > 0 else -1
         # check if calculated target is inside grid
@@ -199,7 +199,7 @@ class Block (BoringBlock):
             diag = False
         # check what's in target tiles on each axis and decide action to take
         react = [None, None]
-        for axis in xrange(2):
+        for axis in (0, 1):
             force = resultant[axis]
             if not force:
                 # no force, so won't push anything anyway
@@ -236,7 +236,7 @@ class Block (BoringBlock):
                 self.reaction(direction)
 
         # apply forces to targets
-        for axis in xrange(2):
+        for axis in (0, 1):
             # remove old targets
             old = self.targets[axis]
             if old:
@@ -402,18 +402,18 @@ class Puzzle:
         # get amount to offset everything by
         offset = [0, 0]
         offset[axis] += (sign - (1 if direction > 1 else -1)) / 2
-        self.size = (self.w, self.h) = size
+        self.size = (w, h) = size
         # resize tiler
-        self.tiler.w = self.w
-        self.tiler.h = self.h
+        self.tiler.w = w
+        self.tiler.h = h
         self.tiler.reset()
         # create new grid
         grid = []
         di, dj = offset
-        for i in xrange(self.w):
+        for i in xrange(w):
             col = []
-            for j in xrange(self.h):
-                i -= di
+            i -= di
+            for j in xrange(h):
                 j -= dj
                 if 0 <= i < self.w and 0 <= j < self.h:
                     col.append(self.grid[i][j])
@@ -422,6 +422,7 @@ class Puzzle:
                     col.append([self.default_s, None, False])
             grid.append(col)
         self.grid = grid
+        self.w, self.h = self.size
         if self.selected is not None:
             # offset self.selected
             self.selected[0] += di
@@ -432,12 +433,10 @@ class Puzzle:
                 selected = list(self.selected)
             else:
                 selected = self.selected
+                for axis in (0, 1):
+                    limit = self.size[axis] - 1
+                    selected[axis] = min(max(selected[axis], 0), limit)
                 self.selected = None
-            for axis in (0, 1):
-                if selected[axis] < 0:
-                    selected[axis] = 0
-                elif selected[axis] >= self.size[axis]:
-                    selected[axis] = self.size[axis] - 1
             self.select(*selected)
         self.resize(amount - sign, direction)
 
@@ -504,7 +503,7 @@ class Puzzle:
                     # reaction on all blocks that don't move
                     for b in bs:
                         diff = (b.pos[0] - pos[0], b.pos[1] - pos[1])
-                        for axis in xrange(2):
+                        for axis in (0, 1):
                             if diff[axis]:
                                 b.reaction(1 + axis + diff[axis])
             for pos in rm:
