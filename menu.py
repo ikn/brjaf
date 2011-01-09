@@ -13,6 +13,11 @@ import conf
 # scrollable element sets - set maximum number and scroll if exceed it
 # u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
 # keys should select next option, like u/d, l/r: flatten with others removed
+# options: key bindings/repeat rates
+#          delete data (progress, custom levels, solution history)
+#          appearance (select from multiple themes)
+#          sound/music volume
+# custom levels delete/rename/duplicate
 
 # Text
 # | Option
@@ -180,7 +185,7 @@ class Image:
     pass
 
 class Menu:
-    def __init__ (self, game, event_handler):
+    def __init__ (self, game, event_handler, *extra_args):
         event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
         args = (
             eh.MODE_ONDOWN_REPEAT,
@@ -199,7 +204,7 @@ class Menu:
         self.game = game
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
-        self.init()
+        self.init(*extra_args)
         self.set_page(0)
 
     def init (self, pages):
@@ -462,21 +467,26 @@ import level
 import editor
 
 class MainMenu (Menu):
+    """The game's main menu."""
+
     def init (self):
         pages = (
             (
                 Button('Play', self.set_page, 1),
-                Button('Options', self.set_page, 6)
-            ), (
-                Button('Main', self.set_page, 2),
-                Button('Custom', self.set_page, 3)
+                Button('Custom', self.set_page, 2),
+                Button('Options', self.set_page, 5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
-                Button('Edit', self.set_page, 4),
-                Button('Play', self.set_page, 5)
-            ), [], [], (
-                Button('Input', self.set_page, 7),
-                Button('Sound', self.set_page, 8)
+                Button('Load', self.set_page, 3)
+            ), [], (
+                Button('Play', self._with_custom_lvl, level.Level),
+                Button('Edit', self._with_custom_lvl, editor.Editor),
+                #Button('Delete'),
+                #Button('Rename'),
+                #Button('Duplicate')
+            ), (
+                Button('Input', self.set_page, 6),
+                Button('Sound', self.set_page, 7)
             ), (
                 Text('Key repeat'),
                 Option('Delay 0.2'), # 0.1 - 1.0 | FloatSelect('Delay %x', .1, 1, .1)
@@ -489,10 +499,9 @@ class MainMenu (Menu):
                 Button('Save', self.back)
             )
         )
+
         # create level pages
-        for page, custom, backend in ((2, False, level.Level),
-                                      (4, True, editor.Editor),
-                                      (5, True, level.Level)):
+        for page, custom in ((1, False), (3, True)):
             lvls = level.get_levels(custom)
             page = pages[page]
             if not lvls:
@@ -510,7 +519,10 @@ class MainMenu (Menu):
             for lvl in lvls:
                 lvl = str(lvl)
                 ID = (custom, lvl)
-                b = Button(lvl, self.game.start_backend, backend, ID)
+                if custom:
+                    b = Button(lvl, self._custom_lvl_cb, ID)
+                else:
+                    b = Button(lvl, self.game.start_backend, level.Level, ID)
                 page[col].append(b)
                 if not custom:
                     # highlight completed levels
@@ -526,3 +538,17 @@ class MainMenu (Menu):
                 col %= conf.LEVEL_SELECT_COLS
 
         Menu.init(self, pages)
+
+    def _custom_lvl_cb (self, ID):
+        """Set up page shown on selecting a custom level."""
+        self._custom_lvl_ID = ID
+        self.set_page(4)
+
+    def _with_custom_lvl (self, obj):
+        """Call function or start backend with self._custom_lvl_ID."""
+        if hasattr(obj, '__call__'):
+            # function; give level to it
+            obj(self._custom_lvl_ID)
+        else:
+            # backend class: start backend
+            self.game.start_backend(obj, self._custom_lvl_ID)

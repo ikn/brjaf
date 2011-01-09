@@ -440,6 +440,36 @@ class Puzzle:
             self.select(*selected)
         self.resize(amount - sign, direction)
 
+    def definition (self):
+        """Return a definition string for the puzzle's current state."""
+        # get blocks and surfaces from self.grid
+        bs = []
+        ss = []
+        s_count = {}
+        for i in xrange(len(self.grid)):
+            col = self.grid[i]
+            for j in xrange(len(col)):
+                s, b, sel = col[j]
+                if b is not None:
+                    bs.append('{0} {1} {2}'.format(b.type, i, j))
+                ss.append((s, '{0} {1} {2}'.format(s, i, j)))
+                try:
+                    s_count[s] += 1
+                except KeyError:
+                    s_count[s] = 1
+        # get most common surface type to use as default
+        # we only want one, so don't worry about types with the same freqency
+        s_count = dict((v, k) for k, v in s_count.iteritems())
+        common_s = s_count[max(s_count)]
+        # compile definition
+        return '{0} {1} {2}{3}{4}\n\n{5}'.format(
+            self.w, self.h, common_s,
+            '\n' if bs else '',
+            '\n'.join(bs),
+            # don't need individual tiles for most common surface
+            '\n'.join(data for s, data in ss if s != common_s)
+        )
+
     def step (self):
         # apply arrow forces
         for col in self.grid:

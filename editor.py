@@ -14,14 +14,13 @@ import conf
 # reset to blank with r
 # quicksave with q - no need to solve, goes into drafts, gets autonamed
 # save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve)
-# menu should have new/load, then under each puzzle get play/edit/delete/rename
 
 class PauseMenu (menu.Menu):
-    def init (self):
+    def init (self, editor):
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
-                menu.Button('Save', self.set_page, 1),
+                menu.Button('Save', editor.save),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),
         ))
@@ -134,7 +133,10 @@ class Editor:
         self.dirty = True
 
     def pause (self, event = None):
-        self.game.start_backend(PauseMenu)
+        self.game.start_backend(PauseMenu, self)
+
+    def save (self):
+        print '\'' + self.editor.definition() + '\''
 
     def update (self):
         pass
