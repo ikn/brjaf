@@ -29,11 +29,11 @@ def get_levels (custom = False):
     return sorted(lvl[len(path):] for lvl in glob(path + '*'))
 
 class PauseMenu (menu.Menu):
-    def init (self):
+    def init (self, level):
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
-                menu.Button('Help', self.set_page, 1),
+                menu.Button('Help', level.solve),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),
         ))
@@ -72,34 +72,51 @@ class Level:
         self.players = [b for b in self.puzzle.blocks
                         if b.type == conf.B_PLAYER]
         self.dirty = True
-        # store message
-        if '@' in definition:
-            d = definition
-            d = d[d.find('@') + 1:]
-            if '\n' in d:
-                d = d[:d.find('\n')]
-            self.msg = d.strip()
-        else:
-            self.msg = None
+        # store message and solution
+        for char, attr in (('@', 'msg'), (':', 'solution')):
+            if char in definition:
+                d = definition
+                d = d[d.find(char) + 1:]
+                if '\n' in d:
+                    d = d[:d.find('\n')]
+                val = d.strip()
+            else:
+                val = None
+            setattr(self, attr, val)
         self.winning = False
+        self.solving = False
         self.solving_index = None
 
     def move (self, event, direction):
         # key callback to move player
-        if self.solving_index is None:
+        if not self.solving:
             for player in self.players:
                 player.add_force(direction, conf.FORCE_MOVE)
         # else solving (ignore input)
 
     def pause (self, event = None):
-        self.game.start_backend(PauseMenu)
+        self.game.start_backend(PauseMenu, self)
 
     def reset (self, event = None):
-        if self.solving_index is None:
+        if not self.solving:
             self.puzzle.init()
             self.players = [b for b in self.puzzle.blocks
                             if b.type == conf.B_PLAYER]
         # else solving (ignore input)
+
+    def solve (self):
+        if self.solving_index is None:
+            # just starting: don't do anything yet
+            self.reset()
+            self.solving_index = 0
+        elif self.solving_index == len(self.solution):
+            # finished
+            self.solving = False
+        else:
+            # continuing
+            print self.solution[self.solving_index]
+            self.solving_index += 1
+            self.solving = True
 
     def update (self):
         self.puzzle.step()
@@ -127,6 +144,9 @@ class Level:
                 self.winning = True
         else:
             self.winning = False
+        # continue solving
+        if self.solving:
+            self.solve()
 
     def _mk_msg (self, screen, w, h):
         if self.msg is None:

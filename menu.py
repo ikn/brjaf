@@ -208,8 +208,6 @@ class Menu:
         self.set_page(0)
 
     def init (self, pages):
-        if not conf.SILENT:
-            print 'init', self
         self.pages = []
         for page in pages:
             if isinstance(page[0], (Text, Image)):
