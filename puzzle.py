@@ -198,11 +198,13 @@ class Block (BoringBlock):
         else:
             diag = False
         # check what's in target tiles on each axis and decide action to take
-        react = [None, None]
+        react = [False] * 4
         for axis in (0, 1):
             force = resultant[axis]
             if not force:
-                # no force, so won't push anything anyway
+                # no resultant force on this axis: reaction
+                react[axis] = react[axis + 2] = True
+                # won't push anything anyway
                 continue
             # get adjacent target tile
             r = resultant[:]
@@ -210,7 +212,7 @@ class Block (BoringBlock):
             adj = self.target_tile(r)
             if is_immoveable(adj):
                 # can't move on this axis
-                react[axis] = opposite_dir(force_dir(axis, force))
+                react[opposite_dir(force_dir(axis, force))] = True
                 # so can't move diagonally
                 self.rm_targets(axis, diag)
             else:
@@ -219,20 +221,20 @@ class Block (BoringBlock):
                 if diag and not is_immoveable(diag):
                     self.add_targets(axis, diag)
         # if trying to move on both axes and can't move to diagonal
-        if is_immoveable(diag) and react[0] is react[1] is None:
+        if is_immoveable(diag) and not any(react):
             r = [abs(f) for f in resultant]
             if r[0] != r[1]:
                 # unequal forces: reaction along weaker one's axis
                 axis = r.index(min(r))
                 force = resultant[axis]
-                react[axis] = opposite_dir(force_dir(axis, force))
+                react[opposite_dir(force_dir(axis, force))] = True
             else:
                 # equal forces: reaction along both axes
                 for axis, force in enumerate(resultant):
-                    react[axis] = opposite_dir(force_dir(axis, force))
+                    react[opposite_dir(force_dir(axis, force))] = True
         # propagate any reactions
-        for direction in react:
-            if direction is not None:
+        for direction in xrange(len(react)):
+            if react[direction]:
                 self.reaction(direction)
 
         # apply forces to targets
