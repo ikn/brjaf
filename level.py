@@ -87,17 +87,17 @@ class Level:
         self.solving = False
         self.solving_index = None
 
-    def move (self, event, direction):
+    def move (self, event, mods, direction):
         # key callback to move player
         if not self.solving:
             for player in self.players:
                 player.add_force(direction, conf.FORCE_MOVE)
         # else solving (ignore input)
 
-    def pause (self, event = None):
+    def pause (self, *args):
         self.game.start_backend(PauseMenu, self)
 
-    def reset (self, event = None):
+    def reset (self, *args):
         if not self.solving:
             self.puzzle.init()
             self.players = [b for b in self.puzzle.blocks

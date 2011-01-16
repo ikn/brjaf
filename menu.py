@@ -22,12 +22,12 @@ import conf
 # Text
 # | Option
 # | | Button
+# | | | Entry (event:change)
+# | | | | KeyEntry
 # | | Select (abstract; .wrap; event:change; put arrows in edge blocks; text contains %x to replace with current value)
 # | | | DiscreteSelect (.options)
 # | | | RangeSelect (.min, .max, .step)
 # | | | | FloatSelect (.dp)
-# | | Entry (event:change)
-# | | | KeyEntry
 # Image (.w, .h, .img, .border = (size, colour))
 
 class Text:
@@ -48,6 +48,7 @@ special: whether the text is displayed in a different style; defaults to False.
          Call update after changing to redraw.
 pos: the position of the first character in the grid display, or None if
      unknown.
+menu: the Menu instance the widget exists in, or None if unknown.
 puzzle: the Puzzle instance the widget exists in, or None if unknown.
 
 """
@@ -64,7 +65,10 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
         self.size = len(self.text)
         self.selectable = False
         self.pos = None
-        self.puzzle = None
+        if not hasattr(self, 'menu'):
+            self.menu = None
+        if not hasattr(self, 'puzzle'):
+            self.puzzle = None
         self.special = False
 
     def __str__ (self):
@@ -178,6 +182,50 @@ CLICK_EVENT: the button was clicked.
         """Trigger handlers attached to CLICK_EVENT."""
         self._throw_event(Button.CLICK_EVENT)
 
+class Entry (Button):
+    """A text entry widget.  Inherits from Button.
+
+    CONSTRUCTOR
+
+Entry(menu, initial_text = ''[, max_size])
+
+menu: the Menu instance this widget is attached to.
+max_size: maximum number of characters the entry can hold.
+
+    EVENTS
+
+CHANGE_EVENT: the text in the entry changed.
+
+"""
+
+    def __init__ (self, menu, initial_text = '', max_size = None):
+        Button.__init__(self, initial_text, self.toggle_focus)
+        self.menu = menu
+        self.max_size = max_size
+        self.focused = False
+
+    def toggle_focus (self):
+        """Toggle whether the entry is focused.
+
+When a widget is focused, it catches keypresses and its text can be edited.
+Only one widget can be focused at a time, for which reason it may not be
+possible to toggle focus; the return value indicates whether it was possible.
+
+"""
+        if self.focused:
+            self.focused = False
+            err = 'something else captured input while {0} had it'.format(self)
+            assert self.menu.release_input(self.input), err
+        else:
+            captured = self.menu.capture_input(self.input)
+            if captured:
+                self.focused = True
+            return captured
+
+    def input (self, event):
+        """Takes a keypress event to alter the entry's text."""
+        print event
+
 class Select (Option):
     pass
 
@@ -193,17 +241,18 @@ class Menu:
             max(int(conf.MENU_REPEAT_DELAY * conf.MENU_FPS), 1)
         )
         event_handler.add_key_handlers([
-            (conf.KEYS_LEFT, [(self.alter, (-1,))]) + args,
             (conf.KEYS_UP, [(self.move_selection, (-1,))]) + args,
-            (conf.KEYS_RIGHT, [(self.alter, (1,))]) + args,
             (conf.KEYS_DOWN, [(self.move_selection, (1,))]) + args,
-            (conf.KEYS_BACK, self.back, eh.MODE_ONDOWN),
-            (conf.KEYS_NEXT, self.select, eh.MODE_ONDOWN)
+            (conf.KEYS_LEFT, [(self.alter, (-1,))]) + args,
+            (conf.KEYS_RIGHT, [(self.alter, (1,))]) + args,
+            (conf.KEYS_NEXT, self.select, eh.MODE_ONDOWN),
+            (conf.KEYS_BACK, self.back, eh.MODE_ONDOWN)
         ])
         self.event_handler = event_handler
         self.game = game
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
+        self.capture_cb = None
         self.init(*extra_args)
         self.set_page(0)
 
@@ -377,7 +426,7 @@ class Menu:
                     self.selected(sel).set_selected(True)
             self.sel = sel
 
-    def move_selection (self, event, amount, axis = 1):
+    def move_selection (self, event, mods, amount, axis = 1):
         # change the selected option
         if self.sel is None:
             return
@@ -400,7 +449,7 @@ class Menu:
         # change selection
         self.set_selected(sel)
 
-    def alter (self, event, amount):
+    def alter (self, event, mods, amount):
         if self.sel is None:
             return
         element = self.page[self.sel[0]][self.sel[1]]
@@ -409,11 +458,7 @@ class Menu:
             return
         # TODO: alter
 
-    def back (self, event = None):
-        # go back one page, if possible
-        self.set_page(-1)
-
-    def select (self, event = None):
+    def select (self, *args):
         # choose the currently selected option, if any
         if self.sel is None:
             return
@@ -421,24 +466,63 @@ class Menu:
         if hasattr(option, 'click'):
             option.click()
 
+    def back (self, *args):
+        # go back one page, if possible
+        self.set_page(-1)
+
     def _access_keys (self, event):
-        # select options by pressing their first letter
-        try:
-            elements = self.keys[event.unicode]
-        except KeyError:
-            # no matches
-            return
-        if len(elements) == 1:
-            # one match: select it and try to click it
-            self.set_selected(elements[0])
-            self.select()
+        if self.capture_cb is None:
+            # select options by pressing their first letter
+            try:
+                elements = self.keys[event.unicode]
+            except KeyError:
+                # no matches
+                return
+            if len(elements) == 1:
+                # one match: select it and try to click it
+                self.set_selected(elements[0])
+                self.select()
+            else:
+                # multiple matches: select next one
+                x, y = self.sel
+                w, h = self.page_dim(self.page, False)
+                sel = min(((j - y) % h, (i - x) % w, i, j)
+                        for i, j in elements if i != x or j != y)[2:]
+                self.set_selected(sel)
         else:
-            # multiple matches: select next one
-            x, y = self.sel
-            w, h = self.page_dim(self.page, False)
-            sel = min(((j - y) % h, (i - x) % w, i, j)
-                      for i, j in elements if i != x or j != y)[2:]
-            self.set_selected(sel)
+            # pass input to capture function
+            self.capture_cb(event)
+
+    def capture_input (self, cb):
+        """Capture all keyboard input.
+
+Takes a function to pass all keypress events to.  Returns whether the capture
+was allowed.
+
+"""
+        if self.capture_cb is None:
+            self.event_handler.keys_active = False
+            self.capture_cb = cb
+            return True
+        else:
+            return False
+
+    def release_input (self, cb):
+        """Undo the capture set up through Menu.capture_input.
+
+Takes the same function as was used to capture input; if this does not match,
+no change is made.  Returns whether input was released (or was never captured
+to start with).
+
+"""
+        if cb is self.capture_cb:
+            self.event_handler.keys_active = True
+            self.capture_cb = None
+            return True
+        elif self.capture_cb is None:
+            return True
+        else:
+            return False
 
     def update (self):
         if self.re_init:
@@ -472,7 +556,8 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5)
+                Button('Options', self.set_page, 5),
+                Entry(self, 'aoeu')
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)

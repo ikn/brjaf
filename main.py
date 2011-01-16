@@ -130,7 +130,6 @@ files: loaded image cache (before resize).
         self.running = False
         self.imgs = {}
         self.files = {}
-        self.mod_ctrl = self.mod_shift = self.mod_alt = False
         # load display settings
         conf.FULLSCREEN = conf.get('fullscreen', conf.FULLSCREEN)
         conf.RES_W = conf.get('res', conf.RES_W)
@@ -172,9 +171,6 @@ EventHandler_instance in its event_handler attribute.
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
-            (conf.KEYS_CTRL, lambda e: setattr(self, 'mod_ctrl', True), h),
-            (conf.KEYS_SHIFT, lambda e: setattr(self, 'mod_shift', True), h),
-            (conf.KEYS_ALT, lambda e: setattr(self, 'mod_alt', True), h)
         ], False, self._quit)
         try:
             self.backends.append(self.backend)
@@ -273,7 +269,6 @@ text: determine how to get the required image (what to do with data).
 
     def _update (self):
         """Run the backend's update method."""
-        self.mod_ctrl = self.mod_shift = self.mod_alt = False
         self.backend.event_handler.update()
         self.backend.update()
 
@@ -324,16 +319,16 @@ text: determine how to get the required image (what to do with data).
         # clear image cache
         self.imgs = {}
 
-    def minimise (self, event):
-        """Minimise the window or fullscreen display, pausing if possible."""
-        if isinstance(self.backend, Level):
-             self.backend.pause()
-        pygame.display.iconify()
-
-    def toggle_fullscreen (self, event = None):
+    def toggle_fullscreen (self, *args):
         """Toggle fullscreen mode."""
         conf.FULLSCREEN = not conf.FULLSCREEN
         self.refresh_display()
+
+    def minimise (self, *args):
+        """Minimise the display, pausing if possible (and necessary)."""
+        if isinstance(self.backend, Level):
+             self.backend.pause()
+        pygame.display.iconify()
 
     def _resize_cb (self, event):
         """Callback to handle a window resize."""

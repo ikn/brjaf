@@ -81,7 +81,30 @@ class Editor:
         self.editing = True
         self.dirty = True
 
-    def insert_simple (self, event = None):
+    def move (self, event, mods, direction):
+        """Callback for arrow keys."""
+        mods = (mods & conf.MOD_SHIFT, mods & conf.MOD_ALT)
+        shrink = mods[direction <= 1]
+        grow = mods[direction > 1]
+        if shrink ^ grow:
+            self.editor.resize(1 if grow else -1, direction)
+            self.dirty = True
+        else:
+            # move selection
+            self.puzzle.move_selected(direction)
+
+    def pause (self, *args):
+        self.game.start_backend(PauseMenu, self)
+
+    def switch_puzzle (self, *args):
+        self.editing = not self.editing
+        if self.editing:
+            self.puzzle = self.editor
+        else:
+            self.puzzle = self.selector
+        self.dirty = True
+
+    def insert_simple (self, *args):
         if not self.editing:
             return
         # get type and ID of selected tile in selector puzzle
@@ -109,31 +132,10 @@ class Editor:
             return
         print 'insert', event.unicode
 
-    def del_block (self, event = None):
+    def del_block (self, *args):
         """Delete any block in the currently selected tile."""
         if self.editing:
             self.editor.rm_block(None, *self.editor.selected)
-
-    def move (self, event, direction):
-        """Callback for arrow keys."""
-        shrink, grow = self.game.mod_alt, self.game.mod_shift
-        if shrink ^ grow:
-            self.editor.resize(1 if grow else -1, direction)
-            self.dirty = True
-        else:
-            # move selection
-            self.puzzle.move_selected(direction)
-
-    def switch_puzzle (self, event = None):
-        self.editing = not self.editing
-        if self.editing:
-            self.puzzle = self.editor
-        else:
-            self.puzzle = self.selector
-        self.dirty = True
-
-    def pause (self, event = None):
-        self.game.start_backend(PauseMenu, self)
 
     def save (self):
         print '\'' + self.editor.definition() + '\''
