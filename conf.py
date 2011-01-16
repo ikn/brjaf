@@ -59,11 +59,9 @@ MOVE_REPEAT_DELAY = .1
 MENU_INITIAL_DELAY = .3
 MENU_REPEAT_DELAY = .15
 
-# mechanics
+# puzzle
 FORCE_MOVE = 2
 FORCE_ARROW = 2
-RAND_B_RATIO = 0.1
-RAND_S_RATIO = 0.1
 
 # IDs
 MIN_ID = -6
@@ -86,7 +84,7 @@ B_BOUNCE = 4
 
 WALL = 99
 
-# puzzle colours
+# colours
 BG = (255, 255, 255)
 surface_colours = {
     S_BLANK: (255, 255, 255),
@@ -100,12 +98,22 @@ block_colours = {
     B_BOUNCE: (100, 255, 100)
 }
 
+# messages
+MSG_FONT = 'orbitron-black.otf'
+MSG_TEXT_COLOUR = (0, 0, 0)
+MSG_LINE_HEIGHT = .1 # proportion of smaller screen dimension
+MSG_PADDING_TOP = .02 # proportion of smaller screen dimension
+MSG_PADDING_BOTTOM = .01 # proportion of smaller screen dimension
+MSG_MAX_HEIGHT = .2 # proportion of screen height
+
 # menu
 PUZZLE_FONT = 'orbitron-black.otf'
 PUZZLE_TEXT_COLOUR = (0, 0, 0)
 PUZZLE_TEXT_SELECTED_COLOUR = (255, 0, 0)
 PUZZLE_TEXT_SPECIAL_COLOUR = (0, 180, 0)
 PUZZLE_TEXT_UPPER = True
+RAND_B_RATIO = 0.1
+RAND_S_RATIO = 0.1
 MIN_CHAR_ID = 32
 MAX_CHAR_ID = 126
 SELECTED_CHAR_ID_OFFSET = 128
@@ -118,14 +126,6 @@ BLANK_LEVEL = '5 5'
 SEL_COLOUR = (255, 0, 0)
 MIN_SEL_WIDTH = 1
 SEL_WIDTH = .05 # proportion of tile size
-
-# puzzle messages
-MSG_FONT = 'orbitron-black.otf'
-MSG_TEXT_COLOUR = (0, 0, 0)
-MSG_LINE_HEIGHT = .1 # proportion of smaller screen dimension
-MSG_PADDING_TOP = .02 # proportion of smaller screen dimension
-MSG_PADDING_BOTTOM = .01 # proportion of smaller screen dimension
-MSG_MAX_HEIGHT = .2 # proportion of screen height
 
 def load_conf ():
     try:

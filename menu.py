@@ -203,6 +203,11 @@ CHANGE_EVENT: the text in the entry changed.
         self.menu = menu
         self.max_size = max_size
         self.focused = False
+        self._known_keys = dict((k, self.toggle_focus) for k in conf.KEYS_NEXT)
+        self._known_keys.update({
+            pygame.K_ESCAPE: self.toggle_focus,
+            #pygame.K_BACKSPACE: self.backspace
+        })
 
     def toggle_focus (self):
         """Toggle whether the entry is focused.
@@ -215,16 +220,22 @@ possible to toggle focus; the return value indicates whether it was possible.
         if self.focused:
             self.focused = False
             err = 'something else captured input while {0} had it'.format(self)
-            assert self.menu.release_input(self.input), err
+            assert self.menu.release_input(self), err
         else:
-            captured = self.menu.capture_input(self.input)
+            captured = self.menu.capture_input(self)
             if captured:
                 self.focused = True
             return captured
 
     def input (self, event):
         """Takes a keypress event to alter the entry's text."""
-        print event
+        k = event.key
+        u = event.unicode
+        if k in self._known_keys:
+            self._known_keys[k]()
+        elif u:
+            print u
+        # TODO
 
 class Select (Option):
     pass
@@ -252,7 +263,7 @@ class Menu:
         self.game = game
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
-        self.capture_cb = None
+        self.captured = False
         self.init(*extra_args)
         self.set_page(0)
 
@@ -471,58 +482,58 @@ class Menu:
         self.set_page(-1)
 
     def _access_keys (self, event):
-        if self.capture_cb is None:
-            # select options by pressing their first letter
-            try:
-                elements = self.keys[event.unicode]
-            except KeyError:
-                # no matches
-                return
-            if len(elements) == 1:
-                # one match: select it and try to click it
-                self.set_selected(elements[0])
-                self.select()
-            else:
-                # multiple matches: select next one
-                x, y = self.sel
-                w, h = self.page_dim(self.page, False)
-                sel = min(((j - y) % h, (i - x) % w, i, j)
-                        for i, j in elements if i != x or j != y)[2:]
-                self.set_selected(sel)
-        else:
+        if self.captured:
             # pass input to capture function
-            self.capture_cb(event)
+            self.captured.input(event)
+            return
+        # select options by pressing their first letter
+        try:
+            elements = self.keys[event.unicode]
+        except KeyError:
+            # no matches
+            return
+        if len(elements) == 1:
+            # one match: select it and try to click it
+            self.set_selected(elements[0])
+            self.select()
+        else:
+            # multiple matches: select next one
+            x, y = self.sel
+            w, h = self.page_dim(self.page, False)
+            sel = min(((j - y) % h, (i - x) % w, i, j)
+                    for i, j in elements if i != x or j != y)[2:]
+            self.set_selected(sel)
 
-    def capture_input (self, cb):
+    def capture_input (self, element):
         """Capture all keyboard input.
 
-Takes a function to pass all keypress events to.  Returns whether the capture
-was allowed.
+Takes an element to pass all keypress events to the input method of.  Returns
+whether the capture was allowed.
 
 """
-        if self.capture_cb is None:
-            self.event_handler.keys_active = False
-            self.capture_cb = cb
-            return True
-        else:
+        if self.captured:
             return False
+        else:
+            self.event_handler.keys_active = False
+            self.captured = element
+            return True
 
-    def release_input (self, cb):
+    def release_input (self, element):
         """Undo the capture set up through Menu.capture_input.
 
-Takes the same function as was used to capture input; if this does not match,
-no change is made.  Returns whether input was released (or was never captured
+Takes the same element as was used to capture input; if this does not match, no
+change is made.  Returns whether input was released (or was never captured
 to start with).
 
 """
-        if cb is self.capture_cb:
+        if element is self.captured:
             self.event_handler.keys_active = True
-            self.capture_cb = None
+            self.captured = False
             return True
-        elif self.capture_cb is None:
-            return True
-        else:
+        elif self.captured:
             return False
+        else:
+            return True
 
     def update (self):
         if self.re_init:
