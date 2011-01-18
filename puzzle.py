@@ -280,7 +280,6 @@ class Puzzle:
                            **tiler_kw_args)
         self.physics = physics
         self.selected = None
-        self.render_text = game.fonts.text
         self.img = game.img
         self.init()
 

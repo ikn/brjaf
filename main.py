@@ -243,6 +243,7 @@ text: determine how to get the required image (what to do with data).
             return self.imgs[key]
         # else new: load/render
         if text:
+            # TODO: if this raises pygame.error, fallback to some standard font
             img = self.fonts.text(*data)
         else:
             # also cache loaded images to reduce file I/O

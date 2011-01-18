@@ -4,7 +4,7 @@ from random import randrange, randint
 import pygame
 import evthandler as eh
 
-from puzzle import Puzzle
+from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
@@ -54,14 +54,8 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
 """
 
     def __init__ (self, text, special = False):
-        chars = []
-        for c in text:
-            o = ord(c)
-            if o >= conf.MIN_CHAR_ID and o <= conf.MAX_CHAR_ID:
-                chars.append(c)
-            else:
-                chars.append(' ')
-        self.text = ''.join(chars)
+        self.text = u''
+        self._append(text)
         self.size = len(self.text)
         self.selectable = False
         self.pos = None
@@ -72,9 +66,23 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
         self.special = False
 
     def __str__ (self):
-        return '<{0}: \'{1}\'>'.format(self.__class__.__name__, self.text)
+        text = self.text.encode('utf-8')
+        return '<{0}: \'{1}\'>'.format(self.__class__.__name__, text)
 
     __repr__ = __str__
+
+    def _append (self, text):
+        """Append a string to the end of the text, properly."""
+        if not isinstance(text, unicode):
+            text = text.decode('utf-8')
+        chars = []
+        for c in text:
+            o = ord(c)
+            if o >= conf.MIN_CHAR_ID and o <= conf.MAX_CHAR_ID:
+                chars.append(c)
+            else:
+                chars.append(u' ')
+        self.text += ''.join(chars)
 
     def update (self):
         """Make any colour changes (selected, special) visible."""
@@ -234,8 +242,16 @@ possible to toggle focus; the return value indicates whether it was possible.
         if k in self._known_keys:
             self._known_keys[k]()
         elif u:
-            print u
-        # TODO
+            text = self.text
+            if k == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif k == pygame.K_DELETE:
+                pass
+            elif self.size != self.max_size:
+                self._append(u)
+            if text != self.text:
+                self.size = len(self.text)
+                self.menu.refresh_text()
 
 class Select (Option):
     pass
@@ -347,13 +363,60 @@ class Menu:
         self.set_selected(select)
         self.dirty = True
 
+    def refresh_text (self, page_ID = None):
+        # redraw text for the given page ID, or the current page
+        if page_ID is None:
+            page_ID = self.page_ID
+            page = self.page
+        else:
+            page = self.pages[page_ID]
+        change = set()
+        # update both old and new sets of covered tiles
+        puzzle = self.grids[page_ID]
+        rm_w = self._prev_dim[0]
+        rm_x0 = (self.grid_w - rm_w) / 2 + 1
+        add_w, h = self.page_dim(page)
+        add_x0 = (self.grid_w - add_w) / 2 + 1
+        x0 = min(rm_x0, add_x0)
+        y0 = (self.grid_h - h) / 2 + 1
+        w = max(rm_w + rm_x0 - x0, add_w + add_x0 - x0)
+        for rm in (True, False):
+            for col in page:
+                for y, text in enumerate(col):
+                    y = y0 + 2 * y
+                    if rm:
+                        # remove letters
+                        for x in xrange(w):
+                            x += x0
+                            b = puzzle.grid[x][y][1]
+                            if b is not None and b.type > conf.MAX_ID:
+                                puzzle.rm_block(None, x, y)
+                            # replace with original random block, if any
+                            try:
+                                b = (BoringBlock, self.definition[1][(x, y)])
+                            except KeyError:
+                                pass
+                            else:
+                                puzzle.add_block(b, x, y)
+                    else:
+                        # add letters back
+                        text.pos = (add_x0, y)
+                        for x, c in enumerate(text.text):
+                            o = ord(c)
+                            if text.special:
+                                o += conf.SPECIAL_CHAR_ID_OFFSET
+                            puzzle.add_block((BoringBlock, o), add_x0 + x, y)
+                x0 += max(0, *(text.size + 1 for text in col))
+        # reapply selection
+        self.set_selected(self.sel, True)
+
     def generate_grid (self):
         # generate a grid containing random stuff and this page's text
         if self.definition is None:
             # create definition for random surfaces and blocks
             definition = ['{0} {1}\n'.format(self.grid_w, self.grid_h)]
-            data = ((0, conf.RAND_B_RATIO), (conf.MIN_ID, conf.RAND_S_RATIO))
-            for min_ID, rand_ratio in data:
+            for min_ID, rand_ratio in ((0, conf.RAND_B_RATIO),
+                                       (conf.MIN_ID, conf.RAND_S_RATIO)):
                 things = {} # blocks or surfaces depending on the iteration
                 i = 0
                 n = int(min(rand_ratio, 1) * self.grid_w * self.grid_h)
@@ -370,7 +433,7 @@ class Menu:
             definition = self.definition
         things = dict(definition[1])
         # letters count as blocks; add to the right part of the definition
-        w, h = self.page_dim(self.page)
+        self._prev_dim = (w, h) = self.page_dim(self.page)
         x0 = (self.grid_w - w) / 2 + 1
         y0 = (self.grid_h - h) / 2 + 1
         for col in self.page:
@@ -404,11 +467,11 @@ class Menu:
         except IndexError:
             return None
 
-    def set_selected (self, sel):
+    def set_selected (self, sel, force = False):
         # set the currently selected option
         if sel is not None:
             sel = list(sel)
-        if sel != self.sel:
+        if sel != self.sel or force:
             if self.sel is not None:
                 # deselect current option
                 self.selected().set_selected(False)
