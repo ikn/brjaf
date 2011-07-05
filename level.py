@@ -38,7 +38,7 @@ class PauseMenu (menu.Menu):
             ),
         ))
 
-class Level:
+class Level (object):
     def __init__ (self, game, event_handler, ID = None, definition = None):
         # add gameplay key handlers
         args = (

@@ -18,12 +18,12 @@ import conf
 #          appearance (select from multiple themes)
 #          sound/music volume
 # custom levels delete/rename/duplicate
-# need another colour for special AND selected
 
 # Text
 # | Option
 # | | Button
-# | | | Entry (event:change)
+# | | | Entry
+# | | | | TextEntry
 # | | | | KeyEntry
 # | | Select (abstract; .wrap; event:change; put arrows in edge blocks; text contains %x to replace with current value)
 # | | | DiscreteSelect (.options)
@@ -31,7 +31,7 @@ import conf
 # | | | | FloatSelect (.dp)
 # Image (.w, .h, .img, .border = (size, colour))
 
-class Text:
+class Text (object):
     """A simple widget to display (immutable) text.
 
     CONSTRUCTOR
@@ -72,18 +72,29 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
 
     __repr__ = __str__
 
-    def _append (self, text):
+    def _append (self, string):
         """Append a string to the end of the text, properly."""
-        if not isinstance(text, unicode):
-            text = text.decode('utf-8')
+        if not isinstance(string, unicode):
+            string = string.decode('utf-8')
         chars = []
-        for c in text:
+        for c in string:
             o = ord(c)
             if o >= conf.MIN_CHAR_ID and o <= conf.MAX_CHAR_ID:
                 chars.append(c)
             else:
                 chars.append(u' ')
         self.text += ''.join(chars)
+
+    def _insert (self, index, string):
+        """Insert a string at some index into the text, properly.
+
+insert(index, string)
+
+"""
+        end = self.text[index:]
+        self.text = self.text[:index]
+        self._append(string)
+        self.text += end
 
     def update (self):
         """Make any colour changes (selected, special) visible."""
@@ -192,31 +203,27 @@ CLICK_EVENT: the button was clicked.
         self._throw_event(Button.CLICK_EVENT)
 
 class Entry (Button):
-    """A fixed-size text entry widget.  Inherits from Button.
+    """Abstract class for widgets that capture input.  Inherits from Button.
 
     CONSTRUCTOR
 
-Entry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE)
+Entry(menu, text)
 
 menu: the Menu instance this widget is attached to.
-max_size: maximum number of characters the entry can hold.
-initial_text: text to start with; gets truncated to max_size.
-allowed: list/string of allowed characters (initial_text is not checked for
-         compliance).
 
     EVENTS
 
-CHANGE_EVENT: the text in the entry changed.
+CHANGE_EVENT: the value stored in the entry changed.
 
 """
 
-    def __init__ (self, menu, max_size, initial_text = '', allowed = conf.PRINTABLE):
-        Button.__init__(self, initial_text[:max_size], self.toggle_focus)
+    def __init__ (self, menu, text):
+        Button.__init__(self, text, self.toggle_focus)
         self.menu = menu
-        self.max_size = max_size
         self.focused = False
-        self.allowed = set(allowed)
         self._toggle_keys = set(conf.KEYS_NEXT + (pygame.K_ESCAPE,))
+
+    CHANGE_EVENT = 2
 
     def toggle_focus (self):
         """Toggle whether the entry is focused.
@@ -237,30 +244,87 @@ possible to toggle focus; the return value indicates whether it was possible.
             return captured
 
     def input (self, event):
+        """Takes a keypress event and handles focus toggling."""
+        if event.key in self._toggle_keys:
+            self.toggle_focus()
+
+class TextEntry (Entry):
+    """A fixed-size text entry widget.  Inherits from Entry.
+
+    CONSTRUCTOR
+
+Entry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE)
+
+menu: the Menu instance this widget is attached to.
+max_size: maximum number of characters the entry can hold.
+initial_text: text to start with; gets truncated to max_size.
+allowed: list/string of allowed characters (initial_text is not checked for
+         compliance).
+
+The widget takes up one more tile than max_size.
+
+"""
+
+    def __init__ (self, menu, max_size, initial_text = '', allowed = conf.PRINTABLE):
+        Entry.__init__(self, menu, initial_text[:max_size])
+        self.max_size = max_size
+        self.cursor = self.size
+        self.allowed = set(allowed)
+
+    def _update_cursor (self):
+        """Update the cursor position."""
+        if self.focused:
+            self.cursor = max(0, min(self.cursor, self.size))
+            self.puzzle.select(self.pos[0] + self.cursor, self.pos[1])
+        else:
+            self.puzzle.deselect()
+
+    def toggle_focus (self):
+        """Also handle cursor updating."""
+        focused = self.focused
+        Entry.toggle_focus(self)
+        if focused != self.focused:
+            self._update_cursor()
+
+    def input (self, event):
         """Takes a keypress event to alter the entry's text."""
+        Entry.input(self, event)
         k = event.key
         u = event.unicode
-        if k in self._toggle_keys:
-            self.toggle_focus()
-        elif u:
-            text = self.text
-            if k == pygame.K_BACKSPACE:
-                self.text = self.text[:-1]
-            elif k == pygame.K_DELETE:
-                pass
-            elif u in self.allowed and self.size != self.max_size:
-                self._append(u)
-            if text != self.text:
-                self.size = len(self.text)
-                self.menu.refresh_text()
+        text = self.text
+        if u in self.allowed and self.size != self.max_size:
+            self._insert(self.cursor, u)
+            self.cursor += 1
+        elif k == pygame.K_BACKSPACE:
+            if self.cursor > 0:
+                self.text = self.text[:self.cursor - 1] + \
+                            self.text[self.cursor:]
+                self.cursor -= 1
+        elif k == pygame.K_DELETE:
+            if self.cursor < self.max_size:
+                self.text = self.text[:self.cursor] + \
+                            self.text[self.cursor + 1:]
+        elif k in conf.KEYS_LEFT:
+            self.cursor -= 1
+        elif k in conf.KEYS_RIGHT:
+            self.cursor += 1
+        elif k == pygame.K_HOME:
+            self.cursor = 0
+        elif k == pygame.K_END:
+            self.cursor = self.max_size
+        if text != self.text:
+            self.size = len(self.text)
+            self.menu.refresh_text()
+            self._throw_event(Entry.CHANGE_EVENT)
+        self._update_cursor()
 
 class Select (Option):
     pass
 
-class Image:
+class Image (object):
     pass
 
-class Menu:
+class Menu (object):
     def __init__ (self, game, event_handler, *extra_args):
         event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
         args = (
@@ -631,7 +695,8 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5)
+                Button('Options', self.set_page, 5),
+                TextEntry(self, 5, '!')
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)

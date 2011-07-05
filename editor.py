@@ -25,7 +25,7 @@ class PauseMenu (menu.Menu):
             ),
         ))
 
-class Editor:
+class Editor (object):
     def __init__ (self, game, event_handler, ID = None):
         # add event handlers
         event_handler.add_event_handlers({pygame.KEYDOWN: self.insert})

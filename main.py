@@ -11,7 +11,7 @@ from menu import MainMenu
 from level import Level
 import conf
 
-class Fonts:
+class Fonts (object):
     """Collection of pygame.font.Font instances."""
 
     def __init__ (self, *fonts):
@@ -103,7 +103,7 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
                 h += font.size(line)[1]
         return surface
 
-class Game:
+class Game (object):
     """Handles backends.
 
     METHODS

@@ -54,7 +54,7 @@ def force_axis (direction, force):
 def opposite_dir (direction):
     return (direction + 2) % 4
 
-class BoringBlock:
+class BoringBlock (object):
     def __init__ (self, type_ID, puzzle, pos, orientation = None):
         self.type = type_ID
         self.pos = list(pos)
@@ -263,7 +263,7 @@ class Block (BoringBlock):
 
         self.handled = True
 
-class Puzzle:
+class Puzzle (object):
     def __init__ (self, game, definition, physics = False, **tiler_kw_args):
         self.lines = definition.split('\n')
         first = self._next_ints(self.lines)
@@ -370,15 +370,18 @@ class Puzzle:
         # set selected tile
         if self.selected is not None:
             self.deselect()
-        self.grid[x][y][2] = True
-        self.selected = [x, y]
-        self.tiler.change(self.selected)
+        if self.selected != [x, y]:
+            self.grid[x][y][2] = True
+            self.selected = [x, y]
+            self.tiler.change(self.selected)
 
     def deselect (self):
         # deselect currently selected tile
-        x, y = self.selected
-        self.grid[x][y][2] = False
-        self.tiler.change(self.selected)
+        if self.selected is not None:
+            x, y = self.selected
+            self.grid[x][y][2] = False
+            self.tiler.change(self.selected)
+            self.selected = None
 
     def move_selected (self, direction, amount = 1):
         # move selection relative to current position
