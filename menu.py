@@ -18,6 +18,7 @@ import conf
 #          appearance (select from multiple themes)
 #          sound/music volume
 # custom levels delete/rename/duplicate
+# need another colour for special AND selected
 
 # Text
 # | Option
@@ -191,14 +192,17 @@ CLICK_EVENT: the button was clicked.
         self._throw_event(Button.CLICK_EVENT)
 
 class Entry (Button):
-    """A text entry widget.  Inherits from Button.
+    """A fixed-size text entry widget.  Inherits from Button.
 
     CONSTRUCTOR
 
-Entry(menu, initial_text = ''[, max_size])
+Entry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE)
 
 menu: the Menu instance this widget is attached to.
 max_size: maximum number of characters the entry can hold.
+initial_text: text to start with; gets truncated to max_size.
+allowed: list/string of allowed characters (initial_text is not checked for
+         compliance).
 
     EVENTS
 
@@ -206,16 +210,13 @@ CHANGE_EVENT: the text in the entry changed.
 
 """
 
-    def __init__ (self, menu, initial_text = '', max_size = None):
-        Button.__init__(self, initial_text, self.toggle_focus)
+    def __init__ (self, menu, max_size, initial_text = '', allowed = conf.PRINTABLE):
+        Button.__init__(self, initial_text[:max_size], self.toggle_focus)
         self.menu = menu
         self.max_size = max_size
         self.focused = False
-        self._known_keys = dict((k, self.toggle_focus) for k in conf.KEYS_NEXT)
-        self._known_keys.update({
-            pygame.K_ESCAPE: self.toggle_focus,
-            #pygame.K_BACKSPACE: self.backspace
-        })
+        self.allowed = set(allowed)
+        self._toggle_keys = set(conf.KEYS_NEXT + (pygame.K_ESCAPE,))
 
     def toggle_focus (self):
         """Toggle whether the entry is focused.
@@ -239,15 +240,15 @@ possible to toggle focus; the return value indicates whether it was possible.
         """Takes a keypress event to alter the entry's text."""
         k = event.key
         u = event.unicode
-        if k in self._known_keys:
-            self._known_keys[k]()
+        if k in self._toggle_keys:
+            self.toggle_focus()
         elif u:
             text = self.text
             if k == pygame.K_BACKSPACE:
                 self.text = self.text[:-1]
             elif k == pygame.K_DELETE:
                 pass
-            elif self.size != self.max_size:
+            elif u in self.allowed and self.size != self.max_size:
                 self._append(u)
             if text != self.text:
                 self.size = len(self.text)
@@ -500,7 +501,7 @@ class Menu:
                     self.selected(sel).set_selected(True)
             self.sel = sel
 
-    def move_selection (self, event, mods, amount, axis = 1):
+    def move_selection (self, key, event, mods, amount, axis = 1):
         # change the selected option
         if self.sel is None:
             return
@@ -523,12 +524,12 @@ class Menu:
         # change selection
         self.set_selected(sel)
 
-    def alter (self, event, mods, amount):
+    def alter (self, key, event, mods, amount):
         if self.sel is None:
             return
         element = self.page[self.sel[0]][self.sel[1]]
         if not isinstance(element, Select):
-            self.move_selection(None, amount, 0)
+            self.move_selection(None, None, None, amount, 0)
             return
         # TODO: alter
 
@@ -630,8 +631,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5),
-                Entry(self, 'aoeu')
+                Button('Options', self.set_page, 5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)

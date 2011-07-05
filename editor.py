@@ -81,7 +81,7 @@ class Editor:
         self.editing = True
         self.dirty = True
 
-    def move (self, event, mods, direction):
+    def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
         mods = (mods & conf.MOD_SHIFT, mods & conf.MOD_ALT)
         shrink = mods[direction <= 1]

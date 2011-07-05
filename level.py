@@ -87,7 +87,7 @@ class Level:
         self.solving = False
         self.solving_index = None
 
-    def move (self, event, mods, direction):
+    def move (self, key, event, mods, direction):
         # key callback to move player
         if not self.solving:
             for player in self.players:

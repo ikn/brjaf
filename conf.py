@@ -1,6 +1,7 @@
 import os
 
 import pygame as pg
+import string
 
 # timing
 FPS = 10
@@ -112,6 +113,7 @@ PUZZLE_TEXT_COLOUR = (0, 0, 0)
 PUZZLE_TEXT_SELECTED_COLOUR = (255, 0, 0)
 PUZZLE_TEXT_SPECIAL_COLOUR = (0, 180, 0)
 PUZZLE_TEXT_UPPER = True
+PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
 RAND_B_RATIO = 0.1
 RAND_S_RATIO = 0.1
 MIN_CHAR_ID = 32
