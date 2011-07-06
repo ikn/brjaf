@@ -6,7 +6,6 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# document
 # undo/redo with u/ctrl-u (store grid each step up to conf.UNDO_LEVELS and just restore then set puzzle dirty)
 # reset to blank with r (confirm)
 # quicksave with q - no need to solve, goes into drafts, gets autonamed (notify)
@@ -19,7 +18,7 @@ import conf
     # can also add more solutions later; these are viewed through some 'watch solutions' menu for each puzzle
     # replaying solutions should support manual advance to the next input frame and display current frame's input at bottom
 
-class PauseMenu (menu.Menu):
+class Menu (menu.Menu):
     def init (self, editor):
         menu.Menu.init(self, (
             (
@@ -30,6 +29,31 @@ class PauseMenu (menu.Menu):
         ))
 
 class Editor (object):
+    """A puzzle editor (Game backend).
+
+Takes a (custom) puzzle ID to load, else starts editing a blank puzzle.
+
+    METHODS
+
+load
+store_state
+move
+menu
+switch_puzzle
+insert
+del_block
+undo
+save
+
+    ATTRIBUTES
+
+selector: puzzle used to select blocks/surfaces to add.
+editor: the puzzle being edited.
+history: a list of past puzzle definitions.
+state: the current position in the history.
+
+"""
+
     def __init__ (self, game, event_handler, ID = None):
         # add event handlers
         args = (
@@ -44,10 +68,11 @@ class Editor (object):
             (conf.KEYS_UP, [(self.move, (1,))]) + args,
             (conf.KEYS_RIGHT, [(self.move, (2,))]) + args,
             (conf.KEYS_DOWN, [(self.move, (3,))]) + args,
-            (conf.KEYS_BACK, self.pause, od),
+            (conf.KEYS_BACK, self.menu, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
-            (conf.KEYS_INSERT, self.insert_simple, od),
-            (conf.KEYS_DEL, self.del_block, od)
+            (conf.KEYS_INSERT, self.insert, od),
+            (conf.KEYS_DEL, self.del_block, od),
+            (conf.KEYS_UNDO, self.undo) + args
         ])
         self.event_handler = event_handler
 
@@ -68,7 +93,7 @@ class Editor (object):
         self.load(ID)
 
     def load (self, ID = None):
-        # load a level
+        """Load a level with the given ID, else a blank level."""
         self.ID = None if (ID is None or not ID[0]) else str(ID[1])
         if ID is None:
             # blank grid
@@ -83,12 +108,34 @@ class Editor (object):
         self.puzzle = self.editor
         self.editing = True
         self.dirty = True
+        self.history = []
+        self.state = -1
+        self.store_state()
+
+    def store_state (self):
+        """Store the current state in history."""
+        defn = self.editor.definition()
+        # if nothing changed, return
+        try:
+            if self.history[self.state] == defn:
+                return
+        except IndexError:
+            pass
+        # purge 'future' states
+        self.history = self.history[:self.state + 2]
+        self.history.append(defn)
+        # purge oldest state if need to (don't need to increment state, then)
+        if len(self.history) > conf.UNDO_LEVELS > 0:
+            self.history.pop()
+        else:
+            self.state += 1
+        print len(self.history)
 
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
         resize = False
         if self.editing:
-            # only resize if editing
+            # can only resize if editing
             mods = (mods & conf.MOD_SHIFT, mods & conf.MOD_ALT)
             shrink = bool(mods[direction <= 1])
             grow = bool(mods[direction > 1])
@@ -97,14 +144,17 @@ class Editor (object):
             # resize puzzle
             self.editor.resize(1 if grow else -1, direction)
             self.dirty = True
+            self.store_state()
         else:
             # move selection
             self.puzzle.move_selected(direction)
 
-    def pause (self, *args):
-        self.game.start_backend(PauseMenu, self)
+    def menu (self, *args):
+        """Show the editor menu."""
+        self.game.start_backend(Menu, self)
 
     def switch_puzzle (self, *args):
+        """Switch selected puzzle between editor and block selector."""
         self.editing = not self.editing
         if self.editing:
             self.puzzle = self.editor
@@ -112,7 +162,8 @@ class Editor (object):
             self.puzzle = self.selector
         self.dirty = True
 
-    def insert_simple (self, *args):
+    def insert (self, *args):
+        """Insert a block or surface at the current position."""
         if not self.editing:
             return
         # get type and ID of selected tile in selector puzzle
@@ -135,19 +186,41 @@ class Editor (object):
             self.editor.add_block((BoringBlock, ID), x, y)
         else:
             self.editor.set_surface(x, y, ID)
+        self.store_state()
 
     def del_block (self, *args):
         """Delete any block in the currently selected tile."""
         if self.editing:
             self.editor.rm_block(None, *self.editor.selected)
+            self.store_state()
+
+    def undo (self, key, event, mods):
+        """Undo or redo changes to the puzzle."""
+        do = False
+        if mods & conf.MOD_CTRL:
+            # redo
+            if self.state < len(self.history) - 1:
+                self.state += 1
+                do = True
+        else:
+            # undo
+            if self.state > 0:
+                self.state -= 1
+                do = True
+        # Puzzle.load returns whether it was resized
+        if do and self.editor.load(self.history[self.state]):
+            self.dirty = True
 
     def save (self):
-        print '\'' + self.editor.definition() + '\''
+        """Show the menu to save the current puzzle."""
+        print '\'' + self.history[self.state] + '\''
 
     def update (self):
+        """Do nothing (needed by Game)."""
         pass
 
     def draw (self, screen):
+        """Draw the puzzles."""
         if self.dirty:
             screen.fill(conf.BG)
         drawn = self.puzzle.draw(screen, self.dirty, screen.get_size())

@@ -264,24 +264,11 @@ class Block (BoringBlock):
         self.handled = True
 
 class Puzzle (object):
-    def __init__ (self, game, definition, physics = False, **tiler_kw_args):
-        self.lines = definition.split('\n')
-        first = self._next_ints(self.lines)
-        try:
-            self.w, self.h = first
-        except ValueError:
-            # also got default surface
-            self.w, self.h, self.default_s = first
-        else:
-            self.default_s = conf.DEFAULT_SURFACE
-        self.size = (self.w, self.h)
-        # grid handler
-        self.tiler = Tiler(self.w, self.h, self.draw_tile, track_tiles = False,
-                           **tiler_kw_args)
+    def __init__ (self, game, defn, physics = False, **tiler_kw_args):
         self.physics = physics
         self.selected = None
         self.img = game.img
-        self.init()
+        self.load(defn, **tiler_kw_args)
 
     def _next_ints (self, lines):
         try:
@@ -322,6 +309,43 @@ class Puzzle (object):
             ID, i, j = line
             self.grid[i][j][0] = ID
             line = self._next_ints(lines)
+
+    def load (self, defn, **tiler_kw_args):
+        """Initialise puzzle from a definition.
+
+Returns whether the puzzle was resized (may leave areas outside the puzzle
+dirty).
+
+"""
+        self.lines = defn.split('\n')
+        # dimensions in first line
+        first = self._next_ints(self.lines)
+        try:
+            w, h = first
+        except ValueError:
+            # also got default surface
+            w, h, default_s = first
+        else:
+            default_s = conf.DEFAULT_SURFACE
+        if hasattr(self, 'tiler'):
+            # already initialised: need to resize first
+            resized = self.resize_abs(w, h)
+        else:
+            # create grid handler
+            self.tiler = Tiler(w, h, self.draw_tile, track_tiles = False,
+                               **tiler_kw_args)
+            resized = False
+        # initialise
+        self.w = w
+        self.h = h
+        self.size = (self.w, self.h)
+        self.default_s = default_s
+        # preserve selection
+        sel = self.selected
+        self.init()
+        if sel is not None:
+            self.select(*sel)
+        return resized
 
     def add_block (self, block, x, y):
         # add a block, optionally creating it first
@@ -393,7 +417,7 @@ class Puzzle (object):
 
     def resize (self, amount, direction):
         if amount == 0:
-            return
+            return False
         # resize one tile at a time
         # get new grid size
         axis = direction % 2
@@ -402,7 +426,7 @@ class Puzzle (object):
         size[axis] += sign
         if size[axis] == 0:
             # can't shrink
-            return
+            return False
         # get amount to offset everything by
         offset = [0, 0]
         offset[axis] += (sign - (1 if direction > 1 else -1)) / 2
@@ -443,6 +467,10 @@ class Puzzle (object):
                 self.selected = None
             self.select(*selected)
         self.resize(amount - sign, direction)
+        return True
+
+    def resize_abs (self, w, h):
+        return self.resize(w - self.w, 2) or  self.resize(h - self.h, 3)
 
     def definition (self):
         """Return a definition string for the puzzle's current state."""

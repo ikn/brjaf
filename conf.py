@@ -50,6 +50,7 @@ KEYS_RESET = (pg.K_r,)
 KEYS_TAB = (pg.K_TAB, pg.K_F8, pg.K_SLASH, pg.K_BACKSLASH)
 KEYS_INSERT = KEYS_NEXT + (pg.K_i, pg.K_INSERT)
 KEYS_DEL = (pg.K_DELETE, pg.K_d)
+KEYS_UNDO = (pg.K_u, pg.K_z)
 
 MOD_SHIFT = pg.KMOD_LSHIFT | pg.KMOD_RSHIFT | pg.KMOD_SHIFT
 MOD_CTRL = pg.KMOD_LCTRL| pg.KMOD_RCTRL| pg.KMOD_CTRL
@@ -129,6 +130,7 @@ BLANK_LEVEL = '5 5'
 SEL_COLOUR = (255, 0, 0)
 MIN_SEL_WIDTH = 1
 SEL_WIDTH = .05 # proportion of tile size
+UNDO_LEVELS = 0
 
 def load_conf ():
     try:
