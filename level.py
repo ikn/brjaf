@@ -18,11 +18,11 @@ import conf
 #       "I should start charging for these solutions." (used solutions often)
 #       "I knew you'd be back." (used solutions often)
 #       "I hope you got here by accident." (haven't spent long on the puzzle)
-#       "Do you _really_ want to stoop this low?"
+#       "Do you really want to stoop this low?"
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-#   "Keep trying" / "Do it for me"
+#   "Keep trying" / "Solve it for me"
 
 def get_levels (custom = False):
     path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN

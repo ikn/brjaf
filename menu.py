@@ -25,7 +25,7 @@ import conf
 # | | | Entry
 # | | | | TextEntry
 # | | | | KeyEntry
-# | | Select (abstract; .wrap; event:change; put arrows in edge blocks; text contains %x to replace with current value)
+# | | Select (abstract; event:change; put arrows (<>) in edge blocks; text contains %x to replace with current value)
 # | | | DiscreteSelect (.options)
 # | | | RangeSelect (.min, .max, .step)
 # | | | | FloatSelect (.dp)
@@ -213,7 +213,8 @@ menu: the Menu instance this widget is attached to.
 
     EVENTS
 
-CHANGE_EVENT: the value stored in the entry changed.
+CHANGE_EVENT: the value stored in the entry changed; called after the change is
+              made.
 
 """
 
@@ -263,13 +264,20 @@ allowed: list/string of allowed characters (initial_text is not checked for
 
 The widget takes up one more tile than max_size.
 
+    EVENTS
+
+CURSOR_EVENT: the cursor changed position; called after the position update.
+
 """
 
-    def __init__ (self, menu, max_size, initial_text = '', allowed = conf.PRINTABLE):
+    def __init__ (self, menu, max_size, initial_text = '',
+                  allowed = conf.PRINTABLE):
         Entry.__init__(self, menu, initial_text[:max_size])
         self.max_size = max_size
         self.cursor = self.size
         self.allowed = set(allowed)
+
+    CURSOR_EVENT = 3
 
     def _update_cursor (self):
         """Update the cursor position."""
@@ -291,10 +299,13 @@ The widget takes up one more tile than max_size.
         Entry.input(self, event)
         k = event.key
         u = event.unicode
+        cursor = self.cursor
         text = self.text
+        # insert character if printable
         if u in self.allowed and self.size != self.max_size:
             self._insert(self.cursor, u)
             self.cursor += 1
+        # backspace deletes previous character, delete the one under the cursor
         elif k == pygame.K_BACKSPACE:
             if self.cursor > 0:
                 self.text = self.text[:self.cursor - 1] + \
@@ -304,10 +315,11 @@ The widget takes up one more tile than max_size.
             if self.cursor < self.max_size:
                 self.text = self.text[:self.cursor] + \
                             self.text[self.cursor + 1:]
+        # movement keys
         elif k in conf.KEYS_LEFT:
-            self.cursor -= 1
+            self.cursor = (cursor - 1) % (self.size + 1)
         elif k in conf.KEYS_RIGHT:
-            self.cursor += 1
+            self.cursor = (cursor + 1) % (self.size + 1)
         elif k == pygame.K_HOME:
             self.cursor = 0
         elif k == pygame.K_END:
@@ -316,6 +328,8 @@ The widget takes up one more tile than max_size.
             self.size = len(self.text)
             self.menu.refresh_text()
             self._throw_event(Entry.CHANGE_EVENT)
+        if cursor != self.cursor:
+            self._throw_event(TextEntry.CURSOR_EVENT)
         self._update_cursor()
 
 class Select (Option):

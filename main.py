@@ -11,6 +11,8 @@ from menu import MainMenu
 from level import Level
 import conf
 
+restarting = True
+
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
 
@@ -110,10 +112,13 @@ class Game (object):
 
 start_backend
 quit_backend
+set_backend_attrs
+img
 run
+restart
 refresh_display
-minimise
 toggle_fullscreen
+minimise
 
     ATTRIBUTES
 
@@ -171,7 +176,7 @@ EventHandler_instance in its event_handler attribute.
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
-        ], False, self._quit)
+        ], False, self.quit)
         try:
             self.backends.append(self.backend)
         except AttributeError:
@@ -194,7 +199,7 @@ If the running backend is the last (root) one, exit the game.
         try:
             self.backend = self.backends.pop()
         except IndexError:
-            self.running = False
+            self.quit()
         else:
             self.backend.dirty = True
         depth -= 1
@@ -264,8 +269,8 @@ text: determine how to get the required image (what to do with data).
         self.imgs[key] = img
         return img
 
-    def _quit (self, event = None):
-        """pygame.QUIT event callback."""
+    def quit (self, event = None):
+        """Quit the game."""
         self.running = False
 
     def _update (self):
@@ -297,6 +302,12 @@ text: determine how to get the required image (what to do with data).
         # save display settings
         conf.set('fullscreen', conf.FULLSCREEN)
         conf.set('res', conf.RES_W)
+
+    def restart (self):
+        """Restart the game."""
+        global restarting
+        restarting = True
+        self.quit()
 
     def refresh_display (self):
         """Update the display mode from conf, and notify the backend."""
@@ -341,6 +352,8 @@ if __name__ == '__main__':
         pygame.display.set_icon(pygame.image.load(conf.WINDOW_ICON))
     if conf.WINDOW_TITLE is not None:
         pygame.display.set_caption(conf.WINDOW_TITLE)
-    Game().run()
+    while restarting:
+        restarting = False
+        Game().run()
 
 pygame.quit()
