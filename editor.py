@@ -7,7 +7,7 @@ import conf
 
 # TODO:
 # reset to blank with r (confirm)
-# quicksave with q - no need to solve, goes into drafts, gets autonamed (notify)
+# quicksave with q (notify) - no need to solve, goes into drafts (conf.LEVEL_DIR_DRAFT), gets autonamed
 # save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve)
 # level comment, solution
 # new solution format: t,m,t,m,t,...m
@@ -42,6 +42,7 @@ switch_puzzle
 insert
 del_block
 undo
+redo
 save
 
     ATTRIBUTES
@@ -55,23 +56,29 @@ state: the current position in the history.
 
     def __init__ (self, game, event_handler, ID = None):
         # add event handlers
-        args = (
+        pzl_args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
             max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
         )
+        menu_args = (
+            eh.MODE_ONDOWN_REPEAT,
+            max(int(conf.MENU_INITIAL_DELAY * conf.FPS), 1),
+            max(int(conf.MENU_REPEAT_DELAY * conf.FPS), 1)
+        )
         od = eh.MODE_ONDOWN
         held = eh.MODE_HELD
         event_handler.add_key_handlers([
-            (conf.KEYS_LEFT, [(self.move, (0,))]) + args,
-            (conf.KEYS_UP, [(self.move, (1,))]) + args,
-            (conf.KEYS_RIGHT, [(self.move, (2,))]) + args,
-            (conf.KEYS_DOWN, [(self.move, (3,))]) + args,
+            (conf.KEYS_LEFT, [(self.move, (0,))]) + pzl_args,
+            (conf.KEYS_UP, [(self.move, (1,))]) + pzl_args,
+            (conf.KEYS_RIGHT, [(self.move, (2,))]) + pzl_args,
+            (conf.KEYS_DOWN, [(self.move, (3,))]) + pzl_args,
             (conf.KEYS_BACK, self.menu, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
             (conf.KEYS_INSERT, self.insert, od),
             (conf.KEYS_DEL, self.del_block, od),
-            (conf.KEYS_UNDO, self.undo) + args
+            (conf.KEYS_UNDO, self.undo) + menu_args,
+            (conf.KEYS_REDO, self.redo) + menu_args
         ])
         self.event_handler = event_handler
 
@@ -134,7 +141,7 @@ state: the current position in the history.
         resize = False
         if self.editing:
             # can only resize if editing
-            mods = (mods & conf.MOD_SHIFT, mods & conf.MOD_ALT)
+            mods = (mods & pygame.KMOD_SHIFT, mods & pygame.KMOD_ALT)
             shrink = bool(mods[direction <= 1])
             grow = bool(mods[direction > 1])
             resize = shrink ^ grow
@@ -192,22 +199,21 @@ state: the current position in the history.
             self.editor.rm_block(None, *self.editor.selected)
             self.store_state()
 
-    def undo (self, key, event, mods):
-        """Undo or redo changes to the puzzle."""
-        do = False
-        if mods & conf.MOD_CTRL:
-            # redo
-            if self.state < len(self.history) - 1:
-                self.state += 1
-                do = True
-        else:
-            # undo
-            if self.state > 0:
-                self.state -= 1
-                do = True
-        # Puzzle.load returns whether it was resized
-        if do and self.editor.load(self.history[self.state]):
-            self.dirty = True
+    def undo (self, *args):
+        """Undo changes to the puzzle."""
+        if self.state > 0:
+            self.state -= 1
+            # Puzzle.load returns whether it was resized
+            if self.editor.load(self.history[self.state]):
+                self.dirty = True
+
+    def redo (self, *args):
+        """Redo undone changes."""
+        if self.state < len(self.history) - 1:
+            self.state += 1
+            # Puzzle.load returns whether it was resized
+            if self.editor.load(self.history[self.state]):
+                self.dirty = True
 
     def save (self):
         """Show the menu to save the current puzzle."""

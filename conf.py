@@ -1,7 +1,7 @@
 import os
+import string
 
 import pygame as pg
-import string
 
 # timing
 FPS = 10
@@ -17,6 +17,7 @@ FONT_DIR = DATA_DIR + 'font' + os.sep
 CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
 CONF_FILE = CONF_DIR + 'conf'
 LEVEL_DIR_CUSTOM = CONF_DIR + 'lvl' + os.sep
+LEVEL_DIR_DRAFT = LEVEL_DIR_CUSTOM + 'draft' + os.sep
 
 # CLI
 DEBUG = False
@@ -46,15 +47,13 @@ KEYS_MINIMISE = (pg.K_F10,)
 KEYS_FULLSCREEN = (pg.K_F11,)
 KEYS_BACK = (pg.K_BACKSPACE, pg.K_ESCAPE)
 KEYS_NEXT = (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER)
-KEYS_RESET = (pg.K_r,)
+KEYS_RESET = ((pg.K_r, 0, True))
 KEYS_TAB = (pg.K_TAB, pg.K_F8, pg.K_SLASH, pg.K_BACKSLASH)
 KEYS_INSERT = KEYS_NEXT + (pg.K_i, pg.K_INSERT)
 KEYS_DEL = (pg.K_DELETE, pg.K_d)
-KEYS_UNDO = (pg.K_u, pg.K_z)
-
-MOD_SHIFT = pg.KMOD_LSHIFT | pg.KMOD_RSHIFT | pg.KMOD_SHIFT
-MOD_CTRL = pg.KMOD_LCTRL| pg.KMOD_RCTRL| pg.KMOD_CTRL
-MOD_ALT = pg.KMOD_LALT| pg.KMOD_RALT| pg.KMOD_ALT
+KEYS_UNDO = ((pg.K_u, 0, True), (pg.K_z, pg.KMOD_CTRL, True))
+KEYS_REDO = ((pg.K_r, pg.KMOD_CTRL, True), (pg.K_y, pg.KMOD_CTRL, True),
+             (pg.K_z, (pg.KMOD_CTRL, pg.KMOD_SHIFT), True))
 
 MOVE_INITIAL_DELAY = .2
 MOVE_REPEAT_DELAY = .1
@@ -130,7 +129,7 @@ BLANK_LEVEL = '5 5'
 SEL_COLOUR = (255, 0, 0)
 MIN_SEL_WIDTH = 1
 SEL_WIDTH = .05 # proportion of tile size
-UNDO_LEVELS = 3
+UNDO_LEVELS = 0
 
 def load_conf ():
     try:
