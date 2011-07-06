@@ -10,13 +10,13 @@ MENU_FPS = 30
 MENU_FRAME = 1. / MENU_FPS
 
 # paths
+DATA_DIR = ''
+IMG_DIR = DATA_DIR + 'img' + os.sep
+LEVEL_DIR_MAIN = DATA_DIR + 'lvl' + os.sep
+FONT_DIR = DATA_DIR + 'font' + os.sep
 CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
 CONF_FILE = CONF_DIR + 'conf'
-IMG_DIR = 'img' + os.sep
-LEVEL_DIR = 'lvl' + os.sep
-LEVEL_DIR_MAIN = LEVEL_DIR + 'main' + os.sep
-LEVEL_DIR_CUSTOM = LEVEL_DIR + 'custom' + os.sep
-FONT_DIR = 'font' + os.sep
+LEVEL_DIR_CUSTOM = CONF_DIR + 'lvl' + os.sep
 
 # CLI
 DEBUG = False

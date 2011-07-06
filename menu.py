@@ -709,8 +709,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5),
-                TextEntry(self, 5, '!')
+                Button('Options', self.set_page, 5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
@@ -781,10 +780,5 @@ class MainMenu (Menu):
         self.set_page(4)
 
     def _with_custom_lvl (self, obj):
-        """Call function or start backend with self._custom_lvl_ID."""
-        if hasattr(obj, '__call__'):
-            # function; give level to it
-            obj(self._custom_lvl_ID)
-        else:
-            # backend class: start backend
-            self.game.start_backend(obj, self._custom_lvl_ID)
+        """Start backend with self._custom_lvl_ID."""
+        self.game.start_backend(obj, self._custom_lvl_ID)

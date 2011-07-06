@@ -7,13 +7,18 @@ import conf
 
 # TODO:
 # document
-# insert:
-#  tab to another grid containing every block/goal/surface and KEY_CONTINUE or K_i on main grid to insert; or
-#  press a number to insert that ID and use b/g/s to switch between block, goal and surface modes
+# insert: press a number to insert that ID and use b/g/s to switch between block, goal and surface modes
 # undo/redo with u/ctrl-u (store grid each step up to conf.UNDO_LEVELS and just restore then set puzzle dirty)
-# reset to blank with r
-# quicksave with q - no need to solve, goes into drafts, gets autonamed
+# reset to blank with r (confirm)
+# quicksave with q - no need to solve, goes into drafts, gets autonamed (notify)
 # save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve)
+# level comment, solution
+# new solution format: t,m,t,m,t,...m
+    # t is number of frames to wait; can be omitted to default to some setting ('solution speed')
+    # m is move to make on the next frame (has >=1 of l/u/r/d)
+    # solution lines start with : and first one, given by solving, is 'primary' solution
+    # can also add more solutions later; these are viewed through some 'watch solutions' menu for each puzzle
+    # replaying solutions should support manual advance to the next input frame and display current frame's input at bottom
 
 class PauseMenu (menu.Menu):
     def init (self, editor):
@@ -113,7 +118,8 @@ class Editor (object):
         is_block = col == 0 and row <= conf.MAX_ID
         if is_block:
             ID = row
-        elif col == 1:
+        # will be here for col = 0 if past end of blocks
+        elif col == 0 or col == 1:
             ID = row
             if ID > conf.MAX_ID:
                 ID = conf.DEFAULT_SURFACE
