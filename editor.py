@@ -7,7 +7,6 @@ import conf
 
 # TODO:
 # document
-# insert: press a number to insert that ID and use b/g/s to switch between block, goal and surface modes
 # undo/redo with u/ctrl-u (store grid each step up to conf.UNDO_LEVELS and just restore then set puzzle dirty)
 # reset to blank with r (confirm)
 # quicksave with q - no need to solve, goes into drafts, gets autonamed (notify)
@@ -33,7 +32,6 @@ class PauseMenu (menu.Menu):
 class Editor (object):
     def __init__ (self, game, event_handler, ID = None):
         # add event handlers
-        event_handler.add_event_handlers({pygame.KEYDOWN: self.insert})
         args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
@@ -88,10 +86,15 @@ class Editor (object):
 
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
-        mods = (mods & conf.MOD_SHIFT, mods & conf.MOD_ALT)
-        shrink = mods[direction <= 1]
-        grow = mods[direction > 1]
-        if shrink ^ grow:
+        resize = False
+        if self.editing:
+            # only resize if editing
+            mods = (mods & conf.MOD_SHIFT, mods & conf.MOD_ALT)
+            shrink = bool(mods[direction <= 1])
+            grow = bool(mods[direction > 1])
+            resize = shrink ^ grow
+        if resize:
+            # resize puzzle
             self.editor.resize(1 if grow else -1, direction)
             self.dirty = True
         else:
@@ -132,11 +135,6 @@ class Editor (object):
             self.editor.add_block((BoringBlock, ID), x, y)
         else:
             self.editor.set_surface(x, y, ID)
-
-    def insert (self, event):
-        if not self.editing or event.key not in conf.KEYS_NUM:
-            return
-        print 'insert', event.unicode
 
     def del_block (self, *args):
         """Delete any block in the currently selected tile."""
