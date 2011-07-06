@@ -130,7 +130,7 @@ BLANK_LEVEL = '5 5'
 SEL_COLOUR = (255, 0, 0)
 MIN_SEL_WIDTH = 1
 SEL_WIDTH = .05 # proportion of tile size
-UNDO_LEVELS = 0
+UNDO_LEVELS = 3
 
 def load_conf ():
     try:

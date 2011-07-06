@@ -6,7 +6,6 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# undo/redo with u/ctrl-u (store grid each step up to conf.UNDO_LEVELS and just restore then set puzzle dirty)
 # reset to blank with r (confirm)
 # quicksave with q - no need to solve, goes into drafts, gets autonamed (notify)
 # save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve)
@@ -122,14 +121,13 @@ state: the current position in the history.
         except IndexError:
             pass
         # purge 'future' states
-        self.history = self.history[:self.state + 2]
+        self.history = self.history[:self.state + 1]
         self.history.append(defn)
         # purge oldest state if need to (don't need to increment state, then)
         if len(self.history) > conf.UNDO_LEVELS > 0:
-            self.history.pop()
+            self.history.pop(0)
         else:
             self.state += 1
-        print len(self.history)
 
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
