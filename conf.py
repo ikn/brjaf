@@ -26,7 +26,7 @@ SILENT = SILENT and not DEBUG
 
 # window
 RES_F = pg.display.list_modes()[0]
-RES_W = (640, 480)
+RES_W = (720, 480)
 MIN_RES_W = (320, 240)
 RESIZABLE = True
 FULLSCREEN = False
@@ -99,6 +99,11 @@ block_colours = {
     B_BOUNCE: (100, 255, 100)
 }
 
+# selection
+SEL_COLOUR = (255, 0, 0)
+MIN_SEL_WIDTH = 1
+SEL_WIDTH = .05 # proportion of tile size
+
 # messages
 MSG_FONT = 'orbitron-black.otf'
 MSG_TEXT_COLOUR = (0, 0, 0)
@@ -126,9 +131,6 @@ NUM_UNCOMPLETED_LEVELS = 5
 
 # editor
 BLANK_LEVEL = '5 5'
-SEL_COLOUR = (255, 0, 0)
-MIN_SEL_WIDTH = 1
-SEL_WIDTH = .05 # proportion of tile size
 UNDO_LEVELS = 0
 
 def load_conf ():

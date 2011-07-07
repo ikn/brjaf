@@ -8,6 +8,7 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
+# bug: when change size
 # document Menu and derivatives
 # home/end keys
 # scrollable element sets - set maximum number and scroll if exceed it
@@ -43,6 +44,7 @@ text: the text to display.
     ATTRIBUTES
 
 text: the widget's text.
+fixed: whether the text is fixed (won't change).
 size: the length of the text.
 selectable: whether the widget can be selected (always False).
 special: whether the text is displayed in a different style; defaults to False.
@@ -56,6 +58,7 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
 
     def __init__ (self, text, special = False):
         self.text = u''
+        self.fixed = True
         self._append(text)
         self.size = len(self.text)
         self.selectable = False
@@ -101,7 +104,7 @@ insert(index, string)
         # move blocks
         change = set()
         pos = list(self.pos)
-        for dx in xrange(self.size):
+        for dx in xrange(len(self.text)):
             change.add(tuple(pos))
             ID = ord(self.text[dx])
             if self.selected:
@@ -211,6 +214,11 @@ Entry(menu, text)
 
 menu: the Menu instance this widget is attached to.
 
+    ATTRIBUTES
+
+menu: as given.
+focused: whether the Entry has keyboard focus.
+
     EVENTS
 
 CHANGE_EVENT: the value stored in the entry changed; called after the change is
@@ -264,6 +272,12 @@ allowed: list/string of allowed characters (initial_text is not checked for
 
 The widget takes up one more tile than max_size.
 
+    ATTRIBUTES:
+
+current_size: the number of characters currently entered.
+cursor: the cursor position (>= 0).
+allowed: as given.
+
     EVENTS
 
 CURSOR_EVENT: the cursor changed position; called after the position update.
@@ -273,8 +287,10 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
     def __init__ (self, menu, max_size, initial_text = '',
                   allowed = conf.PRINTABLE):
         Entry.__init__(self, menu, initial_text[:max_size])
-        self.max_size = max_size
-        self.cursor = self.size
+        self.current_size = self.size
+        self.fixed = False
+        self.size = max_size + 1
+        self.cursor = self.current_size
         self.allowed = set(allowed)
 
     CURSOR_EVENT = 3
@@ -282,7 +298,7 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
     def _update_cursor (self):
         """Update the cursor position."""
         if self.focused:
-            self.cursor = max(0, min(self.cursor, self.size))
+            self.cursor = max(0, min(self.cursor, self.current_size))
             self.puzzle.select(self.pos[0] + self.cursor, self.pos[1])
         else:
             self.puzzle.deselect()
@@ -302,7 +318,7 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         cursor = self.cursor
         text = self.text
         # insert character if printable
-        if u in self.allowed and self.size != self.max_size:
+        if u in self.allowed and self.current_size != self.size - 1:
             self._insert(self.cursor, u)
             self.cursor += 1
         # backspace deletes previous character, delete the one under the cursor
@@ -312,20 +328,20 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
                             self.text[self.cursor:]
                 self.cursor -= 1
         elif k == pygame.K_DELETE:
-            if self.cursor < self.max_size:
+            if self.cursor <= self.size:
                 self.text = self.text[:self.cursor] + \
                             self.text[self.cursor + 1:]
         # movement keys
         elif k in conf.KEYS_LEFT:
-            self.cursor = (cursor - 1) % (self.size + 1)
+            self.cursor = (cursor - 1) % (self.current_size + 1)
         elif k in conf.KEYS_RIGHT:
-            self.cursor = (cursor + 1) % (self.size + 1)
+            self.cursor = (cursor + 1) % (self.current_size + 1)
         elif k == pygame.K_HOME:
             self.cursor = 0
         elif k == pygame.K_END:
-            self.cursor = self.max_size
+            self.cursor = self.size - 1
         if text != self.text:
-            self.size = len(self.text)
+            self.current_size = len(self.text)
             self.menu.refresh_text()
             self._throw_event(Entry.CHANGE_EVENT)
         if cursor != self.cursor:
@@ -432,7 +448,7 @@ class Menu (object):
         self.keys = {}
         for i, col in enumerate(self.page):
             for j, element in enumerate(col):
-                if isinstance(element, Option):
+                if isinstance(element, Option) and element.fixed:
                     # ignore caps - add for each variation
                     c = element.text[0]
                     ks = set((c, c.lower(), c.upper()))
@@ -468,33 +484,30 @@ class Menu (object):
         x0 = min(rm_x0, add_x0)
         y0 = (self.grid_h - h) / 2 + 1
         w = max(rm_w + rm_x0 - x0, add_w + add_x0 - x0)
-        for rm in (True, False):
-            for col in page:
-                for y, text in enumerate(col):
-                    y = y0 + 2 * y
-                    if rm:
-                        # remove letters
-                        for x in xrange(w):
-                            x += x0
-                            b = puzzle.grid[x][y][1]
-                            if b is not None and b.type > conf.MAX_ID:
-                                puzzle.rm_block(None, x, y)
-                            # replace with original random block, if any
-                            try:
-                                b = (BoringBlock, self.definition[1][(x, y)])
-                            except KeyError:
-                                pass
-                            else:
-                                puzzle.add_block(b, x, y)
+        for col in page:
+            for y, text in enumerate(col):
+                y = y0 + 2 * y
+                # remove letters
+                for x in xrange(w):
+                    x += x0
+                    b = puzzle.grid[x][y][1]
+                    if b is not None and b.type > conf.MAX_ID:
+                        puzzle.rm_block(None, x, y)
+                    # replace with original random block, if any
+                    try:
+                        b = (BoringBlock, self.definition[1][(x, y)])
+                    except KeyError:
+                        pass
                     else:
-                        # add letters back
-                        text.pos = (add_x0, y)
-                        for x, c in enumerate(text.text):
-                            o = ord(c)
-                            if text.special:
-                                o += conf.SPECIAL_CHAR_ID_OFFSET
-                            puzzle.add_block((BoringBlock, o), add_x0 + x, y)
-                x0 += max(0, *(text.size + 1 for text in col))
+                        puzzle.add_block(b, x, y)
+                # add letters back
+                text.pos = (add_x0, y)
+                for x, c in enumerate(text.text):
+                    o = ord(c)
+                    if text.special:
+                        o += conf.SPECIAL_CHAR_ID_OFFSET
+                    puzzle.add_block((BoringBlock, o), add_x0 + x, y)
+            x0 += max(0, *(text.size + 1 for text in col))
         # reapply selection
         self.set_selected(self.sel, True)
 
@@ -718,7 +731,8 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5)
+                Button('Options', self.set_page, 5),
+                TextEntry(self, 10)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)

@@ -7,7 +7,7 @@ import level
 import conf
 
 # TODO:
-# save menu option (can save in drafts, though)
+# save draft option
 # level message, solution
 # new solution format: t,m,t,m,t,...m
     # t is number of frames to wait; can be omitted to default to some setting ('solution speed')
@@ -55,7 +55,7 @@ class Menu (menu.Menu):
 
     def _level_won (self):
         # callback for solving the created level
-        print '\'' + self._defn + '\''
+        # TODO: save (ask for name (max. conf.LEVEL_NAME_LENGTH digits, no spaces)), give notification
         del self._defn
         self.game.quit_backend()
 
@@ -73,6 +73,8 @@ class Menu (menu.Menu):
         # ask the player to solve the puzzle
         self._defn = defn
         self.game.quit_backend()
+        # show message making it clear what's going on
+        defn += '\n@Solve the level first.'
         self.game.start_backend(level.LevelBackend, None, defn, SolveMenu,
                                 self._level_won)
 
