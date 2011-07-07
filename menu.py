@@ -339,7 +339,7 @@ class Image (object):
     pass
 
 class Menu (object):
-    def __init__ (self, game, event_handler, *extra_args):
+    def __init__ (self, game, event_handler, page_ID = None, *extra_args):
         event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
         args = (
             eh.MODE_ONDOWN_REPEAT,
@@ -359,13 +359,14 @@ class Menu (object):
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
         self.captured = False
-        rtn = self.init(*extra_args)
-        if rtn is None:
-            self.set_page(0)
-        else:
-            page_ID, select = rtn
-            self.set_page(page_ID)
-            self.set_selected(select)
+        self._default_selections = {}
+        # call subclass's init method
+        page_ID_sub = self.init(*extra_args)
+        # page_ID argument to constructor takes precedence over return value
+        # from init and defaults to 0
+        if page_ID is None:
+            page_ID = page_ID_sub or 0
+        self.set_page(page_ID)
 
     def init (self, pages):
         self.pages = []
@@ -442,8 +443,11 @@ class Menu (object):
                             self.keys[k] = [(i, j)]
         # set selection
         if select is None:
-            # select first selectable option if possible
-            select = [0, 0]
+            # use default selection, then first selectable option if possible
+            try:
+                select = self._default_selections[self.page_ID]
+            except KeyError:
+                select = [0, 0]
         self.set_selected(select)
         self.dirty = True
 

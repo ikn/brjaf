@@ -17,31 +17,24 @@ import conf
 
 class Menu (menu.Menu):
     def init (self, editor):
+        self._default_selections[1] = (0, 2)
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
                 menu.Button('Save', editor.save),
-                menu.Button('Reset', self.game.start_backend, ResetMenu,
-                            editor, 2),
+                menu.Button('Reset', self.set_page, 1),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),
-        ))
-
-class ResetMenu (menu.Menu):
-    def _reset (self, editor, levels_up):
-        editor._do_reset()
-        self.game.quit_backend(levels_up)
-
-    def init (self, editor, levels_up = 1):
-        # levels_up is number of backends to quit to get back to editor
-        menu.Menu.init(self, (
             (
                 menu.Text('Reset?'),
-                menu.Button('Yes', self._reset, editor, levels_up),
-                menu.Button('No', self.game.quit_backend)
-            ),
+                menu.Button('Yes', self._reset, editor),
+                menu.Button('No', self.back)
+            )
         ))
-        return (0, (0, 2))
+
+    def _reset (self, editor):
+        editor._do_reset()
+        self.game.quit_backend()
 
 class Editor (object):
     """A puzzle editor (Game backend).
@@ -231,7 +224,7 @@ state: the current position in the history.
 
     def menu (self, *args):
         """Show the editor menu."""
-        self.game.start_backend(Menu, self)
+        self.game.start_backend(Menu, 0, self)
 
     def _do_reset (self):
         # actually reset the puzzle
@@ -241,7 +234,7 @@ state: the current position in the history.
 
     def reset (self, *args):
         """Confirm resetting the puzzle."""
-        self.game.start_backend(ResetMenu, self)
+        self.game.start_backend(Menu, 1, self)
 
     def save (self):
         """Show the menu to save the current puzzle."""

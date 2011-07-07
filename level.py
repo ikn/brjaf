@@ -95,7 +95,7 @@ class Level (object):
         # else solving (ignore input)
 
     def pause (self, *args):
-        self.game.start_backend(PauseMenu, self)
+        self.game.start_backend(PauseMenu, None, self)
 
     def reset (self, *args):
         if not self.solving:
