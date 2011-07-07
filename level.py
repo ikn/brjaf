@@ -41,16 +41,18 @@ def defn_wins (defn):
     return lvl.won
 
 class PauseMenu (menu.Menu):
-    """The standard pause menu when playing a level."""
+    """The standard pause menu when playing a level.
+
+Takes the LevelBackend instance.
+
+"""
 
     def init (self, level):
-        menu.Menu.init(self, (
-            (
-                menu.Button('Continue', self.game.quit_backend),
-                menu.Button('Help', level.solve),
-                menu.Button('Quit', self.game.quit_backend, 2)
-            ),
-        ))
+        menu.Menu.init(self, ((
+            menu.Button('Continue', self.game.quit_backend),
+            menu.Button('Help', level.solve),
+            menu.Button('Quit', self.game.quit_backend, 2)
+        ),))
 
 class Level (object):
     """A simple Puzzle wrapper to handle drawing.
@@ -115,11 +117,11 @@ win_cb: as given.
 Takes ID and definition arguments as in the constructor.
 
 """
-        self.ID = None if (ID is None or ID[0]) else str(ID[1])
+        self.ID = None if ID is None or ID[0] else ID[1]
         if ID is not None:
             # get data from file
             path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
-            with open(path + str(ID[1])) as f:
+            with open(path + ID[1]) as f:
                 definition = f.read()
         self.puzzle = Puzzle(self.game, definition, True, border = 1)
         self.players = [b for b in self.puzzle.blocks

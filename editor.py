@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import evthandler as eh
 
@@ -17,30 +19,137 @@ import conf
     # replaying solutions should support manual advance to the next input frame and display current frame's input at bottom
 
 class SolveMenu (menu.Menu):
-    """The pause menu for solving a created level."""
+    """The pause menu for solving a created level.
+
+Takes the Level backend instance.
+
+"""
 
     def init (self, level):
+        menu.Menu.init(self, ((
+            menu.Button('Continue', self.game.quit_backend),
+            menu.Button('Quit', self.game.quit_backend, 2)
+        ),))
+
+class SaveMenu (menu.Menu):
+    """Menu for saving a created level.
+
+Further arguments: (directory, defn, fn = ''[, success_cb[, success_cb_args]])
+
+directory: directory to save in.
+defn: level definition to save.
+fn: text to initialise filename text entry with.
+success_cb: a function to call with the filename the level is saved under on
+            success.
+success_cb_args: list of arguments to pass to success_cb after the filename.
+
+"""
+
+    def __init__ (self, *args, **kw):
+        menu.Menu.__init__(self, *args, **kw)
+        self._entry.toggle_focus()
+
+    def init (self, directory, defn, fn = '', success_cb = None,
+              success_cb_args = ()):
+        if not fn:
+            fn = ''
+        # most bad characters will be caught when we try to create the file,
+        # but space would create problems in listing the names, os.sep
+        # would create files in directories if they exist, and : does weird
+        # things without errors on Windows
+        not_allowed = ' :' + os.sep
+        allowed = set(c for c in conf.PRINTABLE if c not in not_allowed)
+        self._entry = menu.TextEntry(self, conf.LEVEL_NAME_LENGTH, fn, allowed)
+        self.directory = directory
+        self.defn = defn
+        self._success_cb = success_cb
+        self._success_cb_args = success_cb_args
+
+        self._default_selections[2] = (0, 2)
         menu.Menu.init(self, (
             (
-                menu.Button('Continue', self.game.quit_backend),
-                menu.Button('Quit', self.game.quit_backend, 2)
-            ),
+                menu.Text('Level name'),
+                self._entry,
+                menu.Button('Save', self._save),
+                menu.Button('Cancel', self.game.quit_backend)
+            ), (
+                menu.Text('Level name'),
+                menu.Text('is blank.')
+            ), (
+                menu.Text('Overwrite?'),
+                menu.Button('Yes', self._save, True),
+                menu.Button('No', self.back)
+            ), (
+                menu.Text('Invalid'),
+                menu.Text('filename')
+            ), (
+                menu.Text('Can\'t write'),
+                menu.Text('to that file.')
+            )
         ))
 
+    def _save (self, overwrite = False):
+        d = self.directory
+        fn = self._entry.text
+        # check for blank filename
+        if fn == '':
+            self.set_page(1)
+            return
+        # confirm overwrite if exists
+        if not overwrite and os.path.exists(d + fn):
+            self.set_page(2)
+            return
+        # create parent
+        if not os.path.exists(d):
+            os.makedirs(d)
+        # try to write
+        try:
+            with open(d + fn, 'w') as f:
+                f.write(self.defn)
+        except IOError, e:
+            if e.errno == 22:
+                # invalid filename
+                self.set_page(3)
+            else:
+                # unknown error
+                self.set_page(4)
+            return
+        # success
+        self.game.quit_backend()
+        if self._success_cb is not None:
+            self._success_cb(fn, *self._success_cb_args)
+
+def success_cb (fn, editor):
+    """Callback for SaveMenu on successful save.
+
+This function shows a notification and sets the current level ID to the name
+given to the level.
+
+"""
+    editor.ID = fn
+    editor.game.start_backend(Menu, 4, editor)
+    # refresh entries in main menu
+    editor.game.set_backend_attrs(menu.MainMenu, 're_init', True)
+
 class Menu (menu.Menu):
-    """The editor pause menu."""
+    """The editor pause menu.
+
+Takes the Editor instance.
+
+"""
 
     def init (self, editor):
+        self._editor = editor
         self._default_selections[1] = (0, 2)
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
-                menu.Button('Save', self._save, editor),
+                menu.Button('Save', self._save),
                 menu.Button('Reset', self.set_page, 1),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ), (
                 menu.Text('Reset?'),
-                menu.Button('Yes', self._reset, editor),
+                menu.Button('Yes', self._reset),
                 menu.Button('No', self.back)
             ), (
                 menu.Text('There must be'),
@@ -50,23 +159,30 @@ class Menu (menu.Menu):
                 menu.Text('The puzzle starts'),
                 menu.Text('with the player'),
                 menu.Text('already winning.')
+            ), (
+                menu.Text('Level saved.'),
+                menu.Button('OK', self.back)
             )
         ))
 
     def _level_won (self):
         # callback for solving the created level
-        # TODO: save (ask for name (max. conf.LEVEL_NAME_LENGTH digits, no spaces)), give notification
-        del self._defn
         self.game.quit_backend()
+        # ask for level name
+        self.game.start_backend(SaveMenu, None, conf.LEVEL_DIR_CUSTOM,
+                                self._defn, self._editor.ID, success_cb,
+                                (self._editor,))
+        del self._defn
 
-    def _save (self, editor):
+    def _save (self):
+        e = self._editor
         # try to save the current puzzle
         # check if there's a player block
-        if not any(b.type == conf.B_PLAYER for b in editor.editor.blocks):
+        if not any(b.type == conf.B_PLAYER for b in e.editor.blocks):
             self.set_page(2)
             return
         # check if already winning: create a puzzle and run it for one frame
-        defn = editor.history[editor.state]
+        defn = e.history[e.state]
         if level.defn_wins(defn):
             self.set_page(3)
             return
@@ -79,7 +195,7 @@ class Menu (menu.Menu):
                                 self._level_won)
 
     def _reset (self, editor):
-        editor._do_reset()
+        self._editor._do_reset()
         self.game.quit_backend()
 
 class Editor (object):
@@ -103,6 +219,7 @@ reset
     ATTRIBUTES
 
 game: Game instance.
+ID: as given.
 selector: puzzle used to select blocks/surfaces to add.
 editor: the puzzle being edited.
 puzzle: the current visible puzzle (editor or selector).
@@ -113,8 +230,8 @@ state: the current position in the history.
 """
 
     def __init__ (self, game, event_handler, ID = None):
-        # add event handlers
         self.game = game
+        # add event handlers
         pzl_args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
@@ -162,11 +279,14 @@ state: the current position in the history.
         if ID is None:
             # blank grid
             definition = conf.BLANK_LEVEL
+            self.ID = None
         else:
             # get data from file
-            path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
-            with open(path + str(ID[1])) as f:
+            path = conf.LEVEL_DIR_CUSTOM
+            #path = conf.LEVEL_DIR_DRAFT if ID[0] else conf.LEVEL_DIR_CUSTOM
+            with open(path + ID[1]) as f:
                 definition = f.read()
+            self.ID = ID[1]
         self.editor = Puzzle(self.game, definition, border = 1)
         self.editor.select(0, 0)
         self.puzzle = self.editor

@@ -132,6 +132,7 @@ NUM_UNCOMPLETED_LEVELS = 5
 # editor
 BLANK_LEVEL = '5 5'
 UNDO_LEVELS = 0
+LEVEL_NAME_LENGTH = 3
 
 def load_conf ():
     try:

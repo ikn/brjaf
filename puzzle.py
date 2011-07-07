@@ -3,8 +3,8 @@
 from os.path import exists
 
 import pygame
-
 from tiler import Tiler, draw_rect
+
 import conf
 
 # TODO:

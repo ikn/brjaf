@@ -278,7 +278,7 @@ The widget takes up one more tile than max_size.
 
 current_size: the number of characters currently entered.
 cursor: the cursor position (>= 0).
-allowed: as given.
+allowed: as given (passed to set).
 
     EVENTS
 
@@ -738,8 +738,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5),
-                TextEntry(self, 10)
+                Button('Options', self.set_page, 5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
@@ -782,7 +781,6 @@ class MainMenu (Menu):
                 page.append([])
             # add buttons
             for lvl in lvls:
-                lvl = str(lvl)
                 ID = (custom, lvl)
                 if custom:
                     b = Button(lvl, self._custom_lvl_cb, ID)
