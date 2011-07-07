@@ -17,7 +17,7 @@ import conf
 
 class Menu (menu.Menu):
     def init (self, editor):
-        return menu.Menu.init(self, (
+        menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
                 menu.Button('Save', editor.save),
@@ -34,13 +34,14 @@ class ResetMenu (menu.Menu):
 
     def init (self, editor, levels_up = 1):
         # levels_up is number of backends to quit to get back to editor
-        return menu.Menu.init(self, (
+        menu.Menu.init(self, (
             (
                 menu.Text('Reset?'),
                 menu.Button('Yes', self._reset, editor, levels_up),
                 menu.Button('No', self.game.quit_backend)
             ),
-        ), select = (0, 2))
+        ))
+        return (0, (0, 2))
 
 class Editor (object):
     """A puzzle editor (Game backend).

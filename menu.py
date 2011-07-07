@@ -359,11 +359,15 @@ class Menu (object):
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
         self.captured = False
-        page_ID, select = self.init(*extra_args)
-        self.set_page(page_ID)
-        self.set_selected(select)
+        rtn = self.init(*extra_args)
+        if rtn is None:
+            self.set_page(0)
+        else:
+            page_ID, select = rtn
+            self.set_page(page_ID)
+            self.set_selected(select)
 
-    def init (self, pages, page_ID = 0, select = [0, 0]):
+    def init (self, pages):
         self.pages = []
         for page in pages:
             if isinstance(page[0], (Text, Image)):
@@ -389,7 +393,6 @@ class Menu (object):
         if self.grid_h % 2 != self.h % 2:
             self.grid_h += 1
         self.grids = {}
-        return page_ID, select
 
     def page_dim (self, page, padding = True):
         if padding:
