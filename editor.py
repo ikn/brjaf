@@ -7,8 +7,7 @@ import conf
 
 # TODO:
 # reset to blank with r (confirm)
-# quicksave with q (notify) - no need to solve, goes into drafts (conf.LEVEL_DIR_DRAFT), gets autonamed
-# save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve)
+# save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve) (can save in drafts, though)
 # level comment, solution
 # new solution format: t,m,t,m,t,...m
     # t is number of frames to wait; can be omitted to default to some setting ('solution speed')
@@ -26,6 +25,18 @@ class Menu (menu.Menu):
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),
         ))
+
+class ResetMenu (menu.Menu):
+    def init (self, editor):
+        menu.Menu.init(self, (
+            (
+                menu.Text('Reset?'),
+                menu.Button('Yes', editor._do_reset),
+                menu.Button('No', self.game.quit_backend)
+            ),
+        ))
+        print self.page
+        #self.set_selected((0, 1))
 
 class Editor (object):
     """A puzzle editor (Game backend).
@@ -78,7 +89,8 @@ state: the current position in the history.
             (conf.KEYS_INSERT, self.insert, od),
             (conf.KEYS_DEL, self.del_block, od),
             (conf.KEYS_UNDO, self.undo) + menu_args,
-            (conf.KEYS_REDO, self.redo) + menu_args
+            (conf.KEYS_REDO, self.redo) + menu_args,
+            (conf.KEYS_RESET, self.reset, od)
         ])
         self.event_handler = event_handler
 
@@ -136,6 +148,13 @@ state: the current position in the history.
         else:
             self.state += 1
 
+    def load_state (self, state):
+        """Load a previous state from history."""
+        self.state = state
+        # Puzzle.load returns whether it was resized
+        if self.editor.load(self.history[state]):
+            self.dirty = True
+
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
         resize = False
@@ -153,10 +172,6 @@ state: the current position in the history.
         else:
             # move selection
             self.puzzle.move_selected(direction)
-
-    def menu (self, *args):
-        """Show the editor menu."""
-        self.game.start_backend(Menu, self)
 
     def switch_puzzle (self, *args):
         """Switch selected puzzle between editor and block selector."""
@@ -202,18 +217,26 @@ state: the current position in the history.
     def undo (self, *args):
         """Undo changes to the puzzle."""
         if self.state > 0:
-            self.state -= 1
-            # Puzzle.load returns whether it was resized
-            if self.editor.load(self.history[self.state]):
-                self.dirty = True
+            self.load_state(self.state - 1)
 
     def redo (self, *args):
         """Redo undone changes."""
         if self.state < len(self.history) - 1:
-            self.state += 1
-            # Puzzle.load returns whether it was resized
-            if self.editor.load(self.history[self.state]):
-                self.dirty = True
+            self.load_state(self.state + 1)
+
+    def menu (self, *args):
+        """Show the editor menu."""
+        self.game.start_backend(Menu, self)
+
+    def _do_reset (self):
+        # actually reset the puzzle
+        self.load_state(0)
+        self.history = [self.history[0]]
+        self.game.quit_backend()
+
+    def reset (self, *args):
+        """Confirm resetting the puzzle."""
+        self.game.start_backend(ResetMenu, self)
 
     def save (self):
         """Show the menu to save the current puzzle."""
