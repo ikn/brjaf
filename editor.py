@@ -6,7 +6,6 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# reset to blank with r (confirm)
 # save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve) (can save in drafts, though)
 # level comment, solution
 # new solution format: t,m,t,m,t,...m
@@ -22,16 +21,23 @@ class Menu (menu.Menu):
             (
                 menu.Button('Continue', self.game.quit_backend),
                 menu.Button('Save', editor.save),
+                menu.Button('Reset', self.game.start_backend, ResetMenu,
+                            editor, 2),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),
         ))
 
 class ResetMenu (menu.Menu):
-    def init (self, editor):
+    def _reset (self, editor, levels_up):
+        editor._do_reset()
+        self.game.quit_backend(levels_up)
+
+    def init (self, editor, levels_up = 1):
+        # levels_up is number of backends to quit to get back to editor
         menu.Menu.init(self, (
             (
                 menu.Text('Reset?'),
-                menu.Button('Yes', editor._do_reset),
+                menu.Button('Yes', self._reset, editor, levels_up),
                 menu.Button('No', self.game.quit_backend)
             ),
         ))
@@ -230,9 +236,9 @@ state: the current position in the history.
 
     def _do_reset (self):
         # actually reset the puzzle
+        # just reset to original state - to whatever was loaded, if anything
         self.load_state(0)
         self.history = [self.history[0]]
-        self.game.quit_backend()
 
     def reset (self, *args):
         """Confirm resetting the puzzle."""
