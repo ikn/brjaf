@@ -359,10 +359,11 @@ class Menu (object):
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
         self.captured = False
-        self.init(*extra_args)
-        self.set_page(0)
+        page_ID, select = self.init(*extra_args)
+        self.set_page(page_ID)
+        self.set_selected(select)
 
-    def init (self, pages):
+    def init (self, pages, page_ID = 0, select = [0, 0]):
         self.pages = []
         for page in pages:
             if isinstance(page[0], (Text, Image)):
@@ -388,6 +389,7 @@ class Menu (object):
         if self.grid_h % 2 != self.h % 2:
             self.grid_h += 1
         self.grids = {}
+        return page_ID, select
 
     def page_dim (self, page, padding = True):
         if padding:
@@ -772,7 +774,7 @@ class MainMenu (Menu):
                 col += 1
                 col %= conf.LEVEL_SELECT_COLS
 
-        Menu.init(self, pages)
+        return Menu.init(self, pages)
 
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""

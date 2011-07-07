@@ -30,7 +30,7 @@ def get_levels (custom = False):
 
 class PauseMenu (menu.Menu):
     def init (self, level):
-        menu.Menu.init(self, (
+        return menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
                 menu.Button('Help', level.solve),
