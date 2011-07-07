@@ -7,7 +7,6 @@ from puzzle import Block, Puzzle
 import conf
 
 # TODO:
-# document
 # solutions:
 #   confirmation; something random (have criteria):
 #       "Are you sure you've thought this through?"
@@ -25,10 +24,25 @@ import conf
 #   "Keep trying" / "Solve it for me"
 
 def get_levels (custom = False):
+    """Get a list of existing levels.
+
+Takes a boolean determining whether to load custom levels.
+
+"""
     path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN
     return sorted(lvl[len(path):] for lvl in glob(path + '*'))
 
+def defn_wins (defn):
+    """Check if the given definition starts in a winning state."""
+    lvl = Level(None, None, defn)
+    # need to simulate for two frames to be sure (something might move)
+    lvl.update()
+    lvl.update()
+    return lvl.won
+
 class PauseMenu (menu.Menu):
+    """The standard pause menu when playing a level."""
+
     def init (self, level):
         menu.Menu.init(self, (
             (
@@ -39,29 +53,68 @@ class PauseMenu (menu.Menu):
         ))
 
 class Level (object):
-    def __init__ (self, game, event_handler, ID = None, definition = None):
-        # add gameplay key handlers
-        args = (
-            eh.MODE_ONDOWN_REPEAT,
-            max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
-            max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
-        )
-        event_handler.add_key_handlers([
-            (conf.KEYS_LEFT, [(self.move, (0,))]) + args,
-            (conf.KEYS_UP, [(self.move, (1,))]) + args,
-            (conf.KEYS_RIGHT, [(self.move, (2,))]) + args,
-            (conf.KEYS_DOWN, [(self.move, (3,))]) + args,
-            (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN),
-            (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN)
-        ])
-        self.event_handler = event_handler
+    """A simple Puzzle wrapper to handle drawing.
 
-        self.game = game
-        self.FRAME = conf.FRAME
+    CONSTRUCTOR
+
+Level([event_handler][, ID][, definition][, win_cb])
+
+event_handler: evthandler.EventHandler instance to use for keybindings.  If not
+               given, the level cannot be controlled by the keyboard.
+ID: level ID to load in the form (is_custom, level_ID).
+definition: a level definition to use; see the puzzle module for details.
+win_cb: function to call when the player wins.
+
+One of ID and definition is required.
+
+    METHODS
+load
+move
+reset
+solve
+
+    ATTRIBUTES
+
+game: None.
+ID: level ID; None if this is a custom level or a definition was given instead.
+puzzle: puzzle.Puzzle instance.
+players: player blocks in the puzzle.
+msg: puzzle message.
+solutions: list of known solutions to the puzzle.
+solving: whether the puzzle is currently being solved.
+solving_index: the current step in the solution being used to solve the puzzle.
+win_cb: as given.
+
+"""
+
+    def __init__ (self, event_handler = None, ID = None, definition = None,
+                  win_cb = None):
+        if not hasattr(self, 'game'):
+            self.game = None
+        if event_handler is not None:
+            # add gameplay key handlers
+            args = (
+                eh.MODE_ONDOWN_REPEAT,
+                max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
+                max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
+            )
+            event_handler.add_key_handlers([
+                (conf.KEYS_LEFT, [(self._move, (0,))]) + args,
+                (conf.KEYS_UP, [(self._move, (1,))]) + args,
+                (conf.KEYS_RIGHT, [(self._move, (2,))]) + args,
+                (conf.KEYS_DOWN, [(self._move, (3,))]) + args,
+                (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN),
+                (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN)
+            ])
         self.load(ID, definition)
+        self.win_cb = win_cb
 
     def load (self, ID = None, definition = None):
-        # load a level
+        """Load a level.
+
+Takes ID and definition arguments as in the constructor.
+
+"""
         self.ID = None if (ID is None or ID[0]) else str(ID[1])
         if ID is not None:
             # get data from file
@@ -71,9 +124,9 @@ class Level (object):
         self.puzzle = Puzzle(self.game, definition, True, border = 1)
         self.players = [b for b in self.puzzle.blocks
                         if b.type == conf.B_PLAYER]
-        self.dirty = True
         # store message and solution
-        for char, attr in (('@', 'msg'), (':', 'solution')):
+        # TODO: retrieve all solutions
+        for char, attr in (('@', 'msg'), (':', 'solutions')):
             if char in definition:
                 d = definition
                 d = d[d.find(char) + 1:]
@@ -83,42 +136,56 @@ class Level (object):
             else:
                 val = None
             setattr(self, attr, val)
-        self.winning = False
+
+        self._winning = False
+        self.won = False
         self.solving = False
         self.solving_index = None
+        self.dirty = True
 
-    def move (self, key, event, mods, direction):
+    def move (self, *directions):
+        """Apply force to all player blocks in the given directions."""
+        for d in set(directions):
+            for player in self.players:
+                player.add_force(d, conf.FORCE_MOVE)
+
+    def _move (self, key, event, mods, direction):
         # key callback to move player
         if not self.solving:
-            for player in self.players:
-                player.add_force(direction, conf.FORCE_MOVE)
-        # else solving (ignore input)
-
-    def pause (self, *args):
-        self.game.start_backend(PauseMenu, None, self)
+            self.move(direction)
 
     def reset (self, *args):
+        """Reset the level to its state after the last call to Level.load."""
         if not self.solving:
             self.puzzle.init()
             self.players = [b for b in self.puzzle.blocks
                             if b.type == conf.B_PLAYER]
-        # else solving (ignore input)
 
-    def solve (self):
+    def solve (self, solution = 0):
+        """Solve the puzzle.
+
+Takes the solution number to use (its index in the list of solutions ordered as
+in the puzzle definition).
+
+"""
         if self.solving_index is None:
-            # just starting: don't do anything yet
+            # starting
             self.reset()
+            self.solving = True
             self.solving_index = 0
-        elif self.solving_index == len(self.solution):
+            self._solution = self.solutions[solution]
+        elif self.solving_index == len(self._solution):
             # finished
             self.solving = False
+            self.solving_index = None
+            del self._solution
         else:
             # continuing
-            print self.solution[self.solving_index]
+            print self._solution[self.solving_index]
             self.solving_index += 1
-            self.solving = True
 
     def update (self):
+        """Update puzzle and check win conditions."""
         self.puzzle.step()
         # check for surfaces with their corresponding Block types on them
         win = True
@@ -131,24 +198,31 @@ class Level (object):
         # need to stay winning for one frame - that is, blocks must have
         # stopped on the goals, not just be moving past them
         if win:
-            if self.winning:
-                # save to disk
-                if self.ID is not None:
-                    levels = conf.get('completed_levels', [])
-                    if self.ID not in levels:
-                        levels.append(self.ID)
-                        conf.set('completed_levels', levels)
-                        self.game.set_backend_attrs(menu.MainMenu, 're_init', True)
-                self.game.quit_backend()
+            if self._winning:
+                # if this is the first frame since we've won,
+                if not self.won:
+                    # save to disk
+                    if self.ID is not None and not self.won:
+                        levels = conf.get('completed_levels', [])
+                        if self.ID not in levels:
+                            levels.append(self.ID)
+                            conf.set('completed_levels', levels)
+                            self.game.set_backend_attrs(menu.MainMenu,
+                                                        're_init', True)
+                    # call win callback
+                    if self.win_cb is not None:
+                        self.win_cb()
+                self.won = True
             else:
-                self.winning = True
+                self._winning = True
         else:
-            self.winning = False
+            self._winning = False
         # continue solving
         if self.solving:
             self.solve()
 
     def _mk_msg (self, screen, w, h):
+        # draw message to screen
         if self.msg is None:
             return
         # keep message size proportional to screen size (ss)
@@ -176,6 +250,7 @@ class Level (object):
         # on the screen (_very_ unlikely): just don't display it
 
     def draw (self, screen):
+        """Draw the puzzle."""
         w, h = screen.get_size()
         # keep message size proportional to screen size (ss)
         ss = min(w, h)
@@ -190,3 +265,42 @@ class Level (object):
         drawn = self.puzzle.draw(screen, self.dirty, (w, h))
         self.dirty = False
         return drawn
+
+class LevelBackend (Level):
+    """A wrapper for Level to make it a Game backend.
+
+    CONSTRUCTOR
+
+LevelBackend(game, event_handler[, ID][, definition],
+             pause_menu = PauseMenu, win_cb = game.quit_backend)
+
+pause_menu: menu.Menu subclass to instantiate on pausing.  Its init method is
+            passed this LevelBackend instance.
+
+ID, definition and win_cb are as taken by Level.
+
+    METHODS
+
+pause
+
+    ATTRIBUTES
+
+game: Game instance.
+pause_menu: as given.
+
+"""
+
+    def __init__ (self, game, event_handler, ID = None, definition = None,
+                  pause_menu = PauseMenu, win_cb = 'default'):
+        self.game = game
+        self.event_handler = event_handler
+        self.FRAME = conf.FRAME
+        self.pause_menu = pause_menu
+        if win_cb == 'default':
+            win_cb = game.quit_backend
+        Level.__init__(self, event_handler, ID, definition, win_cb)
+
+    def pause (self, *args):
+        """Show the pause menu."""
+        if self.pause_menu is not None:
+            self.game.start_backend(self.pause_menu, None, self)

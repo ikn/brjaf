@@ -8,7 +8,7 @@ pygame.init()
 import evthandler as eh
 
 from menu import MainMenu
-from level import Level
+from level import LevelBackend
 import conf
 
 restarting = True
@@ -26,13 +26,16 @@ class Fonts (object):
         font = tuple(font)
         if force_reload or font not in self.fonts:
             fn, size, bold = font
-            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + sep + fn, int(size), bold = bold)
+            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + sep + fn,
+                                                int(size), bold = bold)
         return self.fonts[font]
 
-    def text (self, font, text, colour, shadow = None, width = None, just = 0, minimise = False):
+    def text (self, font, text, colour, shadow = None, width = None, just = 0,
+              minimise = False):
         """Render text from a font.
 
-text(font, text, colour[, shadow][, width], just = 0, minimise = False) -> surface
+text(font, text, colour[, shadow][, width], just = 0, minimise = False)
+                                                                     -> surface
 
 font: (font name, size, is_bold) tuple.
 text: text to render.
@@ -65,7 +68,8 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
                     # check if any words won't fit
                     for word in words:
                         if font.size(word)[0] >= width:
-                            raise ValueError('\'{0}\' doesn\'t fit on one line'.format(word))
+                            e = '\'{0}\' doesn\'t fit on one line'.format(word)
+                            raise ValueError(e)
                     # build line
                     build = ''
                     for word in words:
@@ -86,20 +90,27 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
         h = 0
         for line in lines:
             h += font.size(line)[1]
-        surface = pygame.Surface((width + offset[0], h + offset[1])).convert_alpha()
+        surface = pygame.Surface((width + offset[0], h + offset[1]))
+        surface = surface.convert_alpha()
         surface.fill((0, 0, 0, 0))
 
         # add text
-        for colour, mul in (() if shadow is None else ((shadow_colour, 1),)) + ((colour, -1),):
+        todo = []
+        if shadow is not None:
+            todo.append((shadow_colour, 1))
+        todo.append((colour, -1))
+        for colour, mul in todo:
             o = (max(mul * offset[0], 0), max(mul * offset[1], 0))
             h = 0
             for line in lines:
                 if line:
                     s = font.render(line, True, colour)
                     if just == 2:
-                        surface.blit(s, (width - s.get_width() + o[0], h + o[1]))
+                        surface.blit(s, (width - s.get_width() + o[0],
+                                         h + o[1]))
                     elif just == 1:
-                        surface.blit(s, ((width - s.get_width()) / 2 + o[0], h + o[1]))
+                        surface.blit(s, ((width - s.get_width()) / 2 + o[0],
+                                         h + o[1]))
                     else:
                         surface.blit(s, (o[0], h + o[1]))
                 h += font.size(line)[1]
@@ -172,7 +183,7 @@ EventHandler_instance in its event_handler attribute.
 """
         h = eh.MODE_HELD
         event_handler = eh.EventHandler({
-            pygame.VIDEORESIZE: self._resize_cb, # EVENT_ENDMUSIC: self.play_music
+            pygame.VIDEORESIZE: self._resize_cb
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
@@ -209,7 +220,8 @@ If the running backend is the last (root) one, exit the game.
             # need to update new backend before drawing
             self.update_again = True
 
-    def set_backend_attrs (self, cls, attr, val, current = True, inherit = True):
+    def set_backend_attrs (self, cls, attr, val, current = True,
+                           inherit = True):
         """Set an attribute of all backends with a specific class.
 
 set_backend_attrs(cls, attr, val, current = True, inherit = True)
@@ -338,7 +350,7 @@ text: determine how to get the required image (what to do with data).
 
     def minimise (self, *args):
         """Minimise the display, pausing if possible (and necessary)."""
-        if isinstance(self.backend, Level):
+        if isinstance(self.backend, LevelBackend):
              self.backend.pause()
         pygame.display.iconify()
 

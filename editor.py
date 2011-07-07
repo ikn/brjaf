@@ -3,11 +3,12 @@ import evthandler as eh
 
 import menu
 from puzzle import Puzzle, BoringBlock
+import level
 import conf
 
 # TODO:
-# save menu option (doesn't quit) (reject if no B_PLAYER or already winning or can't solve) (can save in drafts, though)
-# level comment, solution
+# save menu option (can save in drafts, though)
+# level message, solution
 # new solution format: t,m,t,m,t,...m
     # t is number of frames to wait; can be omitted to default to some setting ('solution speed')
     # m is move to make on the next frame (has >=1 of l/u/r/d)
@@ -15,22 +16,65 @@ import conf
     # can also add more solutions later; these are viewed through some 'watch solutions' menu for each puzzle
     # replaying solutions should support manual advance to the next input frame and display current frame's input at bottom
 
+class SolveMenu (menu.Menu):
+    """The pause menu for solving a created level."""
+
+    def init (self, level):
+        menu.Menu.init(self, (
+            (
+                menu.Button('Continue', self.game.quit_backend),
+                menu.Button('Quit', self.game.quit_backend, 2)
+            ),
+        ))
+
 class Menu (menu.Menu):
+    """The editor pause menu."""
+
     def init (self, editor):
         self._default_selections[1] = (0, 2)
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
-                menu.Button('Save', editor.save),
+                menu.Button('Save', self._save, editor),
                 menu.Button('Reset', self.set_page, 1),
                 menu.Button('Quit', self.game.quit_backend, 2)
-            ),
-            (
+            ), (
                 menu.Text('Reset?'),
                 menu.Button('Yes', self._reset, editor),
                 menu.Button('No', self.back)
+            ), (
+                menu.Text('There must be'),
+                menu.Text('at least one'),
+                menu.Text('player block.')
+            ), (
+                menu.Text('The puzzle starts'),
+                menu.Text('with the player'),
+                menu.Text('already winning.')
             )
         ))
+
+    def _level_won (self):
+        # callback for solving the created level
+        print '\'' + self._defn + '\''
+        del self._defn
+        self.game.quit_backend()
+
+    def _save (self, editor):
+        # try to save the current puzzle
+        # check if there's a player block
+        if not any(b.type == conf.B_PLAYER for b in editor.editor.blocks):
+            self.set_page(2)
+            return
+        # check if already winning: create a puzzle and run it for one frame
+        defn = editor.history[editor.state]
+        if level.defn_wins(defn):
+            self.set_page(3)
+            return
+        # ask the player to solve the puzzle
+        self._defn = defn
+        self.game.quit_backend()
+        self.game.start_backend(level.LevelBackend, None, defn, SolveMenu,
+                                self._level_won)
 
     def _reset (self, editor):
         editor._do_reset()
@@ -46,18 +90,21 @@ Takes a (custom) puzzle ID to load, else starts editing a blank puzzle.
 load
 store_state
 move
-menu
 switch_puzzle
 insert
 del_block
 undo
 redo
-save
+menu
+reset
 
     ATTRIBUTES
 
+game: Game instance.
 selector: puzzle used to select blocks/surfaces to add.
 editor: the puzzle being edited.
+puzzle: the current visible puzzle (editor or selector).
+editing: whether the current puzzle is editor.
 history: a list of past puzzle definitions.
 state: the current position in the history.
 
@@ -65,6 +112,7 @@ state: the current position in the history.
 
     def __init__ (self, game, event_handler, ID = None):
         # add event handlers
+        self.game = game
         pzl_args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
@@ -82,9 +130,9 @@ state: the current position in the history.
             (conf.KEYS_UP, [(self.move, (1,))]) + pzl_args,
             (conf.KEYS_RIGHT, [(self.move, (2,))]) + pzl_args,
             (conf.KEYS_DOWN, [(self.move, (3,))]) + pzl_args,
-            (conf.KEYS_BACK, self.menu, od),
+            (conf.KEYS_BACK, self._back_cb, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
-            (conf.KEYS_INSERT, self.insert, od),
+            (conf.KEYS_INSERT, self._insert_cb, od),
             (conf.KEYS_DEL, self.del_block, od),
             (conf.KEYS_UNDO, self.undo) + menu_args,
             (conf.KEYS_REDO, self.redo) + menu_args,
@@ -104,13 +152,11 @@ state: the current position in the history.
         self.selector = Puzzle(game, definition, border = 1)
         self.selector.select(0, 0)
 
-        self.game = game
         self.FRAME = conf.FRAME
         self.load(ID)
 
     def load (self, ID = None):
-        """Load a level with the given ID, else a blank level."""
-        self.ID = None if (ID is None or not ID[0]) else str(ID[1])
+        """Load a level with the given custom level ID, else a blank level."""
         if ID is None:
             # blank grid
             definition = conf.BLANK_LEVEL
@@ -180,7 +226,7 @@ state: the current position in the history.
             self.puzzle = self.selector
         self.dirty = True
 
-    def insert (self, *args):
+    def insert (self):
         """Insert a block or surface at the current position."""
         if not self.editing:
             return
@@ -206,6 +252,13 @@ state: the current position in the history.
             self.editor.set_surface(x, y, ID)
         self.store_state()
 
+    def _insert_cb (self, *args):
+        # callback for conf.KEYS_INSERT
+        if self.editing:
+            self.insert()
+        else:
+            self.switch_puzzle()
+
     def del_block (self, *args):
         """Delete any block in the currently selected tile."""
         if self.editing:
@@ -222,9 +275,16 @@ state: the current position in the history.
         if self.state < len(self.history) - 1:
             self.load_state(self.state + 1)
 
-    def menu (self, *args):
+    def menu (self):
         """Show the editor menu."""
         self.game.start_backend(Menu, 0, self)
+
+    def _back_cb (self, *args):
+        # callback for conf.KEYS_BACK
+        if self.editing:
+            self.menu()
+        else:
+            self.switch_puzzle()
 
     def _do_reset (self):
         # actually reset the puzzle
@@ -236,10 +296,6 @@ state: the current position in the history.
         """Confirm resetting the puzzle."""
         self.game.start_backend(Menu, 1, self)
 
-    def save (self):
-        """Show the menu to save the current puzzle."""
-        print '\'' + self.history[self.state] + '\''
-
     def update (self):
         """Do nothing (needed by Game)."""
         pass
@@ -248,6 +304,6 @@ state: the current position in the history.
         """Draw the puzzles."""
         if self.dirty:
             screen.fill(conf.BG)
-        drawn = self.puzzle.draw(screen, self.dirty, screen.get_size())
+        drawn = self.puzzle.draw(screen, self.dirty)
         self.dirty = False
         return drawn

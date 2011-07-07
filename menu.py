@@ -340,6 +340,7 @@ class Image (object):
 
 class Menu (object):
     def __init__ (self, game, event_handler, page_ID = None, *extra_args):
+        self.game = game
         event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
         args = (
             eh.MODE_ONDOWN_REPEAT,
@@ -355,7 +356,6 @@ class Menu (object):
             (conf.KEYS_BACK, self.back, eh.MODE_ONDOWN)
         ])
         self.event_handler = event_handler
-        self.game = game
         self.FRAME = conf.MENU_FRAME
         self.last_pages = []
         self.captured = False
@@ -723,7 +723,7 @@ class MainMenu (Menu):
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
             ), [], (
-                Button('Play', self._with_custom_lvl, level.Level),
+                Button('Play', self._with_custom_lvl, level.LevelBackend),
                 Button('Edit', self._with_custom_lvl, editor.Editor),
                 #Button('Delete'),
                 #Button('Rename'),
@@ -732,9 +732,9 @@ class MainMenu (Menu):
                 Button('Input', self.set_page, 6),
                 Button('Sound', self.set_page, 7)
             ), (
-                Text('Key repeat'),
+                Text('Key repeat'), # have Puzzle/Menu options, each with Delay/Speed
                 Option('Delay 0.2'), # 0.1 - 1.0 | FloatSelect('Delay %x', .1, 1, .1)
-                Option('Speed 10'), # 1 - 10 | RangeSelect('Speed %x', 1, 10, 1) | is 1 / repeat_delay
+                Option('Speed 10'), # 1 - 10 | RangeSelect('Speed %x', 1, conf.FPS, 1) | is 1 / repeat_delay
                 Button('Save', self.back)
             ), (
                 Text('Volume'),
@@ -766,7 +766,8 @@ class MainMenu (Menu):
                 if custom:
                     b = Button(lvl, self._custom_lvl_cb, ID)
                 else:
-                    b = Button(lvl, self.game.start_backend, level.Level, ID)
+                    b = Button(lvl, self.game.start_backend,
+                               level.LevelBackend, ID)
                 page[col].append(b)
                 if not custom:
                     # highlight completed levels

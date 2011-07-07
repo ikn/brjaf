@@ -1,3 +1,5 @@
+# TODO: document definition format
+
 from os.path import exists
 
 import pygame
@@ -267,7 +269,8 @@ class Puzzle (object):
     def __init__ (self, game, defn, physics = False, **tiler_kw_args):
         self.physics = physics
         self.selected = None
-        self.img = game.img
+        if game is not None:
+            self.img = game.img
         self.load(defn, **tiler_kw_args)
 
     def _next_ints (self, lines):
@@ -637,7 +640,8 @@ dirty).
                     p = rect.center
                     r = rect.w / 2
                     pygame.draw.circle(surface, (0, 0, 0), p, r)
-                    pygame.draw.circle(surface, conf.block_colours[b.type], p, int(r * .8))
+                    pygame.draw.circle(surface, conf.block_colours[b.type], p,
+                                       int(r * .8))
             else:
                 # draw character in tile
                 c = b.type
@@ -654,8 +658,10 @@ dirty).
                     colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
-                text = self.img((b.type, rect[3]), ((conf.PUZZLE_FONT, rect[3], False), c,
-                                         colour), text = True)
+                h = rect[3]
+                text = self.img((b.type, h),
+                                ((conf.PUZZLE_FONT, h, False), c, colour),
+                                text = True)
                 # centre inside tile rect
                 source = autocrop(text)
                 if source: # else blank
