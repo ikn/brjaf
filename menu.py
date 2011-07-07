@@ -221,8 +221,7 @@ focused: whether the Entry has keyboard focus.
 
     EVENTS
 
-CHANGE_EVENT: the value stored in the entry changed; called after the change is
-              made.
+FOCUS_EVENT: focus was toggled; called afterwards.
 
 """
 
@@ -232,24 +231,27 @@ CHANGE_EVENT: the value stored in the entry changed; called after the change is
         self.focused = False
         self._toggle_keys = set(conf.KEYS_NEXT + (pygame.K_ESCAPE,))
 
-    CHANGE_EVENT = 2
+    FOCUS_EVENT = 2
 
     def toggle_focus (self):
         """Toggle whether the entry is focused.
 
-When a widget is focused, it catches keypresses and its text can be edited.
-Only one widget can be focused at a time, for which reason it may not be
-possible to toggle focus; the return value indicates whether it was possible.
+When a widget is focused, it catches keypresses.  Only one widget can be
+focused at a time, for which reason it may not be possible to toggle focus;
+the return value indicates whether it was possible.
 
 """
         if self.focused:
             self.focused = False
+            self._throw_event(Entry.FOCUS_EVENT)
             err = 'something else captured input while {0} had it'.format(self)
             assert self.menu.release_input(self), err
+            return True
         else:
             captured = self.menu.capture_input(self)
             if captured:
                 self.focused = True
+                self._throw_event(Entry.FOCUS_EVENT)
             return captured
 
     def input (self, event):
@@ -280,6 +282,8 @@ allowed: as given.
 
     EVENTS
 
+CHANGE_EVENT: the value stored in the entry changed; called after the change is
+              made.
 CURSOR_EVENT: the cursor changed position; called after the position update.
 
 """
@@ -293,7 +297,8 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         self.cursor = self.current_size
         self.allowed = set(allowed)
 
-    CURSOR_EVENT = 3
+    CHANGE_EVENT = 3
+    CURSOR_EVENT = 4
 
     def _update_cursor (self):
         """Update the cursor position."""
@@ -312,15 +317,15 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
 
     def input (self, event):
         """Takes a keypress event to alter the entry's text."""
-        Entry.input(self, event)
         k = event.key
         u = event.unicode
         cursor = self.cursor
         text = self.text
         # insert character if printable
-        if u in self.allowed and self.current_size != self.size - 1:
-            self._insert(self.cursor, u)
-            self.cursor += 1
+        if u in self.allowed:
+            if self.current_size != self.size - 1:
+                self._insert(self.cursor, u)
+                self.cursor += 1
         # backspace deletes previous character, delete the one under the cursor
         elif k == pygame.K_BACKSPACE:
             if self.cursor > 0:
@@ -340,10 +345,12 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
             self.cursor = 0
         elif k == pygame.K_END:
             self.cursor = self.size - 1
+        else:
+            Entry.input(self, event)
         if text != self.text:
             self.current_size = len(self.text)
             self.menu.refresh_text()
-            self._throw_event(Entry.CHANGE_EVENT)
+            self._throw_event(TextEntry.CHANGE_EVENT)
         if cursor != self.cursor:
             self._throw_event(TextEntry.CURSOR_EVENT)
         self._update_cursor()
