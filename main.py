@@ -39,7 +39,8 @@ font: (font name, size, is_bold) tuple.
 text: text to render.
 colour: (R, G, B[, A]) tuple.
 shadow: to draw a drop-shadow: (colour, offset) tuple, where offset is (x, y).
-width: maximum width of returned surface (wrap text).
+width: maximum width of returned surface (wrap text).  ValueError is raised if
+       any words are too long to fit in this width.
 just: if the text has multiple lines, justify: 0 = left, 1 = centre, 2 = right.
 minimise: if width is set, treat it as a minimum instead of absolute width.
 

@@ -9,14 +9,11 @@ import level
 import conf
 
 # TODO:
-# save draft option
-# level message, solution
-# new solution format: t,m,t,m,t,...m
-    # t is number of frames to wait; can be omitted to default to some setting ('solution speed')
-    # m is move to make on the next frame (has >=1 of l/u/r/d)
-    # solution lines start with : and first one, given by solving, is 'primary' solution
-    # can also add more solutions later; these are viewed through some 'watch solutions' menu for each puzzle
-    # replaying solutions should support manual advance to the next input frame and display current frame's input at bottom
+# - save draft option
+# - save level message, solution
+# - first solution, given by solving, is 'primary' solution; can also add more
+#   solutions later; these are viewed through some 'watch solutions' menu for
+#   each puzzle
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.

@@ -1,4 +1,4 @@
-# TODO: document definition format
+# TODO: document definition format, including solutions
 
 from os.path import exists
 
@@ -8,10 +8,11 @@ from tiler import Tiler, draw_rect
 import conf
 
 # TODO:
-# document
-# bouncing blocks
-# block orientation - set after motion, use in draw_tile
-# crop characters to fit in tiles
+# - document
+# - bouncing blocks
+# - portal blocks
+# - block orientation - set after motion, use in draw_tile
+# - crop characters to fit in tiles
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.

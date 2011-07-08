@@ -7,8 +7,8 @@ from puzzle import Block, Puzzle
 import conf
 
 # TODO:
-# solutions:
-#   confirmation; something random (have criteria):
+# - different pause menu when solving
+# - hint confirmation; something random (have criteria):
 #       "Are you sure you've thought this through?"
 #       "Do you intend to play the game yourself at all?" (used solutions often)
 #       "Getting lazy again?" (used solutions often)
@@ -22,6 +22,11 @@ import conf
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
 #   "Keep trying" / "Solve it for me"
+# - replaying solutions should support manual advance to the next input frame
+#   and display current frame's input at bottom
+# - need finer control over solution speed - stuff like, this period of waiting
+#   is at least/at most t frames; the next x steps should take at least/at most
+#   t frames
 
 def get_levels (custom = False):
     """Get a list of existing levels.
@@ -50,9 +55,13 @@ Takes the LevelBackend instance.
     def init (self, level):
         menu.Menu.init(self, ((
             menu.Button('Continue', self.game.quit_backend),
-            menu.Button('Help', level.solve),
+            menu.Button('Help', self._solve, level),
             menu.Button('Quit', self.game.quit_backend, 2)
         ),))
+
+    def _solve (self, level):
+        self.game.quit_backend()
+        level.solve()
 
 class Level (object):
     """A simple Puzzle wrapper to handle drawing.
@@ -104,7 +113,6 @@ win_cb: as given.
                 (conf.KEYS_UP, [(self._move, (1,))]) + args,
                 (conf.KEYS_RIGHT, [(self._move, (2,))]) + args,
                 (conf.KEYS_DOWN, [(self._move, (3,))]) + args,
-                (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN),
                 (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN)
             ])
         self.load(ID, definition)
@@ -187,25 +195,50 @@ Takes ID and definition arguments as in the constructor.
         """Solve the puzzle.
 
 Takes the solution number to use (its index in the list of solutions ordered as
-in the puzzle definition).
+in the puzzle definition).  This defaults to 0 (the 'primary' solution).
+
+This function is also called to move to the next step of an ongoing solution,
+in which case it requires no argument.  In fact, if a solution is ongoing, it
+cannot be called as detailed above (any argument is ignored).
 
 """
-        if self.solving_index is None:
+        i = self.solving_index
+        if i is None:
             # starting
             self.reset()
             self.solving = True
             self.solving_index = 0
             self._solution = self._parse_soln(solution)
             self._solve_time = self._solution[0]
-        elif self.solving_index == len(self._solution):
-            # finished
-            self.solving = False
-            self.solving_index = None
-            del self._solution
+            # store old message and show a new one
+            self._msg = self.msg
+            self.msg = '[Solving...]'
+            self.dirty = True
+            # call this function again to act on the first instruction
+            self.solve()
+        elif i == len(self._solution):
+            # finished: just wait until the level ends
+            # TODO: if haven't solved after max(2, conf.SOLVE_SPEED) frames, show some sort of error
+            pass
         else:
             # continuing
-            print self._solution[self.solving_index]
-            self.solving_index += 1
+            if i % 2:
+                # make a move
+                move = self._solution[i]
+                self.move(*move)
+                i += 1
+                if i < len(self._solution):
+                    self._solve_time = self._solution[i]
+                self.solving_index = i
+            else:
+                # wait
+                if self._solve_time == 0:
+                    self.solving_index += 1
+                    self.solve()
+                else:
+                    self._solve_time -= 1
+                    return
+            # do next step now
 
     def update (self):
         """Update puzzle and check win conditions."""
@@ -224,8 +257,17 @@ in the puzzle definition).
             if self._winning:
                 # if this is the first frame since we've won,
                 if not self.won:
+                    # clean up solution stuff in case this is to be reused
+                    if self.solving:
+                        self.solving = False
+                        self.solving_index = None
+                        del self._solution
+                        del self._solve_time
+                        # restore message
+                        self.msg = self._msg
+                        self.dirty = True
                     # save to disk
-                    if self.ID is not None and not self.won:
+                    elif self.ID is not None:
                         levels = conf.get('completed_levels', [])
                         if self.ID not in levels:
                             levels.append(self.ID)
@@ -246,11 +288,11 @@ in the puzzle definition).
 
     def _mk_msg (self, screen, w, h):
         # draw message to screen
-        if self.msg is None:
+        if not self.msg:
             return
         # keep message size proportional to screen size (ss)
         ss = min(w, h)
-        font = [conf.MSG_FONT, ss * conf.MSG_LINE_HEIGHT, False]
+        font = [conf.MSG_FONT, int(round(ss * conf.MSG_LINE_HEIGHT)), False]
         args = (self.msg, conf.MSG_TEXT_COLOUR, None, w, 0, True)
         # reduce font size until fits in screen width/proportion of height
         target_height = h * conf.MSG_MAX_HEIGHT
@@ -264,13 +306,15 @@ in the puzzle definition).
                     break
             font[1] -= 1
         if font[1] > 0:
-            msg_w, self.msg_h = msg.get_size()
+            msg_w, self._msg_h = msg.get_size()
             # centre message horizontally
-            blit_w = (w - msg_w) / 2
-            blit_h = h - self.msg_h - ss * conf.MSG_PADDING_BOTTOM
-            screen.blit(msg, (blit_w, blit_h))
-        # else couldn't make font size small enough to fit the message
-        # on the screen (_very_ unlikely): just don't display it
+            blit_x = (w - msg_w) / 2
+            blit_y = int(round(h - self._msg_h - ss * conf.MSG_PADDING_BOTTOM))
+            screen.blit(msg, (blit_x, blit_y))
+        else:
+            # couldn't make font size small enough to fit the message on the
+            # screen (_very_ unlikely): just don't display it
+            self._msg_h = 0
 
     def draw (self, screen):
         """Draw the puzzle."""
@@ -281,10 +325,10 @@ in the puzzle definition).
             screen.fill(conf.BG)
             # generate message, if any
             self._mk_msg(screen, w, h)
-        if self.msg is not None:
+        if self.msg and self._msg_h:
             # reduce puzzle size to fit in message
             padding = ss * (conf.MSG_PADDING_TOP + conf.MSG_PADDING_BOTTOM)
-            h -= self.msg_h + padding
+            h -= self._msg_h + int(round(padding))
         drawn = self.puzzle.draw(screen, self.dirty, (w, h))
         self.dirty = False
         return drawn
@@ -316,6 +360,9 @@ pause_menu: as given.
     def __init__ (self, game, event_handler, ID = None, definition = None,
                   pause_menu = PauseMenu, win_cb = 'default'):
         self.game = game
+        event_handler.add_key_handlers([
+            (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN)
+        ])
         self.event_handler = event_handler
         self.FRAME = conf.FRAME
         self.pause_menu = pause_menu

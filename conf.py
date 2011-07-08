@@ -5,9 +5,9 @@ import string
 import pygame as pg
 
 # TODO:
-# - can edit vars defined here through some config editor: takes raw Python
-#   code and enters into CONF_DIR/local_conf.py; CONF_DIR can't be changed in
-#   this way (have to reject)
+# - can edit vars defined here through some config editor:
+#       takes raw Python code and enters into CONF_DIR/local_conf.py
+#       CONF_DIR can't be changed in this way (reject changing it)
 
 # timing
 FPS = 10

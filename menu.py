@@ -8,16 +8,16 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# document Menu and derivatives
-# home/end keys
-# scrollable element sets - set maximum number and scroll if exceed it
-# u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
-# keys should select next option, like u/d, l/r: flatten with others removed
-# options: key bindings/repeat rates
+# - document Menu and derivatives
+# - home/end keys
+# - scrollable element sets - set maximum number and scroll if exceed it
+# - u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
+# - keys should select next option, like u/d, l/r: flatten with others removed
+# - options: key bindings/repeat rates
 #          delete data (progress, custom levels, solution history)
 #          appearance (select from multiple themes)
 #          sound/music volume
-# custom levels delete/rename/duplicate
+# - custom levels delete/rename/duplicate
 
 # Text
 # | Option
