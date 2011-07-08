@@ -506,6 +506,8 @@ dirty).
         )
 
     def step (self):
+        if conf.DEBUG:
+            print 'start step'
         # apply arrow forces
         for col in self.grid:
             for s, b, sel in col:
@@ -600,6 +602,8 @@ dirty).
         # reset forces
         for b in self.blocks:
             b.reset(b in retain_forces)
+        if conf.DEBUG:
+            print 'end step'
 
     def _draw_from_img (self, surface, rect, prefix, ID):
         ID = prefix + str(ID)

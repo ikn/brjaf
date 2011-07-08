@@ -11,8 +11,6 @@ from menu import MainMenu
 from level import LevelBackend
 import conf
 
-restarting = True
-
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
 
@@ -364,6 +362,7 @@ if __name__ == '__main__':
         pygame.display.set_icon(pygame.image.load(conf.WINDOW_ICON))
     if conf.WINDOW_TITLE is not None:
         pygame.display.set_caption(conf.WINDOW_TITLE)
+    restarting = True
     while restarting:
         restarting = False
         Game().run()

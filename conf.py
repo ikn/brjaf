@@ -1,7 +1,13 @@
 import os
+import sys
 import string
 
 import pygame as pg
+
+# TODO:
+# - can edit vars defined here through some config editor: takes raw Python
+#   code and enters into CONF_DIR/local_conf.py; CONF_DIR can't be changed in
+#   this way (have to reject)
 
 # timing
 FPS = 10
@@ -63,6 +69,7 @@ MENU_REPEAT_DELAY = .15
 # puzzle
 FORCE_MOVE = 2
 FORCE_ARROW = 2
+SOLVE_SPEED = 5 # delay between moves in frames
 
 # IDs
 MIN_ID = -6
@@ -133,6 +140,15 @@ NUM_UNCOMPLETED_LEVELS = 5
 BLANK_LEVEL = '5 5'
 UNDO_LEVELS = 0
 LEVEL_NAME_LENGTH = 3
+
+# try to load local conf overrides
+path = sys.path
+sys.path = [CONF_DIR]
+try:
+    from local_conf import *
+except ImportError:
+    pass
+sys.path = path
 
 def load_conf ():
     try:

@@ -82,7 +82,6 @@ ID: level ID; None if this is a custom level or a definition was given instead.
 puzzle: puzzle.Puzzle instance.
 players: player blocks in the puzzle.
 msg: puzzle message.
-solutions: list of known solutions to the puzzle.
 solving: whether the puzzle is currently being solved.
 solving_index: the current step in the solution being used to solve the puzzle.
 win_cb: as given.
@@ -126,18 +125,20 @@ Takes ID and definition arguments as in the constructor.
         self.puzzle = Puzzle(self.game, definition, True, border = 1)
         self.players = [b for b in self.puzzle.blocks
                         if b.type == conf.B_PLAYER]
-        # store message and solution
-        # TODO: retrieve all solutions
-        for char, attr in (('@', 'msg'), (':', 'solutions')):
-            if char in definition:
-                d = definition
-                d = d[d.find(char) + 1:]
-                if '\n' in d:
-                    d = d[:d.find('\n')]
-                val = d.strip()
-            else:
-                val = None
-            setattr(self, attr, val)
+        # store message and solutions
+        lines = definition.split('\n')
+        msgs = []
+        solns = []
+        for line in lines:
+            line = line.strip()
+            for char, val in (('@', msgs), (':', solns)):
+                if line.startswith(char):
+                    # add lines (stripped) starting with the character
+                    val.append(line[1:].strip())
+                    # won't start with the other one if it starts with this one
+                    continue
+        self.msg = msgs[0] if msgs else None
+        self._solutions = solns
 
         self._winning = False
         self.won = False
@@ -163,6 +164,25 @@ Takes ID and definition arguments as in the constructor.
             self.players = [b for b in self.puzzle.blocks
                             if b.type == conf.B_PLAYER]
 
+    def _parse_soln (self, ID):
+        # parse a solution string if not already done, and return the result
+        soln = self._solutions[ID]
+        if isinstance(soln, list):
+            # already parsed
+            return soln
+        parsed = []
+        dirs = ('l', 'u', 'r', 'd')
+        for i, s in enumerate(soln.split(',')):
+            if i % 2:
+                # directions
+                s = [dirs.index(c) for c in s]
+            else:
+                # time delay
+                s = int(s) if s else conf.SOLVE_SPEED
+            parsed.append(s)
+        self._solutions[ID] = parsed
+        return parsed
+
     def solve (self, solution = 0):
         """Solve the puzzle.
 
@@ -175,7 +195,8 @@ in the puzzle definition).
             self.reset()
             self.solving = True
             self.solving_index = 0
-            self._solution = self.solutions[solution]
+            self._solution = self._parse_soln(solution)
+            self._solve_time = self._solution[0]
         elif self.solving_index == len(self._solution):
             # finished
             self.solving = False

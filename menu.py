@@ -8,7 +8,6 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# bug: when change size
 # document Menu and derivatives
 # home/end keys
 # scrollable element sets - set maximum number and scroll if exceed it
