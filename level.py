@@ -83,6 +83,8 @@ load
 move
 reset
 solve
+start_recording
+stop_recording
 
     ATTRIBUTES
 
@@ -93,6 +95,7 @@ players: player blocks in the puzzle.
 msg: puzzle message.
 solving: whether the puzzle is currently being solved.
 solving_index: the current step in the solution being used to solve the puzzle.
+recording: whether input is currently being recorded.
 win_cb: as given.
 
 """
@@ -148,14 +151,17 @@ Takes ID and definition arguments as in the constructor.
         self.msg = msgs[0] if msgs else None
         self._solutions = solns
 
+        self.dirty = True
         self._winning = False
         self.won = False
         self.solving = False
         self.solving_index = None
-        self.dirty = True
+        self.recording = False
 
     def move (self, *directions):
         """Apply force to all player blocks in the given directions."""
+        if self.recording:
+            self._record(directions)
         for d in set(directions):
             for player in self.players:
                 player.add_force(d, conf.FORCE_MOVE)
@@ -171,6 +177,9 @@ Takes ID and definition arguments as in the constructor.
             self.puzzle.init()
             self.players = [b for b in self.puzzle.blocks
                             if b.type == conf.B_PLAYER]
+        # restart recording if want to
+        if self.recording and self._blank_on_reset:
+            self.start_recording()
 
     def _parse_soln (self, ID):
         # parse a solution string if not already done, and return the result
@@ -179,11 +188,10 @@ Takes ID and definition arguments as in the constructor.
             # already parsed
             return soln
         parsed = []
-        dirs = ('l', 'u', 'r', 'd')
         for i, s in enumerate(soln.split(',')):
             if i % 2:
                 # directions
-                s = [dirs.index(c) for c in s]
+                s = [conf.DIRECTIONS.index(c) for c in s]
             else:
                 # time delay
                 s = int(s) if s else conf.SOLVE_SPEED
@@ -240,6 +248,58 @@ cannot be called as detailed above (any argument is ignored).
                     return
             # do next step now
 
+    def _record (self, directions):
+        # add input to the current recording
+        directions = set(directions)
+        recorded = self._recorded
+        frame = self._recording_frame
+        while len(recorded) < frame:
+            # haven't added anything for some previous frames
+            recorded.append(None)
+        if len(recorded) == frame:
+            # haven't added anything for this frame
+            recorded.append(directions)
+        else:
+            # add more to this frame
+            recorded[frame] |= directions
+        self._recorded = recorded
+
+    def start_recording (self, blank_on_reset = True):
+        """Start recording input to the puzzle (moves).
+
+Takes one boolean argument indicating whether to start recording again if the
+puzzle is reset.  If already recording, calling this will delete the current
+recording.
+
+"""
+        self.recording = True
+        self._blank_on_reset = blank_on_reset
+        self._recorded = []
+        self._recording_frame = 0
+
+    def stop_recording (self):
+        """Stop recording input and return the recorded input.
+
+The return value is in the standard solution format.  If not recording, this
+function returns None.
+
+"""
+        result = ''
+        t = 0
+        for frame in self._recorded:
+            if frame is None:
+                # wait for a frame with input
+                t += 1
+            else:
+                # add total wait time
+                result += str(t) + ','
+                t = 0
+                # add input
+                result += ''.join(conf.DIRECTIONS[d] for d in frame) + ','
+        self.recording = False
+        del self._blank_on_reset, self._recorded, self._recording_frame
+        return result[:-1]
+
     def update (self):
         """Update puzzle and check win conditions."""
         self.puzzle.step()
@@ -261,8 +321,7 @@ cannot be called as detailed above (any argument is ignored).
                     if self.solving:
                         self.solving = False
                         self.solving_index = None
-                        del self._solution
-                        del self._solve_time
+                        del self._solution, self._solve_time
                         # restore message
                         self.msg = self._msg
                         self.dirty = True
@@ -285,6 +344,8 @@ cannot be called as detailed above (any argument is ignored).
         # continue solving
         if self.solving:
             self.solve()
+        if self.recording:
+            self._recording_frame += 1
 
     def _mk_msg (self, screen, w, h):
         # draw message to screen

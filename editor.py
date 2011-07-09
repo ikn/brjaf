@@ -165,6 +165,8 @@ Takes the Editor instance.
     def _level_won (self):
         # callback for solving the created level
         self.game.quit_backend()
+        # retrieve solution and add to definition
+        self._defn += '\n: ' + self._lvl.stop_recording()
         # ask for level name
         self.game.start_backend(SaveMenu, None, conf.LEVEL_DIR_CUSTOM,
                                 self._defn, self._editor.ID, success_cb,
@@ -188,8 +190,9 @@ Takes the Editor instance.
         self.game.quit_backend()
         # show message making it clear what's going on
         defn += '\n@Solve the level first.'
-        self.game.start_backend(level.LevelBackend, None, defn, SolveMenu,
-                                self._level_won)
+        self._lvl = self.game.start_backend(level.LevelBackend, None, defn,
+                                      SolveMenu, self._level_won)
+        self._lvl.start_recording()
 
     def _reset (self, editor):
         self._editor._do_reset()

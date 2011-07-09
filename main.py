@@ -118,6 +118,8 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
 class Game (object):
     """Handles backends.
 
+Takes the same arguments as Game.start_backend and passes them to it.
+
     METHODS
 
 start_backend
@@ -141,7 +143,7 @@ files: loaded image cache (before resize).
 
 """
 
-    def __init__ (self):
+    def __init__ (self, cls, *args):
         self.running = False
         self.imgs = {}
         self.files = {}
@@ -152,15 +154,17 @@ files: loaded image cache (before resize).
         self.fonts = Fonts()
         # start first backend
         self.backends = []
-        self.start_backend(MainMenu)
+        self.start_backend(cls, *args)
 
     def start_backend (self, cls, *args):
         """Start a new backend.
 
-start_backend(cls, *args)
+start_backend(cls, *args) -> backend
 
 cls: the backend class to instantiate.
 args: arguments to pass to the constructor.
+
+backend: the new created instance of cls that is the new backend.
 
 Backends handle pretty much everything, including drawing, and must have update
 and draw methods, as follows:
@@ -176,10 +180,11 @@ method should redraw everything, and should define a FRAME attribute, which is
 the length of one frame in seconds.
 
 A backend is constructed via
-backend_class(Game_instance, EventHandler_instance, *args), and should store
+cls(Game_instance, EventHandler_instance, *args), and should store
 EventHandler_instance in its event_handler attribute.
 
 """
+        # create event handler for this backend
         h = eh.MODE_HELD
         event_handler = eh.EventHandler({
             pygame.VIDEORESIZE: self._resize_cb
@@ -187,11 +192,14 @@ EventHandler_instance in its event_handler attribute.
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
         ], False, self.quit)
+        # store current backend in history, if any
         try:
             self.backends.append(self.backend)
         except AttributeError:
             pass
+        # create new backend
         self.backend = cls(self, event_handler, *args)
+        return self.backend
 
     def quit_backend (self, depth = 1):
         """Quit the currently running backend.
@@ -366,6 +374,6 @@ if __name__ == '__main__':
     restarting = True
     while restarting:
         restarting = False
-        Game().run()
+        Game(MainMenu).run()
 
 pygame.quit()
