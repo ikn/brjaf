@@ -9,7 +9,8 @@ import level
 import conf
 
 # TODO:
-# - save draft option
+# - both puzzles on-screen at the same time
+# - 'Save draft' option
 # - save level message
 # - can add more solutions later; these are viewed through some 'watch
 #   solutions' menu for each puzzle

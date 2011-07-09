@@ -8,15 +8,16 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# - document Menu and derivatives
-# - home/end keys
-# - scrollable element sets - set maximum number and scroll if exceed it
+# - document Menu
+# - home/end/page up/page down keys (paging is home/end for non-scrolling pages, else
+# - scrollable pages - set maximum number of rows and scroll if exceed it; show arrows in rows above top/below bottom if any up/down there (in far left/right tiles)
 # - u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
 # - keys should select next option, like u/d, l/r: flatten with others removed
-# - options: key bindings/repeat rates
-#          delete data (progress, custom levels, solution history)
-#          appearance (select from multiple themes)
-#          sound/music volume
+# - options:
+#       key bindings/repeat rates
+#       delete data (progress, custom levels, solution history, local_conf)
+#       appearance (select from multiple themes)
+#       sound/music volume
 # - custom levels delete/rename/duplicate
 
 # Text
@@ -726,6 +727,7 @@ to start with).
         self.dirty = False
         return drawn
 
+# both of these need menu.Menu
 import level
 import editor
 

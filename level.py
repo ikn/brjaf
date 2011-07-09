@@ -1,4 +1,4 @@
-from glob import glob
+import os
 
 import evthandler as eh
 
@@ -7,7 +7,7 @@ from puzzle import Block, Puzzle
 import conf
 
 # TODO:
-# - hint confirmation; something random (have criteria):
+# - hint confirmation is something random (have criteria):
 #       "Are you sure you've thought this through?"
 #       "Do you intend to play the game yourself at all?" (used solutions often)
 #       "Getting lazy again?" (used solutions often)
@@ -20,8 +20,6 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-#   "Keep trying" / "Show me how"
-# - replaying solutions should display current frame's input at bottom
 # - need finer control over solution speed - stuff like, this period of waiting
 #   is at least/at most t frames; the next x steps should take at least/at most
 #   t frames
@@ -33,7 +31,7 @@ Takes a boolean determining whether to load custom levels.
 
 """
     path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN
-    return sorted(lvl[len(path):] for lvl in glob(path + '*'))
+    return sorted(f for f in os.listdir(path) if os.path.isfile(path + f))
 
 def defn_wins (defn):
     """Check if the given definition starts in a winning state."""
@@ -231,7 +229,7 @@ cannot be called as detailed above (any argument is ignored).
             self._solve_time = self._solution[0]
             # store old message and show a new one
             self._msg = self.msg
-            self.msg = '[Solving...]'
+            self.msg = ' '
             self.dirty = True
             # call this function again to act on the first instruction
             self.solve()
@@ -249,15 +247,19 @@ cannot be called as detailed above (any argument is ignored).
                 if i < len(self._solution):
                     self._solve_time = self._solution[i]
                 self.solving_index = i
+                self.msg = ''.join(conf.DIRECTIONS[x] for x in move).upper()
+                self.dirty = True
             else:
+                self.msg = ' '
+                self.dirty = True
                 # wait
                 if self._solve_time == 0:
                     self.solving_index += 1
+                    # do next step now
                     self.solve()
                 else:
                     self._solve_time -= 1
                     return
-            # do next step now
 
     def stop_solving (self):
         """Stop solving the puzzle."""
