@@ -69,7 +69,7 @@ MENU_REPEAT_DELAY = .15
 # puzzle
 FORCE_MOVE = 2
 FORCE_ARROW = 2
-SOLVE_SPEED = 5 # delay between moves in frames
+SOLVE_SPEED = 0 # delay between moves in frames
 DIRECTIONS = 'lurd'
 
 # IDs

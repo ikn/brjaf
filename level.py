@@ -7,7 +7,6 @@ from puzzle import Block, Puzzle
 import conf
 
 # TODO:
-# - different pause menu when solving
 # - hint confirmation; something random (have criteria):
 #       "Are you sure you've thought this through?"
 #       "Do you intend to play the game yourself at all?" (used solutions often)
@@ -21,9 +20,8 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-#   "Keep trying" / "Solve it for me"
-# - replaying solutions should support manual advance to the next input frame
-#   and display current frame's input at bottom
+#   "Keep trying" / "Show me how"
+# - replaying solutions should display current frame's input at bottom
 # - need finer control over solution speed - stuff like, this period of waiting
 #   is at least/at most t frames; the next x steps should take at least/at most
 #   t frames
@@ -53,15 +51,28 @@ Takes the LevelBackend instance.
 """
 
     def init (self, level):
-        menu.Menu.init(self, ((
-            menu.Button('Continue', self.game.quit_backend),
-            menu.Button('Help', self._solve, level),
-            menu.Button('Quit', self.game.quit_backend, 2)
-        ),))
+        if level.solving:
+            b = menu.Button('Stop solving', self._then_quit,
+                            level.stop_solving)
+        else:
+            b = menu.Button('Help', self.set_page, 1)
+        menu.Menu.init(self, (
+            (
+                menu.Button('Continue', self.game.quit_backend),
+                b,
+                menu.Button('Quit', self.game.quit_backend, 2)
+            ),(
+                menu.Text('Are you sure?'),
+                menu.Button('Keep trying', self.game.quit_backend),
+                menu.Button('Show me how', self._then_quit,
+                            level.solve)
+            )
+        ))
 
-    def _solve (self, level):
+    def _then_quit (self, f):
+        # call a function then quit the menu
+        f()
         self.game.quit_backend()
-        level.solve()
 
 class Level (object):
     """A simple Puzzle wrapper to handle drawing.
@@ -248,6 +259,15 @@ cannot be called as detailed above (any argument is ignored).
                     return
             # do next step now
 
+    def stop_solving (self):
+        """Stop solving the puzzle."""
+        self.solving = False
+        self.solving_index = None
+        del self._solution, self._solve_time
+        # restore message
+        self.msg = self._msg
+        self.dirty = True
+
     def _record (self, directions):
         # add input to the current recording
         directions = set(directions)
@@ -314,28 +334,24 @@ function returns None.
         # need to stay winning for one frame - that is, blocks must have
         # stopped on the goals, not just be moving past them
         if win:
-            if self._winning:
-                # if this is the first frame since we've won,
-                if not self.won:
-                    # clean up solution stuff in case this is to be reused
-                    if self.solving:
-                        self.solving = False
-                        self.solving_index = None
-                        del self._solution, self._solve_time
-                        # restore message
-                        self.msg = self._msg
-                        self.dirty = True
-                    # save to disk
-                    elif self.ID is not None:
-                        levels = conf.get('completed_levels', [])
-                        if self.ID not in levels:
-                            levels.append(self.ID)
-                            conf.set('completed_levels', levels)
-                            self.game.set_backend_attrs(menu.MainMenu,
-                                                        're_init', True)
-                    # call win callback
-                    if self.win_cb is not None:
-                        self.win_cb()
+            if not self._winning:
+                self._winning = True
+            # else if this is the first frame since we've won,
+            elif not self.won:
+                # clean up solution stuff in case this is to be reused
+                if self.solving:
+                    self.stop_solving()
+                # save to disk
+                elif self.ID is not None:
+                    levels = conf.get('completed_levels', [])
+                    if self.ID not in levels:
+                        levels.append(self.ID)
+                        conf.set('completed_levels', levels)
+                        self.game.set_backend_attrs(menu.MainMenu,
+                                                    're_init', True)
+                # call win callback
+                if self.win_cb is not None:
+                    self.win_cb()
                 self.won = True
             else:
                 self._winning = True
@@ -402,8 +418,8 @@ class LevelBackend (Level):
 LevelBackend(game, event_handler[, ID][, definition],
              pause_menu = PauseMenu, win_cb = game.quit_backend)
 
-pause_menu: menu.Menu subclass to instantiate on pausing.  Its init method is
-            passed this LevelBackend instance.
+pause_menu: menu.Menu subclass to start as a Game backend on pausing.  Its init
+            method is passed this LevelBackend instance.
 
 ID, definition and win_cb are as taken by Level.
 

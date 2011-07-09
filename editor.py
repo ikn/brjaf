@@ -10,10 +10,9 @@ import conf
 
 # TODO:
 # - save draft option
-# - save level message, solution
-# - first solution, given by solving, is 'primary' solution; can also add more
-#   solutions later; these are viewed through some 'watch solutions' menu for
-#   each puzzle
+# - save level message
+# - can add more solutions later; these are viewed through some 'watch
+#   solutions' menu for each puzzle
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
