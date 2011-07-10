@@ -12,8 +12,6 @@ import conf
 # - both puzzles on-screen at the same time
 # - 'Save draft' option
 # - save level message
-# - can add more solutions later; these are viewed through some 'watch
-#   solutions' menu for each puzzle
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -210,7 +208,7 @@ store_state
 move
 switch_puzzle
 insert
-del_block
+delete
 undo
 redo
 menu
@@ -252,7 +250,7 @@ state: the current position in the history.
             (conf.KEYS_BACK, self._back_cb, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
             (conf.KEYS_INSERT, self._insert_cb, od),
-            (conf.KEYS_DEL, self.del_block, od),
+            (conf.KEYS_DEL, self.delete, od),
             (conf.KEYS_UNDO, self.undo) + menu_args,
             (conf.KEYS_REDO, self.redo) + menu_args,
             (conf.KEYS_RESET, self.reset, od)
@@ -262,14 +260,14 @@ state: the current position in the history.
         # create block/surface selection grid
         blocks = xrange(conf.MAX_ID + 1)
         surfaces = xrange(-1, conf.MIN_ID - 1, -1)
-        definition = '3 {0}\n{1}\n\n{2}\n{3}'.format(
+        self._selector_defn = '3 {0}\n{1}\n\n{2}\n{3}'.format(
             max(len(blocks), len(surfaces)),
             '\n'.join('{0} 0 {1}'.format(b, i) for i, b in enumerate(blocks)),
             '\n'.join('{0} 1 {1}'.format(b, i) for i, b in enumerate(blocks)),
             '\n'.join('{0} 2 {1}'.format(s, i) for i, s in enumerate(surfaces))
         )
-        self.selector = Puzzle(game, definition, border = 1)
-        self.selector.select(0, 0)
+        self.selector = Puzzle(game, self._selector_defn, border = 1)
+        self.selector.old_selected = (0, 0)
 
         self.FRAME = conf.FRAME
         self.load(ID)
@@ -287,7 +285,10 @@ state: the current position in the history.
             with open(path + ID[1]) as f:
                 definition = f.read()
             self.ID = ID[1]
-        self.editor = Puzzle(self.game, definition, border = 1)
+        if hasattr(self, 'editor'):
+            self.editor.load(definition)
+        else:
+            self.editor = Puzzle(self.game, definition, border = 1, align = 1)
         self.editor.select(0, 0)
         self.puzzle = self.editor
         self.editing = True
@@ -339,21 +340,12 @@ state: the current position in the history.
             # move selection
             self.puzzle.move_selected(direction)
 
-    def switch_puzzle (self, *args):
-        """Switch selected puzzle between editor and block selector."""
-        self.editing = not self.editing
-        if self.editing:
-            self.puzzle = self.editor
-        else:
-            self.puzzle = self.selector
-        self.dirty = True
-
     def insert (self):
         """Insert a block or surface at the current position."""
         if not self.editing:
             return
         # get type and ID of selected tile in selector puzzle
-        col, row = self.selector.selected
+        col, row = self.selector.old_selected
         x, y = self.editor.selected
         is_block = col == 0 and row <= conf.MAX_ID
         if is_block:
@@ -381,11 +373,19 @@ state: the current position in the history.
         else:
             self.switch_puzzle()
 
-    def del_block (self, *args):
-        """Delete any block in the currently selected tile."""
+    def delete (self, *args):
+        """Delete a block or surface in the currently selected tile."""
         if self.editing:
-            self.editor.rm_block(None, *self.editor.selected)
-            self.store_state()
+            x, y = self.editor.selected
+            data = self.editor.grid[x][y]
+            # delete block, if any
+            if data[1] is not None:
+                self.editor.rm_block(None, x, y)
+                self.store_state()
+            # set surface to blank if not already
+            elif data[0] != conf.S_BLANK:
+                self.editor.set_surface(x, y, conf.S_BLANK)
+                self.store_state()
 
     def undo (self, *args):
         """Undo changes to the puzzle."""
@@ -396,6 +396,24 @@ state: the current position in the history.
         """Redo undone changes."""
         if self.state < len(self.history) - 1:
             self.load_state(self.state + 1)
+
+    def switch_puzzle (self, *args):
+        """Switch selected puzzle between editor and block selector."""
+        self.editing = not self.editing
+        pzls = (self.editor, self.selector)
+        if self.editing:
+            new, old = pzls
+        else:
+            old, new = pzls
+        # deselect old and select new
+        old.old_selected = old.selected
+        old.deselect()
+        new.select(*new.old_selected)
+        self.puzzle = new
+
+    def reset (self, *args):
+        """Confirm resetting the puzzle."""
+        self.game.start_backend(Menu, 1, self)
 
     def menu (self):
         """Show the editor menu."""
@@ -414,10 +432,6 @@ state: the current position in the history.
         self.load_state(0)
         self.history = [self.history[0]]
 
-    def reset (self, *args):
-        """Confirm resetting the puzzle."""
-        self.game.start_backend(Menu, 1, self)
-
     def update (self):
         """Do nothing (needed by Game)."""
         pass
@@ -426,6 +440,22 @@ state: the current position in the history.
         """Draw the puzzles."""
         if self.dirty:
             screen.fill(conf.BG)
-        drawn = self.puzzle.draw(screen, self.dirty)
+        w, h = screen.get_size()
+        x1 = w / 2
+        x2 = w - x1
+        t = self.selector.tiler
+        if x2 != t.offset[0]:
+            # screen size changed: need to change selector offset; no need to
+            # draw over area, as Game will have set self.dirty = True
+            t.offset = [x2, 0]
+            t.reset()
+        drawn1 = self.editor.draw(screen, self.dirty, (w / 2, h))
+        drawn2 = self.selector.draw(screen, self.dirty, (w - w / 2, h))
+        drawn = []
+        for d in (drawn1, drawn2):
+            if d:
+                drawn += d
+        if self.dirty:
+            drawn = True
         self.dirty = False
         return drawn

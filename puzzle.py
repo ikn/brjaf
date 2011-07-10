@@ -318,7 +318,7 @@ class Puzzle (object):
         """Initialise puzzle from a definition.
 
 Returns whether the puzzle was resized (may leave areas outside the puzzle
-dirty).
+dirty).  Preserves any selection, if possible.
 
 """
         self.lines = defn.split('\n')
@@ -348,7 +348,11 @@ dirty).
         sel = self.selected
         self.init()
         if sel is not None:
-            self.select(*sel)
+            try:
+                self.select(*sel)
+            except IndexError:
+                # now out of range
+                pass
         return resized
 
     def add_block (self, block, x, y):
@@ -682,6 +686,6 @@ dirty).
         if rects is None:
             return None
         elif isinstance(rects[0], int):
-            return True
+            return rects
         else:
             return rects[1:]

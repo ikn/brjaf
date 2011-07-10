@@ -409,6 +409,8 @@ function returns None.
             padding = ss * (conf.MSG_PADDING_TOP + conf.MSG_PADDING_BOTTOM)
             h -= self._msg_h + int(round(padding))
         drawn = self.puzzle.draw(screen, self.dirty, (w, h))
+        if self.dirty:
+            drawn = True
         self.dirty = False
         return drawn
 

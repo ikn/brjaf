@@ -176,8 +176,9 @@ draw(screen) -> drawn: draw anything necessary to screen; drawn is True if the
                        update the display in.
 
 A backend is also given a dirty attribute, which indicates whether its draw
-method should redraw everything, and should define a FRAME attribute, which is
-the length of one frame in seconds.
+method should redraw everything (it should set it to False when it does so),
+and should define a FRAME attribute, which is the length of one frame in
+seconds.
 
 A backend is constructed via
 cls(Game_instance, EventHandler_instance, *args), and should store
