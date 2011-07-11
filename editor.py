@@ -287,7 +287,7 @@ state: the current position in the history.
         if hasattr(self, 'editor'):
             self.editor.load(definition)
         else:
-            self.editor = Puzzle(self.game, definition, border = 1, align = 1)
+            self.editor = Puzzle(self.game, definition, border = 1)
         self.editor.select(0, 0)
         self.puzzle = self.editor
         self.editing = True
@@ -437,6 +437,7 @@ state: the current position in the history.
 
     def draw (self, screen):
         """Draw the puzzles."""
+        # TODO: more comments, and make squares the same size on both grids
         if self.dirty:
             screen.fill(conf.BG)
         w, h = screen.get_size()

@@ -1,3 +1,16 @@
+"""
+
+Directions are:
+    0 left
+    1 up
+    2 right
+    3 down
+
+Axes are:
+    0 horizontal
+    1 vertical
+
+"""
 # TODO: document definition format, including solutions
 
 from os.path import exists
@@ -8,10 +21,8 @@ from tiler import Tiler, draw_rect
 import conf
 
 # TODO:
-# - document
-# - bouncing blocks
+# - document classes
 # - portal blocks
-# - block orientation - set after motion, use in draw_tile
 # - crop characters to fit in tiles
 
 def autocrop (s):
@@ -38,6 +49,13 @@ Returns False if the image is completely transparent.
     return (b[0], b[1], b[2] - b[0], b[3] - b[1])
 
 def is_immoveable (tile):
+    """Determine whether a tile contains an immoveable object.
+
+Immoveable objects are walls, and the immoveable block if not on a slippery
+surface.  The given tile is conf.WALL, a Block instance or something else
+(never immoveable).
+
+"""
     if isinstance(tile, Block):
         surface = tile.puzzle.grid[tile.pos[0]][tile.pos[1]][0]
         # immoveable blocks can be moved on slippery surfaces
@@ -47,21 +65,35 @@ def is_immoveable (tile):
     return tile == conf.WALL or immoveable
 
 def force_dir (axis, force):
+    """Get the direction of a force.
+
+force_dir(axis, force) -> direction
+
+force is signed.
+
+"""
     return axis + (2 if force > 0 else 0)
 
 def force_axis (direction, force):
+    """Get the axis and sign of a force (reverse of force_dir).
+
+force_axis(direction, force) -> (axis, signed_force)
+
+force is unsigned.
+
+"""
     axis = direction % 2
     force = (1 if direction > 1 else -1) * force
     return axis, force
 
 def opposite_dir (direction):
+    """Get the opposite of a direction."""
     return (direction + 2) % 4
 
 class BoringBlock (object):
-    def __init__ (self, type_ID, puzzle, pos, orientation = None):
+    def __init__ (self, type_ID, puzzle, pos):
         self.type = type_ID
         self.pos = list(pos)
-        self.dir = orientation
 
     def __str__ (self):
         return '<block: {0} at {1}>'.format(self.type, self.pos)
@@ -69,8 +101,8 @@ class BoringBlock (object):
     __repr__ = __str__
 
 class Block (BoringBlock):
-    def __init__ (self, type_ID, puzzle, pos, orientation = None):
-        BoringBlock.__init__ (self, type_ID, puzzle, pos, orientation)
+    def __init__ (self, type_ID, puzzle, pos):
+        BoringBlock.__init__ (self, type_ID, puzzle, pos)
         self.puzzle = puzzle
         self.reset()
 
@@ -206,7 +238,7 @@ class Block (BoringBlock):
             force = resultant[axis]
             if not force:
                 # no resultant force on this axis: reaction
-                react[axis] = react[axis + 2] = True
+                react[axis] = react[axis + 2] = (True, False)
                 # won't push anything anyway
                 continue
             # get adjacent target tile
@@ -215,7 +247,7 @@ class Block (BoringBlock):
             adj = self.target_tile(r)
             if is_immoveable(adj):
                 # can't move on this axis
-                react[opposite_dir(force_dir(axis, force))] = True
+                react[opposite_dir(force_dir(axis, force))] = (True, True)
                 # so can't move diagonally
                 self.rm_targets(axis, diag)
             else:
@@ -230,15 +262,20 @@ class Block (BoringBlock):
                 # unequal forces: reaction along weaker one's axis
                 axis = r.index(min(r))
                 force = resultant[axis]
-                react[opposite_dir(force_dir(axis, force))] = True
+                react[opposite_dir(force_dir(axis, force))] = (True, False)
             else:
                 # equal forces: reaction along both axes
                 for axis, force in enumerate(resultant):
-                    react[opposite_dir(force_dir(axis, force))] = True
+                    react[opposite_dir(force_dir(axis, force))] = (True, False)
         # propagate any reactions
+        handled = True
         for direction in xrange(len(react)):
             if react[direction]:
                 self.reaction(direction)
+                # bounce if right type and right sort of reaction
+                if self.type is conf.B_BOUNCE and react[direction][1]:
+                    self.add_force(direction, abs(resultant[direction % 2]))
+                    handled = False
 
         # apply forces to targets
         for axis in (0, 1):
@@ -264,7 +301,7 @@ class Block (BoringBlock):
                 if force != 0:
                     target.add_sources(axis, {self: force})
 
-        self.handled = True
+        self.handled = handled
 
 class Puzzle (object):
     def __init__ (self, game, defn, physics = False, **tiler_kw_args):
