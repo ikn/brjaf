@@ -20,9 +20,7 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-# - need finer control over solution speed - stuff like, this period of waiting
-#   is at least/at most t frames; the next x steps should take at least/at most
-#   t frames
+# - when choose to autosolve, if >1 solution, show choice of them (numbered)
 
 def get_levels (custom = False):
     """Get a list of existing levels.
@@ -198,12 +196,47 @@ Takes ID and definition arguments as in the constructor.
             return soln
         parsed = []
         for i, s in enumerate(soln.split(',')):
+            s = s.strip()
             if i % 2:
                 # directions
-                s = [conf.DIRECTIONS.index(c) for c in s]
+                s = [conf.SOLN_DIRS.index(c) for c in s]
             else:
                 # time delay
-                s = int(s) if s else conf.SOLVE_SPEED
+                ops = ('>', '<')
+                if any(op in s for op in ops):
+                    # minimum and maximum values
+                    allowed_range = [0, conf.SOLVE_SPEED]
+                    while s:
+                        # check for < and > being first
+                        for op in ops:
+                            if s.startswith(op):
+                                s = s[1:].strip()
+                                eq = s.startswith('=')
+                                if eq:
+                                    # remove = if found
+                                    s = s[1:].strip()
+                            else:
+                                # op is not the first operator
+                                continue
+                            # the number is everything up to the next operator
+                            next_op = len(s)
+                            for o in ops:
+                                j = s.find(o)
+                                # or the end of the string
+                                if j == -1:
+                                    j = len(s)
+                                next_op = min(j, next_op)
+                            val = int(s[:next_op])
+                            val = int(val)
+                            # add/subtract one if >/<
+                            val += (-1 if op else 1) * (1 - eq)
+                            allowed_range[ops.index(op)] = val
+                            s = s[next_op:].strip()
+                    # constrain by given conditions
+                    gt, lt = allowed_range
+                    s = max(min(conf.SOLVE_SPEED, lt), gt)
+                else:
+                    s = int(s) if s else conf.SOLVE_SPEED
             parsed.append(s)
         self._solutions[ID] = parsed
         return parsed
@@ -247,7 +280,7 @@ cannot be called as detailed above (any argument is ignored).
                 if i < len(self._solution):
                     self._solve_time = self._solution[i]
                 self.solving_index = i
-                self.msg = ''.join(conf.DIRECTIONS[x] for x in move).upper()
+                self.msg = ''.join(conf.SOLN_DIRS_SHOWN[x] for x in move)
                 self.dirty = True
             else:
                 self.msg = ' '
@@ -317,7 +350,7 @@ function returns None.
                 result += str(t) + ','
                 t = 0
                 # add input
-                result += ''.join(conf.DIRECTIONS[d] for d in frame) + ','
+                result += ''.join(conf.SOLN_DIRS[d] for d in frame) + ','
         self.recording = False
         del self._blank_on_reset, self._recorded, self._recording_frame
         return result[:-1]

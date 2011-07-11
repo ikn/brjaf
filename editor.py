@@ -9,7 +9,6 @@ import level
 import conf
 
 # TODO:
-# - both puzzles on-screen at the same time
 # - 'Save draft' option
 # - save level message
 

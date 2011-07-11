@@ -70,7 +70,8 @@ MENU_REPEAT_DELAY = .15
 FORCE_MOVE = 2
 FORCE_ARROW = 2
 SOLVE_SPEED = 5 # delay between moves in frames
-DIRECTIONS = 'lurd'
+SOLN_DIRS = 'lurd'
+SOLN_DIRS_SHOWN = SOLN_DIRS.upper()
 
 # IDs
 MIN_ID = -6
