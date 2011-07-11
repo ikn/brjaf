@@ -202,10 +202,17 @@ Takes ID and definition arguments as in the constructor.
                 s = [conf.SOLN_DIRS.index(c) for c in s]
             else:
                 # time delay
+                if s.startswith('['):
+                    # got keys to hold for this waiting period
+                    end = s.find(']')
+                    hold = [conf.SOLN_DIRS.index(c) for c in s[1:end]]
+                    s = s[end + 1:].strip()
+                else:
+                    hold = ()
                 ops = ('>', '<')
                 if any(op in s for op in ops):
                     # minimum and maximum values
-                    allowed_range = [0, conf.SOLVE_SPEED]
+                    allowed_range = [None, None]
                     while s:
                         # check for < and > being first
                         for op in ops:
@@ -229,14 +236,19 @@ Takes ID and definition arguments as in the constructor.
                             val = int(s[:next_op])
                             val = int(val)
                             # add/subtract one if >/<
-                            val += (-1 if op else 1) * (1 - eq)
+                            val += (-1 if op == '<' else 1) * (1 - eq)
                             allowed_range[ops.index(op)] = val
                             s = s[next_op:].strip()
                     # constrain by given conditions
                     gt, lt = allowed_range
-                    s = max(min(conf.SOLVE_SPEED, lt), gt)
+                    s = conf.SOLVE_SPEED
+                    if gt is not None:
+                        s = max(s, gt)
+                    if lt is not None:
+                        s = min(s, lt)
                 else:
                     s = int(s) if s else conf.SOLVE_SPEED
+                s = (hold, s)
             parsed.append(s)
         self._solutions[ID] = parsed
         return parsed
@@ -259,7 +271,7 @@ cannot be called as detailed above (any argument is ignored).
             self.solving = True
             self.solving_index = 0
             self._solution = self._parse_soln(solution)
-            self._solve_time = self._solution[0]
+            self._solve_time = self._solution[0][1]
             # store old message and show a new one
             self._msg = self.msg
             self.msg = ' '
@@ -278,21 +290,30 @@ cannot be called as detailed above (any argument is ignored).
                 self.move(*move)
                 i += 1
                 if i < len(self._solution):
-                    self._solve_time = self._solution[i]
+                    self._solve_time = self._solution[i][1]
                 self.solving_index = i
+                # show directions pressed in message
                 self.msg = ''.join(conf.SOLN_DIRS_SHOWN[x] for x in move)
                 self.dirty = True
             else:
-                self.msg = ' '
-                self.dirty = True
                 # wait
                 if self._solve_time == 0:
                     self.solving_index += 1
-                    # do next step now
+                    # do next step now (will take care of message)
                     self.solve()
                 else:
                     self._solve_time -= 1
-                    return
+                    held = self._solution[self.solving_index][0]
+                    if held:
+                        # want to send some input every frame for this delay
+                        self.move(*held)
+                        # show directions pressed in message
+                        dirs = conf.SOLN_DIRS_SHOWN
+                        self.msg = ''.join(dirs[x] for x in held)
+                    else:
+                        # blank message
+                        self.msg = ' '
+                    self.dirty = True
 
     def stop_solving (self):
         """Stop solving the puzzle."""
