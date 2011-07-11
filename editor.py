@@ -437,20 +437,22 @@ state: the current position in the history.
 
     def draw (self, screen):
         """Draw the puzzles."""
-        # TODO: more comments, and make squares the same size on both grids
         if self.dirty:
             screen.fill(conf.BG)
+        # get puzzle sizes
         w, h = screen.get_size()
-        x1 = w / 2
-        x2 = w - x1
+        w1 = int(conf.EDITOR_WIDTH * w)
+        w2 = w - w1
         t = self.selector.tiler
-        if x2 != t.offset[0]:
+        if w1 != t.offset[0]:
             # screen size changed: need to change selector offset; no need to
             # draw over area, as Game will have set self.dirty = True
-            t.offset = [x2, 0]
+            t.offset = [w1, 0]
             t.reset()
-        drawn1 = self.editor.draw(screen, self.dirty, (w / 2, h))
-        drawn2 = self.selector.draw(screen, self.dirty, (w - w / 2, h))
+        # draw puzzles
+        drawn1 = self.editor.draw(screen, self.dirty, (w1, h))
+        drawn2 = self.selector.draw(screen, self.dirty, (w2, h))
+        # and return the sum list of rects to draw in
         drawn = []
         for d in (drawn1, drawn2):
             if d:

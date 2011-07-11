@@ -226,7 +226,7 @@ If the running backend is the last (root) one, exit the game.
             self.quit_backend(depth)
         else:
             # need to update new backend before drawing
-            self.update_again = True
+            self._update_again = True
 
     def set_backend_attrs (self, cls, attr, val, current = True,
                            inherit = True):
@@ -296,7 +296,10 @@ text: determine how to get the required image (what to do with data).
     def _update (self):
         """Run the backend's update method."""
         self.backend.event_handler.update()
-        self.backend.update()
+        # if a new backend was created during the above call, we'll end up
+        # updating twice before drawing
+        if not self._update_again:
+            self.backend.update()
 
     def _draw (self):
         """Run the backend's draw method and update the screen."""
@@ -311,9 +314,10 @@ text: determine how to get the required image (what to do with data).
         self.running = True
         t0 = time()
         while self.running:
-            self.update_again = False
+            self._update_again = False
             self._update()
-            if self.update_again:
+            if self._update_again:
+                self._update_again = False
                 self._update()
             self._draw()
             t1 = time()

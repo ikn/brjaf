@@ -159,6 +159,8 @@ Takes ID and definition arguments as in the constructor.
         self._solutions = solns
 
         self.dirty = True
+        self._first = True
+        self._moved = []
         self._winning = False
         self.won = False
         self.solving = False
@@ -167,6 +169,11 @@ Takes ID and definition arguments as in the constructor.
 
     def move (self, *directions):
         """Apply force to all player blocks in the given directions."""
+        # only make the move if haven't done already this frame
+        directions = [d for d in directions if d not in self._moved]
+        if not directions:
+            return
+        self._moved += directions
         if self.recording:
             self._record(directions)
         for d in set(directions):
@@ -182,6 +189,7 @@ Takes ID and definition arguments as in the constructor.
         """Reset the level to its state after the last call to Level.load."""
         if not self.solving:
             self.puzzle.init()
+            self._first = 1
             self.players = [b for b in self.puzzle.blocks
                             if b.type == conf.B_PLAYER]
         # restart recording if want to
@@ -261,7 +269,8 @@ in the puzzle definition).  This defaults to 0 (the 'primary' solution).
 
 This function is also called to move to the next step of an ongoing solution,
 in which case it requires no argument.  In fact, if a solution is ongoing, it
-cannot be called as detailed above (any argument is ignored).
+cannot be called as detailed above (any argument is ignored).  This makes it
+a bad idea to call this function while solving.
 
 """
         i = self.solving_index
@@ -378,7 +387,12 @@ function returns None.
 
     def update (self):
         """Update puzzle and check win conditions."""
+        # don't update on first frame in case stuff moves straight away
+        if self._first:
+            self._first = False
+            return
         self.puzzle.step()
+        self._moved = []
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:

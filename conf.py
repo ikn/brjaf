@@ -69,7 +69,7 @@ MENU_REPEAT_DELAY = .15
 # puzzle
 FORCE_MOVE = 2
 FORCE_ARROW = 2
-SOLVE_SPEED = 5 # delay between moves in frames
+SOLVE_SPEED = 20 # delay between moves in frames
 SOLN_DIRS = 'lurd'
 SOLN_DIRS_SHOWN = SOLN_DIRS.upper()
 
@@ -139,6 +139,7 @@ LEVEL_SELECT_COLS = 5
 NUM_UNCOMPLETED_LEVELS = 5
 
 # editor
+EDITOR_WIDTH = .7 # proportion of screen width (rest for selector)
 BLANK_LEVEL = '5 5'
 UNDO_LEVELS = 0
 LEVEL_NAME_LENGTH = 3
