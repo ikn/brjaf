@@ -149,8 +149,8 @@ files: loaded image cache (before resize).
         self.imgs = {}
         self.files = {}
         # load display settings
-        conf.FULLSCREEN = conf.get('fullscreen', conf.FULLSCREEN)
-        conf.RES_W = conf.get('res', conf.RES_W)
+        conf.FULLSCREEN = conf.get('fullscreen')
+        conf.RES_W = conf.get('res_w')
         self.refresh_display()
         self.fonts = Fonts()
         # start first backend
@@ -326,7 +326,7 @@ text: determine how to get the required image (what to do with data).
             t0 += self.backend.FRAME
         # save display settings
         conf.set('fullscreen', conf.FULLSCREEN)
-        conf.set('res', conf.RES_W)
+        conf.set('res_w', conf.RES_W)
 
     def restart (self):
         """Restart the game."""

@@ -155,6 +155,7 @@ except ImportError:
 sys.path = path
 
 def load_conf ():
+    """Load settings dict from file."""
     try:
         with open(CONF_FILE) as f:
             return eval(f.read())
@@ -162,15 +163,44 @@ def load_conf ():
         return {}
 
 def save_conf (conf):
+    """Save given settings dict to file.
+
+All values must have the property that eval(str(value)) == value.
+
+"""
     if not os.path.exists(CONF_DIR):
         os.makedirs(CONF_DIR)
     with open(CONF_FILE, 'w') as f:
         f.write(str(conf))
 
 def get (key, default = None):
+    """Get a setting's value.
+
+get(key[, default]) -> value
+
+key: the setting's name.
+default: the value to return if the setting has not been saved.  If not given,
+         this function tries to return an attribute of this module called
+         key.upper(); if this fails, None is returned.
+
+"""
+    if default is None:
+        try:
+            default = globals()[key.upper()]
+        except KeyError:
+            pass
     return load_conf().get(key, default)
 
 def set (key, value):
+    """Save the value of a setting to file.
+
+set(key, value)
+
+key: the setting's name.
+value: the value to store.  This must have the property that
+       eval(str(value)) == value.
+
+"""
     conf = load_conf()
     conf[key] = value
     save_conf(conf)
