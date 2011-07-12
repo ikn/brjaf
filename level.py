@@ -128,7 +128,8 @@ win_cb: as given.
                 (conf.KEYS_UP, [(self._move, (1,))]) + args,
                 (conf.KEYS_RIGHT, [(self._move, (2,))]) + args,
                 (conf.KEYS_DOWN, [(self._move, (3,))]) + args,
-                (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN)
+                (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN),
+                (conf.KEYS_TAB, self._fast_forward, eh.MODE_HELD)
             ])
         self.load(ID, definition)
         self.win_cb = win_cb
@@ -168,6 +169,7 @@ Takes ID and definition arguments as in the constructor.
         self.won = False
         self.solving = False
         self.solving_index = None
+        self._ff = False
         self.recording = False
 
     def move (self, *directions):
@@ -198,12 +200,13 @@ Takes ID and definition arguments as in the constructor.
         if self.recording and self._blank_on_reset:
             self.start_recording()
 
-    def _parse_soln (self, ID):
-        # parse a solution string if not already done, and return the result
+    def _fast_forward (self, key, event, mods):
+        # key callback to fast-forward an solution this frame
+        self._ff = True
+
+    def _parse_soln (self, ID, speed = conf.SOLVE_SPEED):
+        # parse a solution string and return the result
         soln = self._solutions[ID]
-        if isinstance(soln, list):
-            # already parsed
-            return soln
         parsed = []
         for i, s in enumerate(soln.split(',')):
             s = s.strip()
@@ -251,16 +254,15 @@ Takes ID and definition arguments as in the constructor.
                             s = s[next_op:].strip()
                     # constrain by given conditions
                     gt, lt = allowed_range
-                    s = conf.SOLVE_SPEED
+                    s = speed
                     if gt is not None:
                         s = max(s, gt)
                     if lt is not None:
                         s = min(s, lt)
                 else:
-                    s = int(s) if s else conf.SOLVE_SPEED
+                    s = int(s) if s else speed
                 s = (hold, s)
             parsed.append(s)
-        self._solutions[ID] = parsed
         return parsed
 
     def solve (self, solution = 0):
@@ -284,13 +286,15 @@ a bad idea to call this function while solving.
             self.solving = True
             self.solving_index = 0
             self._solution = self._parse_soln(solution)
+            self._solution_ff = self._parse_soln(solution, 0)
             self._solve_time = self._solution[0][1]
+            self._solve_time_ff = self._solution_ff[0][1]
             # call this function again to act on the first instruction
-            return self.solve()
+            move = self.solve()
         elif i == len(self._solution):
             # finished: just wait until the level ends
-            # TODO: if haven't solved after max(2, conf.SOLVE_SPEED) frames, show some sort of error
-            return []
+            # TODO: if haven't solved after max(2, 0 if self._ff else conf.SOLVE_SPEED) frames, show some sort of error
+            move = []
         else:
             # continuing
             if i % 2:
@@ -300,23 +304,27 @@ a bad idea to call this function while solving.
                 i += 1
                 if i < len(self._solution):
                     self._solve_time = self._solution[i][1]
+                    self._solve_time_ff = self._solution_ff[i][1]
                 self.solving_index = i
-                return move
             else:
                 # wait
-                if self._solve_time == 0:
+                t = self._solve_time_ff if self._ff else self._solve_time
+                if t <= 0:
                     self.solving_index += 1
                     # do next step now
-                    return self.solve()
+                    move = self.solve()
                 else:
                     self._solve_time -= 1
+                    self._solve_time_ff -= 1
                     held = self._solution[self.solving_index][0]
                     if held:
                         # want to send some input every frame for this delay
                         self.move(*held)
-                        return held
+                        move = held
                     else:
-                        return []
+                        move = []
+        self._ff = False
+        return move
 
     def stop_solving (self):
         """Stop solving the puzzle."""
