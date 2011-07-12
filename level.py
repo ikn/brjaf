@@ -1,5 +1,6 @@
 import os
 
+import pygame
 import evthandler as eh
 
 import menu
@@ -202,7 +203,12 @@ Takes ID and definition arguments as in the constructor.
 
     def _fast_forward (self, key, event, mods):
         # key callback to fast-forward an solution this frame
-        self._ff = True
+        if self.solving:
+            # if holding ctrl, go even faster
+            if pygame.KMOD_CTRL & mods:
+                self._ff = 2
+            else:
+                self._ff = 1
 
     def _parse_soln (self, ID, speed = conf.SOLVE_SPEED):
         # parse a solution string and return the result
@@ -308,6 +314,7 @@ a bad idea to call this function while solving.
                 self.solving_index = i
             else:
                 # wait
+                # if fast-forwarding, use the quicker solution
                 t = self._solve_time_ff if self._ff else self._solve_time
                 if t <= 0:
                     self.solving_index += 1
@@ -386,8 +393,8 @@ function returns None.
 
     def update (self):
         """Update puzzle and check win conditions."""
+        # step puzzle forwards
         self.puzzle.step()
-        self._moved = []
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:
@@ -422,11 +429,22 @@ function returns None.
                 self._winning = True
         else:
             self._winning = False
+        # fast-forward by increasing FPS
+        if self.solving and self._ff == 2:
+            if not hasattr(self, '_FRAME'):
+                self._FRAME = self.FRAME
+                self.FRAME /= conf.FF_SPEEDUP
+        elif hasattr(self, '_FRAME'):
+            self.FRAME = self._FRAME
+            del self._FRAME
         # continue solving
         if self.solving:
             self.solve()
+        # continue recording
         if self.recording:
             self._recording_frame += 1
+        # reset list of moves made this frame
+        self._moved = []
 
 
 class LevelBackend (Level):
