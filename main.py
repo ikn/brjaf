@@ -115,6 +115,7 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
                 h += font.size(line)[1]
         return surface
 
+
 class Game (object):
     """Handles backends.
 

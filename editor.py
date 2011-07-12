@@ -25,6 +25,19 @@ Takes the Level backend instance.
             menu.Button('Quit', self.game.quit_backend, 2)
         ),))
 
+
+def success_cb (fn, editor):
+    """Callback for SaveMenu on successful save.
+
+This function shows a notification and sets the current level ID to the name
+given to the level.
+
+"""
+    editor.ID = fn
+    editor.game.start_backend(Menu, 4, editor)
+    # refresh entries in main menu
+    editor.game.set_backend_attrs(menu.MainMenu, 're_init', True)
+
 class SaveMenu (menu.Menu):
     """Menu for saving a created level.
 
@@ -113,17 +126,6 @@ success_cb_args: list of arguments to pass to success_cb after the filename.
         if self._success_cb is not None:
             self._success_cb(fn, *self._success_cb_args)
 
-def success_cb (fn, editor):
-    """Callback for SaveMenu on successful save.
-
-This function shows a notification and sets the current level ID to the name
-given to the level.
-
-"""
-    editor.ID = fn
-    editor.game.start_backend(Menu, 4, editor)
-    # refresh entries in main menu
-    editor.game.set_backend_attrs(menu.MainMenu, 're_init', True)
 
 class Menu (menu.Menu):
     """The editor pause menu.
@@ -194,6 +196,7 @@ Takes the Editor instance.
     def _reset (self, editor):
         self._editor._do_reset()
         self.game.quit_backend()
+
 
 class Editor (object):
     """A puzzle editor (Game backend).

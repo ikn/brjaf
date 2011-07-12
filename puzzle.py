@@ -90,6 +90,7 @@ def opposite_dir (direction):
     """Get the opposite of a direction."""
     return (direction + 2) % 4
 
+
 class BoringBlock (object):
     def __init__ (self, type_ID, puzzle, pos):
         self.type = type_ID
@@ -99,6 +100,7 @@ class BoringBlock (object):
         return '<block: {0} at {1}>'.format(self.type, self.pos)
 
     __repr__ = __str__
+
 
 class Block (BoringBlock):
     def __init__ (self, type_ID, puzzle, pos):
@@ -302,6 +304,7 @@ class Block (BoringBlock):
                     target.add_sources(axis, {self: force})
 
         self.handled = handled
+
 
 class Puzzle (object):
     def __init__ (self, game, defn, physics = False, **tiler_kw_args):

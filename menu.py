@@ -115,6 +115,7 @@ insert(index, string)
             pos[0] += 1
         self.puzzle.tiler.change(*change)
 
+
 class Option (Text):
     """A selectable widget.  Inherits from Text.
 
@@ -174,6 +175,7 @@ args: arguments to pass to the handler; no other arguments are passed.
         self.update()
         self._throw_event(Option.SELECT_EVENT)
 
+
 class Button (Option):
     """A button widget.  Inherits from Option.
 
@@ -204,6 +206,7 @@ CLICK_EVENT: the button was clicked.
     def click (self):
         """Trigger handlers attached to CLICK_EVENT."""
         self._throw_event(Button.CLICK_EVENT)
+
 
 class Entry (Button):
     """Abstract class for widgets that capture input.  Inherits from Button.
@@ -258,6 +261,7 @@ the return value indicates whether it was possible.
         """Takes a keypress event and handles focus toggling."""
         if event.key in self._toggle_keys:
             self.toggle_focus()
+
 
 class TextEntry (Entry):
     """A fixed-size text entry widget.  Inherits from Entry.
@@ -355,11 +359,14 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
             self._throw_event(TextEntry.CURSOR_EVENT)
         self._update_cursor()
 
+
 class Select (Option):
     pass
 
+
 class Image (object):
     pass
+
 
 class Menu (object):
     def __init__ (self, game, event_handler, page_ID = None, *extra_args):
@@ -726,6 +733,7 @@ to start with).
         drawn = self.grid.draw(screen, self.dirty)
         self.dirty = False
         return drawn
+
 
 # both of these need menu.Menu
 import level
