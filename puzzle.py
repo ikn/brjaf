@@ -24,6 +24,7 @@ import conf
 # - document classes
 # - portal blocks
 # - crop characters to fit in tiles
+# - arrows shouldn't be able to move immoveable blocks
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -310,6 +311,11 @@ class Puzzle (object):
     def __init__ (self, game, defn, physics = False, **tiler_kw_args):
         self.physics = physics
         self.selected = None
+        self._changed = False
+        if conf.MOVE_SOUND:
+            self._move_sound = pygame.mixer.Sound(conf.MOVE_SOUND)
+        else:
+            self._move_sound = None
         if game is not None:
             self.img = game.img
         self.load(defn, **tiler_kw_args)
@@ -631,6 +637,8 @@ dirty).  Preserves any selection, if possible.
         # move blocks
         change = set()
         retain_forces = []
+        if dest:
+            self._changed = True
         for pos, b in dest.iteritems():
             # remove
             change.add(tuple(b.pos))
@@ -720,6 +728,9 @@ dirty).  Preserves any selection, if possible.
 
     def draw (self, screen, everything = False, size = None):
         # draw grid and tiles
+        if self._move_sound and self._changed:
+            self._move_sound.play()
+            self._changed = False
         if everything:
             self.tiler.reset()
         rects = self.tiler.draw_changed(screen, size)

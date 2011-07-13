@@ -11,6 +11,7 @@ import conf
 # TODO:
 # - 'Save draft' option
 # - save level message
+# - mouse control: left click to select/place (does both in one click), right to delete
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.

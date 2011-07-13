@@ -18,6 +18,7 @@ MENU_FRAME = 1. / MENU_FPS
 # paths
 DATA_DIR = ''
 IMG_DIR = DATA_DIR + 'img' + os.sep
+SOUND_DIR = DATA_DIR + 'sound' + os.sep
 LEVEL_DIR_MAIN = DATA_DIR + 'lvl' + os.sep
 FONT_DIR = DATA_DIR + 'font' + os.sep
 CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
@@ -73,6 +74,7 @@ SOLVE_SPEED = 5 # delay between moves in frames
 FF_SPEEDUP = 4
 SOLN_DIRS = 'lurd'
 SOLN_DIRS_SHOWN = SOLN_DIRS.upper()
+MOVE_SOUND = None # SOUND_DIR + 'move.ogg'
 
 # IDs
 MIN_ID = -6
