@@ -91,7 +91,7 @@ CHANGE_EVENT: the text changed; called after the change is made.
 
     __repr__ = __str__
 
-    def append (self, text, is_first_append = False):
+    def append (self, text, is_first_append = False, force_update = False):
         """Append a string to the end of the text.
 
 Returns whether any characters were truncated.
@@ -117,9 +117,14 @@ Returns whether any characters were truncated.
                 chars.append(u' ')
         self.text += ''.join(chars)
         self.current_size = len(self.text)
-        if old_text != self.text and not is_first_append:
-            self._throw_event(Text.CHANGE_EVENT)
-            self.update()
+        if not is_first_append:
+            # update if text changed
+            if force_update or old_text != self.text:
+                self._throw_event(Text.CHANGE_EVENT)
+                self.update()
+            # regenerate menu access keys if first letter changed
+            if (old_text and old_text[0]) != (self.text and self.text[0]):
+                self.menu.generate_access_keys()
         return not truncated
 
     def insert (self, index, text):
@@ -140,8 +145,9 @@ Returns whether any characters were truncated.
 Returns whether any characters were truncated.
 
 """
+        update = self.text and not text
         self.text = u''
-        return self.append(text)
+        return self.append(text, force_update = update)
 
     def _throw_event (self, event):
         """Call the handlers attached to the given event ID."""
@@ -530,18 +536,7 @@ class Menu (object):
         except KeyError:
             self.generate_grid()
         # compile options' first letters for access keys
-        self.keys = {}
-        for i, col in enumerate(self.page):
-            for j, element in enumerate(col):
-                if isinstance(element, Option) and element.text:
-                    # ignore caps - add for each variation
-                    c = element.text[0]
-                    ks = set((c, c.lower(), c.upper()))
-                    for k in ks:
-                        try:
-                            self.keys[k].append((i, j))
-                        except KeyError:
-                            self.keys[k] = [(i, j)]
+        self.generate_access_keys()
         # set selection
         if select is None:
             # use default selection, then first selectable option if possible
@@ -590,8 +585,25 @@ widget: widget (Text instance) to refresh text for; defaults to all widgets on
             for x, c in enumerate(widget.text):
                 o = ord(c) + id_offset
                 puzzle.add_block((BoringBlock, o), x0 + x, y)
-        # reapply selection
-        #self.set_selected(self.sel, True)
+
+    def generate_access_keys (self):
+        """Generate the access keys dict for keyboard control of menus.
+
+Options' first letters are used to select them.
+
+"""
+        self.keys = {}
+        for i, col in enumerate(self.page):
+            for j, element in enumerate(col):
+                if isinstance(element, Option) and element.text:
+                    # ignore caps - add for each variation
+                    c = element.text[0]
+                    ks = set((c, c.lower(), c.upper()))
+                    for k in ks:
+                        try:
+                            self.keys[k].append((i, j))
+                        except KeyError:
+                            self.keys[k] = [(i, j)]
 
     def generate_grid (self):
         # generate a grid containing random stuff and this page's text
@@ -812,7 +824,8 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5)
+                Button('Options', self.set_page, 5),
+                TextEntry(5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
