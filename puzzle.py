@@ -24,7 +24,6 @@ import conf
 # - document classes
 # - portal blocks
 # - crop characters to fit in tiles
-# - arrows shouldn't be able to move immoveable blocks
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -562,7 +561,7 @@ dirty).  Preserves any selection, if possible.
         # apply arrow forces
         for col in self.grid:
             for s, b, sel in col:
-                if b is not None and s in conf.S_ARROWS:
+                if s in conf.S_ARROWS and b is not None and not is_immoveable(b):
                     b.add_force(conf.S_ARROWS.index(s), conf.FORCE_ARROW)
 
         # resolve forces into block destinations

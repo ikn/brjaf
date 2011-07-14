@@ -68,7 +68,7 @@ Takes the LevelBackend instance.
         ))
 
     def _then_quit (self, f):
-        # call a function then quit the menu
+        """Call the given function then quit the menu."""
         f()
         self.game.quit_backend()
 
@@ -187,7 +187,7 @@ Takes ID and definition arguments as in the constructor.
                 player.add_force(d, conf.FORCE_MOVE)
 
     def _move (self, key, event, mods, direction):
-        # key callback to move player
+        """Key callback to move player."""
         if not self.solving:
             self.move(direction)
 
@@ -202,7 +202,7 @@ Takes ID and definition arguments as in the constructor.
             self.start_recording()
 
     def _fast_forward (self, key, event, mods):
-        # key callback to fast-forward an solution this frame
+        """Key callback to fast-forward solving this frame."""
         if self.solving:
             # if holding ctrl, go even faster
             if pygame.KMOD_CTRL & mods:
@@ -211,7 +211,7 @@ Takes ID and definition arguments as in the constructor.
                 self._ff = 1
 
     def _parse_soln (self, ID, speed = conf.SOLVE_SPEED):
-        # parse a solution string and return the result
+        """Parse a solution string and return the result."""
         soln = self._solutions[ID]
         parsed = []
         for i, s in enumerate(soln.split(',')):
@@ -340,7 +340,7 @@ a bad idea to call this function while solving.
         del self._solution, self._solve_time
 
     def _record (self, directions):
-        # add input to the current recording
+        """Add input to the current recording."""
         directions = set(directions)
         recorded = self._recorded
         frame = self._recording_frame
@@ -528,11 +528,12 @@ pause_menu: as given.
             return
         Level.update(self, *args, **kw)
 
-    def _mk_msg (self, screen, w, h):
-        # draw message to screen
+    def _mk_msg (self, screen):
+        """Draw message to screen."""
         if not self.msg:
             return
         # keep message size proportional to screen size (ss)
+        w, h = screen.get_size()
         ss = min(w, h)
         font = [conf.MSG_FONT, int(round(ss * conf.MSG_LINE_HEIGHT)), False]
         args = (self.msg, conf.MSG_TEXT_COLOUR, None, w, 0, True)
@@ -579,7 +580,7 @@ pause_menu: as given.
                 screen.fill(conf.BG, msg_rect)
                 msg_h = self._msg_h
             # generate message, if any
-            self._mk_msg(screen, w, h)
+            self._mk_msg(screen)
             if self._msg_h != msg_h:
                 # message height changed: need to change puzzle area
                 self.dirty = True

@@ -49,6 +49,8 @@ KEYS_UP = (pg.K_UP,)
 KEYS_RIGHT = (pg.K_RIGHT,)
 KEYS_DOWN = (pg.K_DOWN,)
 KEYS_DIR = (pg.K_LEFT, pg.K_UP, pg.K_RIGHT, pg.K_DOWN)
+KEYS_HOME = (pg.K_HOME,)
+KEYS_END = (pg.K_END,)
 
 KEYS_MINIMISE = (pg.K_F10,)
 KEYS_FULLSCREEN = (pg.K_F11,)

@@ -97,6 +97,7 @@ success_cb_args: list of arguments to pass to success_cb after the filename.
         ))
 
     def _save (self, overwrite = False):
+        """Callback for trying to save using the entered name."""
         d = self.directory
         fn = self._entry.text
         # check for blank filename
@@ -163,7 +164,7 @@ Takes the Editor instance.
         ))
 
     def _level_won (self):
-        # callback for solving the created level
+        """Callback for solving the created level."""
         self.game.quit_backend()
         # retrieve solution and add to definition
         self._defn += '\n: ' + self._lvl.stop_recording()
@@ -174,6 +175,7 @@ Takes the Editor instance.
         del self._defn
 
     def _save (self):
+        """Callback for 'save' option."""
         e = self._editor
         # try to save the current puzzle
         # check if there's a player block
@@ -195,6 +197,7 @@ Takes the Editor instance.
         self._lvl.start_recording()
 
     def _reset (self, editor):
+        """Call back for 'reset' option."""
         self._editor._do_reset()
         self.game.quit_backend()
 
@@ -370,7 +373,7 @@ state: the current position in the history.
         self.store_state()
 
     def _insert_cb (self, *args):
-        # callback for conf.KEYS_INSERT
+        """Callback for conf.KEYS_INSERT."""
         if self.editing:
             self.insert()
         else:
@@ -423,14 +426,14 @@ state: the current position in the history.
         self.game.start_backend(Menu, 0, self)
 
     def _back_cb (self, *args):
-        # callback for conf.KEYS_BACK
+        """Callback for conf.KEYS_BACK."""
         if self.editing:
             self.menu()
         else:
             self.switch_puzzle()
 
     def _do_reset (self):
-        # actually reset the puzzle
+        """Actually reset the puzzle."""
         # just reset to original state - to whatever was loaded, if anything
         self.load_state(0)
         self.history = [self.history[0]]

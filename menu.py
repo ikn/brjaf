@@ -37,37 +37,54 @@ class Text (object):
 
     CONSTRUCTOR
 
-Text(text)
+Text(text, special = False[, size])
 
 text: the text to display.
+special: whether to display in a different colour.
+size: the maximum size of the text.  This is used to determine the menu size.
+
+    METHODS
+
+append
+insert
+set_text
+attach_event
+update
+
+For all methods that manipulate the text, the result is truncated to self.size.
 
     ATTRIBUTES
 
 text: the widget's text.
-fixed: whether the text is fixed (won't change).
-size: the length of the text.
-selectable: whether the widget can be selected (always False).
-special: whether the text is displayed in a different style; defaults to False.
-         Call update after changing to redraw.
+size: the maximum length of the text.
+menu_size: the maximum space required by this widget in the menu.
+current_size: the size of the current text.
 pos: the position of the first character in the grid display, or None if
      unknown.
+special: whether the text is displayed in a different style; defaults to False.
+         Call update after changing to redraw.
+ehs: an event: handlers dict of attached event handlers.
 menu: the Menu instance the widget exists in, or None if unknown.
 puzzle: the Puzzle instance the widget exists in, or None if unknown.
 
+    EVENTS
+
+CHANGE_EVENT: the text changed; called after the change is made.
+
 """
 
-    def __init__ (self, text, special = False):
+    def __init__ (self, text, special = False, size = None):
         self.text = u''
-        self.fixed = True
-        self._append(text)
-        self.size = len(self.text)
-        self.selectable = False
-        self.pos = None
-        if not hasattr(self, 'menu'):
-            self.menu = None
-        if not hasattr(self, 'puzzle'):
-            self.puzzle = None
+        self.size = len(text) if size is None else int(size)
+        self.menu_size = self.size
+        self.ehs = {}
+        self.append(text)
         self.special = False
+        self.pos = None
+        self.menu = None
+        self.puzzle = None
+
+    CHANGE_EVENT = 0
 
     def __str__ (self):
         text = self.text.encode('utf-8')
@@ -75,75 +92,56 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
 
     __repr__ = __str__
 
-    def _append (self, string):
-        """Append a string to the end of the text, properly."""
-        if not isinstance(string, unicode):
-            string = string.decode('utf-8')
+    def append (self, text):
+        """Append a string to the end of the text.
+
+Returns whether any characters were truncated.
+
+"""
+        old_text = self.text
+        if not isinstance(text, unicode):
+            text = text.decode('utf-8')
         chars = []
-        for c in string:
+        truncated = False
+        l = len(self.text)
+        for c in text:
+            if l + len(chars) == self.size:
+                # can't add any more
+                truncated = True
+                break
+            # limit character range
             o = ord(c)
             if o >= conf.MIN_CHAR_ID and o <= conf.MAX_CHAR_ID:
                 chars.append(c)
             else:
+                # replace other characters with spaces
                 chars.append(u' ')
         self.text += ''.join(chars)
+        self.current_size = len(self.text)
+        if old_text != self.text:
+            self._throw_event(Text.CHANGE_EVENT)
+        return not truncated
 
-    def _insert (self, index, string):
-        """Insert a string at some index into the text, properly.
+    def insert (self, index, text):
+        """Insert a string at some index into the text.
 
-insert(index, string)
+insert(index, text)
+
+Returns whether any characters were truncated.
 
 """
         end = self.text[index:]
         self.text = self.text[:index]
-        self._append(string)
-        self.text += end
+        return self.append(text + end)
 
-    def update (self):
-        """Make any colour changes (selected, special) visible."""
-        # move blocks
-        change = set()
-        pos = list(self.pos)
-        for dx in xrange(len(self.text)):
-            change.add(tuple(pos))
-            ID = ord(self.text[dx])
-            if self.selected:
-                ID += conf.SELECTED_CHAR_ID_OFFSET
-            elif self.special:
-                ID += conf.SPECIAL_CHAR_ID_OFFSET
-            self.puzzle.grid[pos[0]][pos[1]][1].type = ID
-            pos[0] += 1
-        self.puzzle.tiler.change(*change)
+    def set_text (self, text):
+        """Set the value of the text.
 
-
-class Option (Text):
-    """A selectable widget.  Inherits from Text.
-
-    METHODS
-
-attach_event
-set_selected
-
-    ATTRIBUTES
-
-selectable: always True.
-selected: whether this widget is currently selected.
-ehs: an event: handlers dict of attached event handlers.
-
-    EVENTS
-
-SELECT_EVENT: the selected state has changed.  This is called after the
-              selected attribute is changed to the new state.
+Returns whether any characters were truncated.
 
 """
-
-    def __init__ (self, text):
-        Text.__init__(self, text)
-        self.selectable = True
-        self.selected = False
-        self.ehs = {}
-
-    SELECT_EVENT = 0
+        self.text = u''
+        return self.append(text)
 
     def _throw_event (self, event):
         """Call the handlers attached to the given event ID."""
@@ -167,6 +165,48 @@ args: arguments to pass to the handler; no other arguments are passed.
         except KeyError:
             self.ehs[event] = [data]
 
+    def update (self):
+        """Make any colour changes (selected, special) visible."""
+        # move blocks
+        change = set()
+        pos = list(self.pos)
+        for dx in xrange(len(self.text)):
+            change.add(tuple(pos))
+            ID = ord(self.text[dx])
+            if self.selected:
+                ID += conf.SELECTED_CHAR_ID_OFFSET
+            elif self.special:
+                ID += conf.SPECIAL_CHAR_ID_OFFSET
+            self.puzzle.grid[pos[0]][pos[1]][1].type = ID
+            pos[0] += 1
+        self.puzzle.tiler.change(*change)
+
+
+class Option (Text):
+    """A selectable widget.  Inherits from Text.
+
+    METHODS
+
+set_selected
+
+    ATTRIBUTES
+
+selectable: always True.
+selected: whether this widget is currently selected.
+
+    EVENTS
+
+SELECT_EVENT: the selected state has changed.  This is called after the
+              selected attribute is changed to the new state.
+
+"""
+
+    def __init__ (self, text, special = False, size = None):
+        Text.__init__(self, text, special, size)
+        self.selected = False
+
+    SELECT_EVENT = 1
+
     def set_selected (self, selected):
         """Set the widget's selected state."""
         if selected == self.selected:
@@ -181,10 +221,12 @@ class Button (Option):
 
     CONSTRUCTOR
 
-Button(text[, click_handler, *click_args])
+Button(text[, click_handler, *click_args], special = False, [, size])
 
 Passing click_handler and click_args is identical to calling
 Button.attach_event(Button.CLICK_EVENT, click_handler, click_args).
+
+special and size are keyword-only arguments.
 
     METHODS
 
@@ -196,12 +238,13 @@ CLICK_EVENT: the button was clicked.
 
 """
 
-    def __init__ (self, text, click_handler = None, *click_args):
-        Option.__init__(self, text)
+    def __init__ (self, text, click_handler = None, *click_args, **kw):
+        Option.__init__(self, text, kw.get('special', False),
+                        kw.get('size', None))
         if click_handler is not None:
             self.attach_event(Button.CLICK_EVENT, click_handler, click_args)
 
-    CLICK_EVENT = 1
+    CLICK_EVENT = 2
 
     def click (self):
         """Trigger handlers attached to CLICK_EVENT."""
@@ -213,9 +256,14 @@ class Entry (Button):
 
     CONSTRUCTOR
 
-Entry(menu, text)
+Entry(menu, text, special = False[, size])
 
 menu: the Menu instance this widget is attached to.
+
+    METHODS
+
+toggle_focus
+input
 
     ATTRIBUTES
 
@@ -228,13 +276,14 @@ FOCUS_EVENT: focus was toggled; called afterwards.
 
 """
 
-    def __init__ (self, menu, text):
-        Button.__init__(self, text, self.toggle_focus)
+    def __init__ (self, menu, text, special = False, size = None):
+        Button.__init__(self, text, self.toggle_focus, special = special,
+                        size = size)
         self.menu = menu
         self.focused = False
         self._toggle_keys = set(conf.KEYS_NEXT + (pygame.K_ESCAPE,))
 
-    FOCUS_EVENT = 2
+    FOCUS_EVENT = 3
 
     def toggle_focus (self):
         """Toggle whether the entry is focused.
@@ -268,7 +317,8 @@ class TextEntry (Entry):
 
     CONSTRUCTOR
 
-Entry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE)
+Entry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE,
+      special = False)
 
 menu: the Menu instance this widget is attached to.
 max_size: maximum number of characters the entry can hold.
@@ -280,28 +330,22 @@ The widget takes up one more tile than max_size.
 
     ATTRIBUTES:
 
-current_size: the number of characters currently entered.
 cursor: the cursor position (>= 0).
 allowed: as given (passed to set).
 
     EVENTS
 
-CHANGE_EVENT: the value stored in the entry changed; called after the change is
-              made.
 CURSOR_EVENT: the cursor changed position; called after the position update.
 
 """
 
     def __init__ (self, menu, max_size, initial_text = '',
-                  allowed = conf.PRINTABLE):
-        Entry.__init__(self, menu, initial_text[:max_size])
-        self.current_size = self.size
-        self.fixed = False
-        self.size = max_size + 1
+                  allowed = conf.PRINTABLE, special = False):
+        Entry.__init__(self, menu, initial_text, special, max_size)
+        self.menu_size = max_size + 1
         self.cursor = self.current_size
         self.allowed = set(allowed)
 
-    CHANGE_EVENT = 3
     CURSOR_EVENT = 4
 
     def _update_cursor (self):
@@ -324,45 +368,80 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         k = event.key
         u = event.unicode
         cursor = self.cursor
-        text = self.text
         # insert character if printable
         if u in self.allowed:
-            if self.current_size != self.size - 1:
-                self._insert(self.cursor, u)
+            if self.insert(self.cursor, u):
                 self.cursor += 1
-        # backspace deletes previous character, delete the one under the cursor
+        # backspace deletes the previous character
         elif k == pygame.K_BACKSPACE:
             if self.cursor > 0:
-                self.text = self.text[:self.cursor - 1] + \
-                            self.text[self.cursor:]
+                self.set_text(self.text[:self.cursor - 1] + \
+                              self.text[self.cursor:])
                 self.cursor -= 1
+        # delete deletes the character under the cursor
         elif k == pygame.K_DELETE:
-            if self.cursor <= self.size:
-                self.text = self.text[:self.cursor] + \
-                            self.text[self.cursor + 1:]
+            if self.cursor < self.size:
+                self.set_text(self.text[:self.cursor] + \
+                              self.text[self.cursor + 1:])
         # movement keys
         elif k in conf.KEYS_LEFT:
             self.cursor = (cursor - 1) % (self.current_size + 1)
         elif k in conf.KEYS_RIGHT:
             self.cursor = (cursor + 1) % (self.current_size + 1)
-        elif k == pygame.K_HOME:
+        elif k in conf.KEYS_HOME:
             self.cursor = 0
-        elif k == pygame.K_END:
-            self.cursor = self.size - 1
+        elif k in conf.KEYS_END:
+            self.cursor = self.size
         else:
             Entry.input(self, event)
-        if text != self.text:
-            self.current_size = len(self.text)
-            self.menu.refresh_text()
-            self._throw_event(TextEntry.CHANGE_EVENT)
         if cursor != self.cursor:
             self._throw_event(TextEntry.CURSOR_EVENT)
         self._update_cursor()
+        self.menu.refresh_text()
 
 
 class Select (Option):
-    pass
+    """A 'spin' widget to select a value.  Inherits from Option.
 
+    CONSTRUCTOR
+
+Select(text, value)
+
+text: text to display; any instances of '%x' are replaced with str(value).
+value: the initial value taken by the widget.
+
+    METHODS
+
+alter
+
+    ATTRIBUTES
+
+orig_text: the 'text' argument passed to the constructor.
+value: the current value held by the widget.
+
+
+    EVENTS
+
+ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
+             after the widget's text has been updated to reflect the change.
+
+"""
+
+    def __init__ (self, text, value, max_value_size = None):
+        Option.__init__(self, text.replace('%x', value))
+        self.orig_text = text
+        self.value = value
+        if max_value_size is None:
+            max_value_size = len(value)
+        self.current_size = len(self.text)
+        #self.size = len(
+
+    ALTER_EVENT = 5
+
+    #def set_value (self, 
+
+    def alter (self, direction, amount):
+        return NotImplemented
 
 class Image (object):
     pass
@@ -462,7 +541,7 @@ class Menu (object):
         self.keys = {}
         for i, col in enumerate(self.page):
             for j, element in enumerate(col):
-                if isinstance(element, Option) and element.fixed:
+                if isinstance(element, Option) and element.text:
                     # ignore caps - add for each variation
                     c = element.text[0]
                     ks = set((c, c.lower(), c.upper()))
@@ -593,7 +672,7 @@ class Menu (object):
             if sel is not None:
                 # select new option
                 option = self.selected(sel)
-                if not option.selectable:
+                if not isinstance(option, Option):
                     # select next selectable element if possible
                     # get list of selectable elements
                     selectable = []
@@ -630,7 +709,7 @@ class Menu (object):
             sel[axis] %= num_elements
             selected = self.selected(sel)
             # skip non-existent and non-selectable elements
-            while selected is None or not selected.selectable:
+            while selected is None or not isinstance(selected, Option):
                 sel[axis] += amount
                 sel[axis] %= num_elements
                 selected = self.selected(sel)
