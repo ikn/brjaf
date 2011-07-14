@@ -49,6 +49,7 @@ append
 insert
 set_text
 attach_event
+get_id_offset
 update
 
 For all methods that manipulate the text, the result is truncated to self.size.
@@ -57,7 +58,6 @@ For all methods that manipulate the text, the result is truncated to self.size.
 
 text: the widget's text.
 size: the maximum length of the text.
-menu_size: the maximum space required by this widget in the menu.
 current_size: the size of the current text.
 pos: the position of the first character in the grid display, or None if
      unknown.
@@ -76,13 +76,12 @@ CHANGE_EVENT: the text changed; called after the change is made.
     def __init__ (self, text, special = False, size = None):
         self.text = u''
         self.size = len(text) if size is None else int(size)
-        self.menu_size = self.size
         self.ehs = {}
-        self.append(text)
         self.special = False
         self.pos = None
         self.menu = None
         self.puzzle = None
+        self.append(text, True)
 
     CHANGE_EVENT = 0
 
@@ -92,7 +91,7 @@ CHANGE_EVENT: the text changed; called after the change is made.
 
     __repr__ = __str__
 
-    def append (self, text):
+    def append (self, text, is_first_append = False):
         """Append a string to the end of the text.
 
 Returns whether any characters were truncated.
@@ -118,8 +117,9 @@ Returns whether any characters were truncated.
                 chars.append(u' ')
         self.text += ''.join(chars)
         self.current_size = len(self.text)
-        if old_text != self.text:
+        if old_text != self.text and not is_first_append:
             self._throw_event(Text.CHANGE_EVENT)
+            self.update()
         return not truncated
 
     def insert (self, index, text):
@@ -165,21 +165,13 @@ args: arguments to pass to the handler; no other arguments are passed.
         except KeyError:
             self.ehs[event] = [data]
 
+    def get_id_offset (self):
+        """Get the number to add to block IDs."""
+        return conf.SPECIAL_CHAR_ID_OFFSET if self.special else 0
+
     def update (self):
-        """Make any colour changes (selected, special) visible."""
-        # move blocks
-        change = set()
-        pos = list(self.pos)
-        for dx in xrange(len(self.text)):
-            change.add(tuple(pos))
-            ID = ord(self.text[dx])
-            if self.selected:
-                ID += conf.SELECTED_CHAR_ID_OFFSET
-            elif self.special:
-                ID += conf.SPECIAL_CHAR_ID_OFFSET
-            self.puzzle.grid[pos[0]][pos[1]][1].type = ID
-            pos[0] += 1
-        self.puzzle.tiler.change(*change)
+        """Make any changes visible."""
+        self.menu.refresh_text(widget = self)
 
 
 class Option (Text):
@@ -214,6 +206,12 @@ SELECT_EVENT: the selected state has changed.  This is called after the
         self.selected = selected
         self.update()
         self._throw_event(Option.SELECT_EVENT)
+
+    def get_id_offset (self):
+        if self.selected:
+            return conf.SELECTED_CHAR_ID_OFFSET
+        else:
+            return Text.get_id_offset(self)
 
 
 class Button (Option):
@@ -256,9 +254,7 @@ class Entry (Button):
 
     CONSTRUCTOR
 
-Entry(menu, text, special = False[, size])
-
-menu: the Menu instance this widget is attached to.
+Entry(text, special = False[, size])
 
     METHODS
 
@@ -276,10 +272,9 @@ FOCUS_EVENT: focus was toggled; called afterwards.
 
 """
 
-    def __init__ (self, menu, text, special = False, size = None):
+    def __init__ (self, text, special = False, size = None):
         Button.__init__(self, text, self.toggle_focus, special = special,
                         size = size)
-        self.menu = menu
         self.focused = False
         self._toggle_keys = set(conf.KEYS_NEXT + (pygame.K_ESCAPE,))
 
@@ -317,10 +312,9 @@ class TextEntry (Entry):
 
     CONSTRUCTOR
 
-Entry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE,
+TextEntry(max_size, initial_text = '', allowed = conf.PRINTABLE,
       special = False)
 
-menu: the Menu instance this widget is attached to.
 max_size: maximum number of characters the entry can hold.
 initial_text: text to start with; gets truncated to max_size.
 allowed: list/string of allowed characters (initial_text is not checked for
@@ -339,10 +333,9 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
 
 """
 
-    def __init__ (self, menu, max_size, initial_text = '',
-                  allowed = conf.PRINTABLE, special = False):
-        Entry.__init__(self, menu, initial_text, special, max_size)
-        self.menu_size = max_size + 1
+    def __init__ (self, max_size, initial_text = '', allowed = conf.PRINTABLE,
+                  special = False):
+        Entry.__init__(self, initial_text, special, max_size)
         self.cursor = self.current_size
         self.allowed = set(allowed)
 
@@ -370,7 +363,8 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         cursor = self.cursor
         # insert character if printable
         if u in self.allowed:
-            if self.insert(self.cursor, u):
+            if self.current_size < self.size:
+                self.insert(self.cursor, u)
                 self.cursor += 1
         # backspace deletes the previous character
         elif k == pygame.K_BACKSPACE:
@@ -397,7 +391,6 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         if cursor != self.cursor:
             self._throw_event(TextEntry.CURSOR_EVENT)
         self._update_cursor()
-        self.menu.refresh_text()
 
 
 class Select (Option):
@@ -536,7 +529,6 @@ class Menu (object):
             self.grid = self.grids[page]
         except KeyError:
             self.generate_grid()
-            self.grids[self.page_ID] = self.grid
         # compile options' first letters for access keys
         self.keys = {}
         for i, col in enumerate(self.page):
@@ -560,49 +552,46 @@ class Menu (object):
         self.set_selected(select)
         self.dirty = True
 
-    def refresh_text (self, page_ID = None):
-        # redraw text for the given page ID, or the current page
+    def refresh_text (self, page_ID = None, widget = None):
+        """Update text widgets.
+
+refresh_text([page_ID][, widget])
+
+page_ID: page to refresh text for; defaults to the current page.
+widget: widget (Text instance) to refresh text for; defaults to all widgets on
+        the page.
+
+"""
         if page_ID is None:
             page_ID = self.page_ID
-            page = self.page
+        page = self.pages[page_ID]
+        if widget is None:
+            # do for all widgets
+            for col in page:
+                for widget in col:
+                    self.refresh_text(page_ID, widget)
         else:
-            page = self.pages[page_ID]
-        change = set()
-        # update both old and new sets of covered tiles
-        puzzle = self.grids[page_ID]
-        rm_w = self._prev_dim[0]
-        rm_x0 = (self.grid_w - rm_w) / 2 + 1
-        add_w, h = self.page_dim(page)
-        add_x0 = (self.grid_w - add_w) / 2 + 1
-        x0 = min(rm_x0, add_x0)
-        y0 = (self.grid_h - h) / 2 + 1
-        w = max(rm_w + rm_x0 - x0, add_w + add_x0 - x0)
-        for col in page:
-            for y, text in enumerate(col):
-                y = y0 + 2 * y
-                # remove letters
-                for x in xrange(w):
-                    x += x0
-                    b = puzzle.grid[x][y][1]
-                    if b is not None and b.type > conf.MAX_ID:
-                        puzzle.rm_block(None, x, y)
-                    # replace with original random block, if any
-                    try:
-                        b = (BoringBlock, self.definition[1][(x, y)])
-                    except KeyError:
-                        pass
-                    else:
-                        puzzle.add_block(b, x, y)
-                # add letters back
-                text.pos = (add_x0, y)
-                for x, c in enumerate(text.text):
-                    o = ord(c)
-                    if text.special:
-                        o += conf.SPECIAL_CHAR_ID_OFFSET
-                    puzzle.add_block((BoringBlock, o), add_x0 + x, y)
-            x0 += max(0, *(text.size + 1 for text in col))
+            # do for given widget
+            (x0, y) = widget.pos
+            puzzle = self.grids[page_ID]
+            # remove letters
+            for x in xrange(x0, widget.size + x0):
+                b = puzzle.grid[x][y][1]
+                if b is not None and b.type > conf.MAX_ID:
+                    puzzle.rm_block(None, x, y)
+                # replace with original random block, if any
+                try:
+                    puzzle.add_block((BoringBlock, self.definition[1][(x, y)]),
+                                     x, y)
+                except KeyError:
+                    pass
+            # add letters back
+            id_offset = widget.get_id_offset()
+            for x, c in enumerate(widget.text):
+                o = ord(c) + id_offset
+                puzzle.add_block((BoringBlock, o), x0 + x, y)
         # reapply selection
-        self.set_selected(self.sel, True)
+        #self.set_selected(self.sel, True)
 
     def generate_grid (self):
         # generate a grid containing random stuff and this page's text
@@ -626,20 +615,6 @@ class Menu (object):
         else:
             definition = self.definition
         things = dict(definition[1])
-        # letters count as blocks; add to the right part of the definition
-        self._prev_dim = (w, h) = self.page_dim(self.page)
-        x0 = (self.grid_w - w) / 2 + 1
-        y0 = (self.grid_h - h) / 2 + 1
-        for col in self.page:
-            for y, text in enumerate(col):
-                text.pos = (x0, y0 + 2 * y)
-                for x, c in enumerate(text.text):
-                    # just replace any blocks that might be here already
-                    o = ord(c)
-                    if text.special:
-                        o += conf.SPECIAL_CHAR_ID_OFFSET
-                    things[(x0 + x, y0 + 2 * y)] = o
-            x0 += max(0, *(text.size + 1 for text in col))
         # generate expected format definition
         definition = definition[0] + '\n\n'.join(
             '\n'.join(
@@ -648,10 +623,21 @@ class Menu (object):
             ) for things in (things, definition[2])
         )
         self.grid = Puzzle(self.game, definition, False, overflow = 'grow')
-        # Texts need a reference to Tiler to change their appearance
+        self.grids[self.page_ID] = self.grid
+        # texts references to the menu and the puzzle
         for col in self.page:
             for text in col:
+                text.menu = self
                 text.puzzle = self.grid
+        w, h = self.page_dim(self.page)
+        x0 = (self.grid_w - w) / 2 + 1
+        y0 = (self.grid_h - h) / 2 + 1
+        for col in self.page:
+            for y, text in enumerate(col):
+                text.pos = (x0, y0 + 2 * y)
+            x0 += max(0, *(text.size + 1 for text in col))
+        # add letters to the puzzle
+        self.refresh_text()
 
     def selected (self, sel = None):
         if sel is None:

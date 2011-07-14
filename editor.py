@@ -67,7 +67,7 @@ success_cb_args: list of arguments to pass to success_cb after the filename.
         # things without errors on Windows
         not_allowed = ' :' + os.sep
         allowed = set(c for c in conf.PRINTABLE if c not in not_allowed)
-        self._entry = menu.TextEntry(self, conf.LEVEL_NAME_LENGTH, fn, allowed)
+        self._entry = menu.TextEntry(conf.LEVEL_NAME_LENGTH, fn, allowed)
         self.directory = directory
         self.defn = defn
         self._success_cb = success_cb
