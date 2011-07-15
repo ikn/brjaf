@@ -400,14 +400,17 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
 
 
 class Select (Option):
-    """A 'spin' widget to select a value.  Inherits from Option.
+    """Base class for a 'spin' widget to select a value.  Inherits from Option.
 
     CONSTRUCTOR
 
-Select(text, value)
+Select(text, value[, max_value_size], wrap = False)
 
 text: text to display; any instances of '%x' are replaced with str(value).
 value: the initial value taken by the widget.
+max_value_size: the maximum size that str(value) will ever give; defaults to
+                len(str(value)).
+wrap: whether to wrap end values around.
 
     METHODS
 
@@ -417,6 +420,7 @@ alter
 
 orig_text: the 'text' argument passed to the constructor.
 value: the current value held by the widget.
+wrap: as given.
 
 
     EVENTS
@@ -426,21 +430,76 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
 
 """
 
-    def __init__ (self, text, value, max_value_size = None):
-        Option.__init__(self, text.replace('%x', value))
-        self.orig_text = text
-        self.value = value
+    def __init__ (self, text, value, max_value_size = None, wrap = False):
         if max_value_size is None:
-            max_value_size = len(value)
-        self.current_size = len(self.text)
-        #self.size = len(
+            max_value_size = len(str(value))
+        max_size = len(text) + (max_value_size - 2) * text.count('%x')
+        self.orig_text = text
+        Option.__init__(self, self.set_value(value, True), size = max_size)
+        self.wrap = wrap
 
     ALTER_EVENT = 5
 
-    #def set_value (self, 
+    def set_value (self, value, return_only = False):
+        """Set stored value."""
+        self.value = value
+        text = self.orig_text.replace('%x', str(value))
+        if return_only:
+            return text
+        else:
+            self.set_text(text)
 
-    def alter (self, direction, amount):
-        return NotImplemented
+    def alter (self, direction, amount = 1):
+        """'Spin' the widget to select a value.
+
+alter(direction, amount = 1)
+
+direction: 0 for left, 1 for right.  (Truthy values right, falsy values left.)
+amount: number of steps to move left or right.  The meaning of this depends on
+        the subclass being used.
+
+"""
+        pass
+
+
+class DiscreteSelect (Select):
+    """Select subclass for choosing from a given list of values.
+
+    CONSTRUCTOR
+
+DiscreteSelect(text, options, index = 0, wrap = False)
+
+options: a list of the options the value can be chosen from.
+index: the index in the options list to set as the initial value.
+
+    ATTRIBUTES
+
+options: as given.
+index: index of the current value in options.
+
+"""
+
+    def __init__ (self, text, options, index = 0, wrap = False):
+        self.options = options
+        self.index = int(index)
+        max_size = max(len(str(val)) for val in options)
+        Select.__init__(self, text, options[self.index], max_size, wrap)
+
+    def alter (self, direction, amount = 1):
+        direction = 1 if direction else -1
+        amount = int(amount)
+        orig_index = self.index
+        self.index += amount * direction
+        # set index to a value within bounds
+        if self.wrap:
+            self.index %= len(self.options)
+        else:
+            self.index = max(min(self.index, len(self.options) - 1), 0)
+        # only set value/throw event if the index changed
+        if orig_index != self.index:
+            self.set_value(self.options[self.index])
+            self._throw_event(Select.ALTER_EVENT)
+
 
 class Image (object):
     pass
@@ -719,10 +778,14 @@ Options' first letters are used to select them.
         if self.sel is None:
             return
         element = self.page[self.sel[0]][self.sel[1]]
-        if not isinstance(element, Select):
+        # if can alter this element,
+        if isinstance(element, Select):
+            # do so
+            element.alter(amount > 0, abs(amount))
+        else:
+            # else move selection left/right
             self.move_selection(None, None, None, amount, 0)
             return
-        # TODO: alter
 
     def select (self, *args):
         # choose the currently selected option, if any
@@ -824,8 +887,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5),
-                TextEntry(5)
+                Button('Options', self.set_page, 5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
