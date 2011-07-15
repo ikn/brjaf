@@ -56,6 +56,12 @@ KEYS_MINIMISE = (pg.K_F10,)
 KEYS_FULLSCREEN = (pg.K_F11,)
 KEYS_BACK = (pg.K_BACKSPACE, pg.K_ESCAPE)
 KEYS_NEXT = (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER)
+KEYS_ALTER_LEFT = ((pg.K_LEFT, 0, True),)
+KEYS_ALTER_RIGHT = ((pg.K_RIGHT, 0, True),)
+KEYS_ALTER_LEFT_BIG = ((pg.K_LEFT, pg.KMOD_ALT, True),)
+KEYS_ALTER_RIGHT_BIG = ((pg.K_RIGHT, pg.KMOD_ALT, True),)
+KEYS_ALTER_HOME = ((pg.K_LEFT, pg.KMOD_CTRL, True),)
+KEYS_ALTER_END = ((pg.K_RIGHT, pg.KMOD_CTRL, True),)
 KEYS_RESET = ((pg.K_r, 0, True),)
 KEYS_TAB = (pg.K_TAB, pg.K_F8, pg.K_SLASH, pg.K_BACKSLASH)
 KEYS_INSERT = KEYS_NEXT + (pg.K_i, pg.K_INSERT)
@@ -142,6 +148,9 @@ SELECTED_CHAR_ID_OFFSET = 256
 SPECIAL_CHAR_ID_OFFSET = 512
 LEVEL_SELECT_COLS = 5
 NUM_UNCOMPLETED_LEVELS = 5
+SELECT_STEP = (1, 0.01, 5, 0.05) # small/mid/large/very large; < 1 means
+            # fraction of total number of options; >= 1 means absolute value
+MIN_SELECT_STEP = (1, 1, 0.01, 5) # as above
 
 # editor
 EDITOR_WIDTH = .7 # proportion of screen width (rest for selector)

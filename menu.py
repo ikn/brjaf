@@ -26,9 +26,9 @@ import conf
 # | | | Entry
 # | | | | TextEntry
 # | | | | KeyEntry
-# | | Select (abstract; event:change; put arrows (<>) in edge blocks; text contains %x to replace with current value)
-# | | | DiscreteSelect (.options)
-# | | | RangeSelect (.min, .max, .step)
+# | | Select
+# | | | DiscreteSelect
+# | | | RangeSelect
 # | | | | FloatSelect (.dp)
 # Image (.w, .h, .img, .border = (size, colour))
 
@@ -407,21 +407,15 @@ class Select (Option):
 Select(text, value[, max_value_size], wrap = False)
 
 text: text to display; any instances of '%x' are replaced with str(value).
-value: the initial value taken by the widget.
-max_value_size: the maximum size that str(value) will ever give; defaults to
-                len(str(value)).
+value: initial value for the widget to hold.
+max_value_size: the maximum size a value can take; defaults to len(str(value)).
 wrap: whether to wrap end values around.
-
-    METHODS
-
-alter
 
     ATTRIBUTES
 
 orig_text: the 'text' argument passed to the constructor.
 value: the current value held by the widget.
 wrap: as given.
-
 
     EVENTS
 
@@ -431,46 +425,45 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
 """
 
     def __init__ (self, text, value, max_value_size = None, wrap = False):
+        self.orig_text = text
         if max_value_size is None:
             max_value_size = len(str(value))
-        max_size = len(text) + (max_value_size - 2) * text.count('%x')
-        self.orig_text = text
-        Option.__init__(self, self.set_value(value, True), size = max_size)
         self.wrap = wrap
+        max_size = len(text) + (max_value_size - 2) * text.count('%x')
+        Option.__init__(self, self._set_value(value, True), size = max_size)
 
     ALTER_EVENT = 5
 
-    def set_value (self, value, return_only = False):
+    def _set_value (self, value, return_only = False):
         """Set stored value."""
+        try:
+            if value == self.value:
+                return
+        except AttributeError:
+            pass
         self.value = value
         text = self.orig_text.replace('%x', str(value))
         if return_only:
             return text
         else:
             self.set_text(text)
-
-    def alter (self, direction, amount = 1):
-        """'Spin' the widget to select a value.
-
-alter(direction, amount = 1)
-
-direction: 0 for left, 1 for right.  (Truthy values right, falsy values left.)
-amount: number of steps to move left or right.  The meaning of this depends on
-        the subclass being used.
-
-"""
-        pass
+        self._throw_event(Select.ALTER_EVENT)
 
 
 class DiscreteSelect (Select):
-    """Select subclass for choosing from a given list of values.
+    """Choose from a given list of values.  Inherits from Select.
 
     CONSTRUCTOR
 
 DiscreteSelect(text, options, index = 0, wrap = False)
 
 options: a list of the options the value can be chosen from.
-index: the index in the options list to set as the initial value.
+index: the index in the options list to set as the widget's initial value.
+wrap: whether to wrap end values around.
+
+    METHODS
+
+alter
 
     ATTRIBUTES
 
@@ -482,23 +475,88 @@ index: index of the current value in options.
     def __init__ (self, text, options, index = 0, wrap = False):
         self.options = options
         self.index = int(index)
-        max_size = max(len(str(val)) for val in options)
-        Select.__init__(self, text, options[self.index], max_size, wrap)
+        self.wrap = wrap
+        value = options[self.index]
+        max_value_size = max(len(str(val)) for val in options)
+        Select.__init__(self, text, value, max_value_size, wrap)
 
     def alter (self, direction, amount = 1):
-        direction = 1 if direction else -1
-        amount = int(amount)
-        orig_index = self.index
+        """'Spin' the widget to select a value.
+
+alter(direction, amount = 1)
+
+direction: -1 for left, 1 for right.
+amount: 0 to go to start/end, otherwise spin by one step.
+
+"""
+        if direction != 1:
+            direction = -1
+        if amount == 0:
+            if direction == 1:
+                amount = len(self.options) - 1 - self.index
+            else:
+                amount = self.index
+        else:
+            amount = 1
+        # alter index
         self.index += amount * direction
-        # set index to a value within bounds
+        # confine index to a value within bounds
         if self.wrap:
             self.index %= len(self.options)
         else:
             self.index = max(min(self.index, len(self.options) - 1), 0)
-        # only set value/throw event if the index changed
-        if orig_index != self.index:
-            self.set_value(self.options[self.index])
-            self._throw_event(Select.ALTER_EVENT)
+        # set value to that of next index
+        self._set_value(self.options[self.index])
+
+class RangeSelect (Select):
+    """Choose from integer values in a range.  Inherits from Select.
+
+    CONSTRUCTOR
+
+RangeSelect(text, a, b[, initial], wrap = False)
+
+a: minimum value.
+b: maximum value.
+initial: the initial value; defaults to a.
+
+"""
+
+    def __init__ (self, text, a, b, initial = None, wrap = False):
+        self.min = int(a)
+        self.max = max(self.min, int(b))
+        if initial is None:
+            initial = self.min
+        else:
+            # choose next value down if given value not an option
+            initial = max(self.min, *(x for x in options if x <= initial))
+        # 'longest' number is either most negative or most positive
+        max_size = max(len(str(self.min)), len(str(self.max)))
+        Select.__init__(self, text, initial, max_size, wrap)
+
+    def alter (self, direction, amount = 1):
+        """'Spin' the widget to select a value.
+
+alter(direction, amount = 1)
+
+direction: -1 for left, 1 for right.
+amount: 0 to go to start/end, else 1 to 4 for a small to a large step.
+
+"""
+        if amount == 0:
+            value = self.max if direction == 1 else self.min
+        else:
+            # get wanted step
+            step = conf.SELECT_STEP[amount - 1]
+            if step < 1:
+                step = int(step * (self.max - self.min))
+            # constrain by defined minimum
+            min_step = conf.MIN_SELECT_STEP[amount - 1]
+            if min_step < 1:
+                min_step = int(min_step * (self.max - self.min))
+            step = max(step, min_step)
+            # get new value
+            value = max(min(self.value + direction * step, self.max), self.min)
+        self._set_value(value)
 
 
 class Image (object):
@@ -509,6 +567,7 @@ class Menu (object):
     def __init__ (self, game, event_handler, page_ID = None, *extra_args):
         self.game = game
         event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
+        od = eh.MODE_ONDOWN
         args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MENU_INITIAL_DELAY * conf.MENU_FPS), 1),
@@ -517,10 +576,14 @@ class Menu (object):
         event_handler.add_key_handlers([
             (conf.KEYS_UP, [(self.move_selection, (-1,))]) + args,
             (conf.KEYS_DOWN, [(self.move_selection, (1,))]) + args,
-            (conf.KEYS_LEFT, [(self.alter, (-1,))]) + args,
-            (conf.KEYS_RIGHT, [(self.alter, (1,))]) + args,
-            (conf.KEYS_NEXT, self.select, eh.MODE_ONDOWN),
-            (conf.KEYS_BACK, self.back, eh.MODE_ONDOWN)
+            (conf.KEYS_ALTER_LEFT, [(self.alter, (-1, 1))]) + args,
+            (conf.KEYS_ALTER_RIGHT, [(self.alter, (1, 1))]) + args,
+            (conf.KEYS_ALTER_LEFT_BIG, [(self.alter, (-1, 3))]) + args,
+            (conf.KEYS_ALTER_RIGHT_BIG, [(self.alter, (1, 3))]) + args,
+            (conf.KEYS_ALTER_HOME, [(self.alter, (-1, 0,))]) + args,
+            (conf.KEYS_ALTER_END, [(self.alter, (1, 0))]) + args,
+            (conf.KEYS_NEXT, self.select, od),
+            (conf.KEYS_BACK, self.back, od)
         ])
         self.event_handler = event_handler
         self.FRAME = conf.MENU_FRAME
@@ -774,17 +837,20 @@ Options' first letters are used to select them.
         # change selection
         self.set_selected(sel)
 
-    def alter (self, key, event, mods, amount):
+    def alter (self, key, event, mods, direction, amount):
         if self.sel is None:
             return
         element = self.page[self.sel[0]][self.sel[1]]
         # if can alter this element,
         if isinstance(element, Select):
             # do so
-            element.alter(amount > 0, abs(amount))
+            if event == 2 and amount:
+                # go faster if holding the key
+                amount += 1
+            element.alter(direction, amount)
         else:
             # else move selection left/right
-            self.move_selection(None, None, None, amount, 0)
+            self.move_selection(None, None, None, 1, 0)
             return
 
     def select (self, *args):
@@ -887,7 +953,8 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5)
+                Button('Options', self.set_page, 5),
+                RangeSelect('%x', -200, 200)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
