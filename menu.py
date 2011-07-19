@@ -840,7 +840,9 @@ Options' first letters are used to select them.
     def alter (self, key, event, mods, direction, amount):
         if self.sel is None:
             return
-        element = self.page[self.sel[0]][self.sel[1]]
+        else:
+            x, y = self.sel
+        element = self.page[x][y]
         # if can alter this element,
         if isinstance(element, Select):
             # do so
@@ -850,7 +852,7 @@ Options' first letters are used to select them.
             element.alter(direction, amount)
         else:
             # else move selection left/right
-            self.move_selection(None, None, None, 1, 0)
+            self.move_selection(None, None, None, direction, 0)
             return
 
     def select (self, *args):
