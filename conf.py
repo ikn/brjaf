@@ -4,216 +4,217 @@ import string
 
 import pygame as pg
 
-# TODO:
-# - can edit vars defined here through some config editor:
-#       takes raw Python code and enters into CONF_DIR/local_conf.py
-#       CONF_DIR can't be changed in this way (reject changing it)
-
-# timing
-FPS = 10
-FRAME = 1. / FPS
-MENU_FPS = 30
-MENU_FRAME = 1. / MENU_FPS
-
-# paths
-DATA_DIR = ''
-IMG_DIR = DATA_DIR + 'img' + os.sep
-SOUND_DIR = DATA_DIR + 'sound' + os.sep
-LEVEL_DIR_MAIN = DATA_DIR + 'lvl' + os.sep
-FONT_DIR = DATA_DIR + 'font' + os.sep
 CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
 CONF_FILE = CONF_DIR + 'conf'
-LEVEL_DIR_CUSTOM = CONF_DIR + 'lvl' + os.sep
-LEVEL_DIR_DRAFT = LEVEL_DIR_CUSTOM + 'draft' + os.sep
+
+# read local conf file into dict
+_local = {}
+try:
+    with open(CONF_FILE) as f:
+        lines = f.readlines()
+except IOError:
+    pass
+else:
+    for line in lines:
+        # split line into key/value by first =
+        eq = line.find('=')
+        if eq == -1:
+            continue
+        k = line[:eq].strip()
+        v = line[eq + 1:].strip()
+        _local[k] = v
+
+def save_conf ():
+    """Save current changed settings to file."""
+    if not os.path.exists(CONF_DIR):
+        os.makedirs(CONF_DIR)
+    with open(CONF_FILE, 'w') as f:
+        s = '\n'.join('{0} = {1}'.format(k, v) for k, v in _local.iteritems())
+        f.write(s)
+
+def get (key, default = None):
+    """Get a setting's value.
+
+get(key, default = None) -> value
+
+key: the setting's name; case-insensitive.
+default: the value to return if the setting has not been saved.
+
+"""
+    # look in this module first, then _local, then return default
+    try:
+        return globals()[key.upper()]
+    except KeyError:
+        try:
+            return eval(_local[key.upper()])
+        except KeyError:
+            return default
+
+
+# timing
+FPS = get('fps', 10)
+FRAME = get('frame', 1. / FPS)
+MENU_FPS = get('menu_fps', 30)
+MENU_FRAME = get('menu_frame', 1. / MENU_FPS)
+
+# paths
+DATA_DIR = get('data_dir', '')
+IMG_DIR = get('img_dir', DATA_DIR + 'img' + os.sep)
+SOUND_DIR = get('sound_dir', DATA_DIR + 'sound' + os.sep)
+LEVEL_DIR_MAIN = get('level_dir_main', DATA_DIR + 'lvl' + os.sep)
+FONT_DIR = get('font_dir', DATA_DIR + 'font' + os.sep)
+LEVEL_DIR_CUSTOM = get('level_dir_custom', CONF_DIR + 'lvl' + os.sep)
+LEVEL_DIR_DRAFT = get('level_dir_draft', LEVEL_DIR_CUSTOM + 'draft' + os.sep)
 
 # CLI
-DEBUG = False
-SILENT = True
-SILENT = SILENT and not DEBUG
+DEBUG = get('debug', False)
+SILENT = get('silent', True and not DEBUG)
 
 # window
-RES_F = pg.display.list_modes()[0]
-RES_W = (720, 480)
-MIN_RES_W = (320, 240)
-RESIZABLE = True
-FULLSCREEN = False
-WINDOW_ICON = None
-WINDOW_TITLE = 'Puzzle game thing'
-MAX_RATIO = 3
+RES_F = get('res_f', pg.display.list_modes()[0])
+RES_W = get('res_w', (720, 480))
+MIN_RES_W = get('min_res_w', (320, 240))
+RESIZABLE = get('resizable', True)
+FULLSCREEN = get('fullscreen', False)
+WINDOW_ICON = get('window_icon', None)
+WINDOW_TITLE = get('window_title', 'Puzzle game thing')
+MAX_RATIO = get('max_ratio', 3)
 
 # input
-KEYS_ALPHA = range(pg.K_a, pg.K_z + 1)
-KEYS_NUM = range(pg.K_0, pg.K_9 + 1)
-KEYS_LEFT = (pg.K_LEFT,)
-KEYS_UP = (pg.K_UP,)
-KEYS_RIGHT = (pg.K_RIGHT,)
-KEYS_DOWN = (pg.K_DOWN,)
-KEYS_DIR = (pg.K_LEFT, pg.K_UP, pg.K_RIGHT, pg.K_DOWN)
-KEYS_HOME = (pg.K_HOME,)
-KEYS_END = (pg.K_END,)
+KEYS_ALPHA = get('keys_alpha', range(pg.K_a, pg.K_z + 1))
+KEYS_NUM = get('keys_num', range(pg.K_0, pg.K_9 + 1))
+KEYS_LEFT = get('keys_left', (pg.K_LEFT,))
+KEYS_UP = get('keys_up', (pg.K_UP,))
+KEYS_RIGHT = get('keys_right', (pg.K_RIGHT,))
+KEYS_DOWN = get('keys_down', (pg.K_DOWN,))
+KEYS_DIR = get('keys_dir', (pg.K_LEFT, pg.K_UP, pg.K_RIGHT, pg.K_DOWN))
+KEYS_HOME = get('keys_home', (pg.K_HOME,))
+KEYS_END = get('keys_end', (pg.K_END,))
 
-KEYS_MINIMISE = (pg.K_F10,)
-KEYS_FULLSCREEN = (pg.K_F11,)
-KEYS_BACK = (pg.K_BACKSPACE, pg.K_ESCAPE)
-KEYS_NEXT = (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER)
-KEYS_ALTER_LEFT = ((pg.K_LEFT, 0, True),)
-KEYS_ALTER_RIGHT = ((pg.K_RIGHT, 0, True),)
-KEYS_ALTER_LEFT_BIG = ((pg.K_LEFT, pg.KMOD_ALT, True),)
-KEYS_ALTER_RIGHT_BIG = ((pg.K_RIGHT, pg.KMOD_ALT, True),)
-KEYS_ALTER_HOME = ((pg.K_LEFT, pg.KMOD_CTRL, True),)
-KEYS_ALTER_END = ((pg.K_RIGHT, pg.KMOD_CTRL, True),)
-KEYS_RESET = ((pg.K_r, 0, True),)
-KEYS_TAB = (pg.K_TAB, pg.K_F8, pg.K_SLASH, pg.K_BACKSLASH)
-KEYS_INSERT = KEYS_NEXT + (pg.K_i, pg.K_INSERT)
-KEYS_DEL = (pg.K_DELETE, pg.K_d)
-KEYS_UNDO = ((pg.K_u, 0, True), (pg.K_z, pg.KMOD_CTRL, True))
-KEYS_REDO = ((pg.K_r, pg.KMOD_CTRL, True), (pg.K_y, pg.KMOD_CTRL, True),
-             (pg.K_z, (pg.KMOD_CTRL, pg.KMOD_SHIFT), True))
+KEYS_MINIMISE = get('keys_minimise', (pg.K_F10,))
+KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,))
+KEYS_BACK = get('keys_back', (pg.K_BACKSPACE, pg.K_ESCAPE))
+KEYS_NEXT = get('keys_next', (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER))
+KEYS_ALTER_LEFT = get('keys_alter_left', ((pg.K_LEFT, 0, True),))
+KEYS_ALTER_RIGHT = get('keys_alter_right', ((pg.K_RIGHT, 0, True),))
+KEYS_ALTER_LEFT_BIG = get('keys_alter_left_big',
+                          ((pg.K_LEFT, pg.KMOD_ALT, True),))
+KEYS_ALTER_RIGHT_BIG = get('keys_alter_right_big',
+                           ((pg.K_RIGHT, pg.KMOD_ALT, True),))
+KEYS_ALTER_HOME = get('keys_alter_home', ((pg.K_LEFT, pg.KMOD_CTRL, True),))
+KEYS_ALTER_END = get('keys_alter_end', ((pg.K_RIGHT, pg.KMOD_CTRL, True),))
+KEYS_RESET = get('keys_reset', ((pg.K_r, 0, True),))
+KEYS_TAB = get('keys_tab', (pg.K_TAB, pg.K_F8, pg.K_SLASH, pg.K_BACKSLASH))
+KEYS_INSERT = get('keys_insert', KEYS_NEXT + (pg.K_i, pg.K_INSERT))
+KEYS_DEL = get('keys_del', (pg.K_DELETE, pg.K_d))
+KEYS_UNDO = get('keys_undo', ((pg.K_u, 0, True), (pg.K_z, pg.KMOD_CTRL, True)))
+KEYS_REDO = get('keys_redo', ((pg.K_r, pg.KMOD_CTRL, True),
+                              (pg.K_y, pg.KMOD_CTRL, True),
+                              (pg.K_z, (pg.KMOD_CTRL, pg.KMOD_SHIFT), True)))
 
-MOVE_INITIAL_DELAY = .2
-MOVE_REPEAT_DELAY = .1
-MENU_INITIAL_DELAY = .3
-MENU_REPEAT_DELAY = .15
+MOVE_INITIAL_DELAY = get('move_initial_delay', .2)
+MOVE_REPEAT_DELAY = 1. / FPS
+MENU_INITIAL_DELAY = get('menu_initial_delay', .3)
+MENU_REPEAT_DELAY = get('menu_repeat_delay', .15)
 
 # puzzle
-FORCE_MOVE = 2
-FORCE_ARROW = 2
-SOLVE_SPEED = 5 # delay between moves in frames
-FF_SPEEDUP = 4
-SOLN_DIRS = 'lurd'
-SOLN_DIRS_SHOWN = SOLN_DIRS.upper()
-MOVE_SOUND = None # SOUND_DIR + 'move.ogg'
+FORCE_MOVE = get('force_move', 2)
+FORCE_ARROW = get('force_arrow', 2)
+SOLVE_SPEED = get('solve_speed', 5) # delay between moves in frames
+FF_SPEEDUP = get('ff_speedup', 4)
+SOLN_DIRS = get('soln_dirs', 'lurd')
+SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
+MUSIC_VOLUME = get('music_volume', 50)
+SOUND_VOLUME = get('sound_volume', 50)
+MOVE_SOUND = get('move_sound', None) # SOUND_DIR + 'move.ogg'
 
 # IDs
-MIN_ID = -6
-MAX_ID = 4
+MIN_ID = get('min_id', -6)
+MAX_ID = get('max_id', 4)
 
-S_BLANK = -1
-S_SLIDE = -2
-S_LEFT = -3
-S_UP = -4
-S_RIGHT = -5
-S_DOWN = -6
-S_ARROWS = (S_LEFT, S_UP, S_RIGHT, S_DOWN)
-DEFAULT_SURFACE = S_BLANK
+S_BLANK = get('s_blank', -1)
+S_SLIDE = get('s_slide', -2)
+S_LEFT = get('s_left', -3)
+S_UP = get('s_up', -4)
+S_RIGHT = get('s_right', -5)
+S_DOWN = get('s_down', -6)
+S_ARROWS = get('s_arrows', (S_LEFT, S_UP, S_RIGHT, S_DOWN))
+DEFAULT_SURFACE = get('default_surface', S_BLANK)
 
-B_PLAYER = 0
-B_IMMOVEABLE = 1
-B_STANDARD = 2
-B_SLIDE = 3
-B_BOUNCE = 4
+B_PLAYER = get('b_player', 0)
+B_IMMOVEABLE = get('b_immoveable', 1)
+B_STANDARD = get('b_standard', 2)
+B_SLIDE = get('b_slide', 3)
+B_BOUNCE = get('b_bounce', 4)
 
-WALL = 99
+WALL = get('wall', 99)
 
 # colours
-BG = (255, 255, 255)
-surface_colours = {
+BG = get('bg', (255, 255, 255))
+surface_colours = get('surface_colours', {
     S_BLANK: (255, 255, 255),
     S_SLIDE: (200, 200, 255)
-}
-block_colours = {
+})
+block_colours = get('block_colours', {
     B_PLAYER: (200, 0, 0),
     B_IMMOVEABLE: (70, 70, 70),
     B_STANDARD: (150, 150, 150),
     B_SLIDE: (150, 150, 255),
     B_BOUNCE: (100, 255, 100)
-}
+})
 
 # selection
-SEL_COLOUR = (255, 0, 0)
-MIN_SEL_WIDTH = 1
-SEL_WIDTH = .05 # proportion of tile size
+SEL_COLOUR = get('sel_colour', (255, 0, 0))
+MIN_SEL_WIDTH = get('min_sel_width', 1)
+SEL_WIDTH = get('sel_width', .05) # proportion of tile size
 
 # messages
-MSG_FONT = 'orbitron-black.otf'
-MSG_TEXT_COLOUR = (0, 0, 0)
-MSG_LINE_HEIGHT = .1 # proportion of smaller screen dimension
-MSG_PADDING_TOP = .02 # proportion of smaller screen dimension
-MSG_PADDING_BOTTOM = .01 # proportion of smaller screen dimension
-MSG_MAX_HEIGHT = .2 # proportion of screen height
+MSG_FONT = get('msg_font', 'orbitron-black.otf')
+MSG_TEXT_COLOUR = get('msg_text_colour', (0, 0, 0))
+# proportion of smaller screen dimension
+MSG_LINE_HEIGHT = get('msg_line_height', .1)
+MSG_PADDING_TOP = get('msg_padding_top', .02)
+MSG_PADDING_BOTTOM = get('msg_padding_bottom', .01)
+MSG_MAX_HEIGHT = get('msg_max_height', .2) # proportion of screen height
 
 # menu
-PUZZLE_FONT = 'orbitron-black.otf'
-PUZZLE_TEXT_COLOUR = (0, 0, 0)
-PUZZLE_TEXT_SELECTED_COLOUR = (255, 0, 0)
-PUZZLE_TEXT_SPECIAL_COLOUR = (0, 180, 0)
-PUZZLE_TEXT_UPPER = True
+PUZZLE_FONT = get('puzzle_font', 'orbitron-black.otf')
+PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
+PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
+PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
+PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
 PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
+PRINTABLE = get('printable', PRINTABLE)
 PRINTABLE.add(' ')
-RAND_B_RATIO = 0.1
-RAND_S_RATIO = 0.1
-MIN_CHAR_ID = 32
-MAX_CHAR_ID = 255
-SELECTED_CHAR_ID_OFFSET = 256
-SPECIAL_CHAR_ID_OFFSET = 512
-LEVEL_SELECT_COLS = 5
-NUM_UNCOMPLETED_LEVELS = 5
-SELECT_STEP = (1, 0.01, 5, 0.05) # small/mid/large/very large; < 1 means
-            # fraction of total number of options; >= 1 means absolute value
-MIN_SELECT_STEP = (1, 1, 0.01, 5) # as above
+RAND_B_RATIO = get('rand_b_ratio', 0.1)
+RAND_S_RATIO = get('rand_s_ratio', 0.1)
+MIN_CHAR_ID = get('min_char_id', 32)
+MAX_CHAR_ID = get('max_char_id', 255)
+SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
+SPECIAL_CHAR_ID_OFFSET = get('special_char_id_offset', 512)
+LEVEL_SELECT_COLS = get('level_select_cols', 5)
+NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
+# (small, mid, large, very large)
+# < 1 means fraction of total number of options, >= 1 means absolute value
+SELECT_STEP = get('select_step', (1, 0.01, 5, 0.05))
+MIN_SELECT_STEP = get('min_select_step', (1, 1, 0.01, 5))
 
 # editor
-EDITOR_WIDTH = .7 # proportion of screen width (rest for selector)
-BLANK_LEVEL = '5 5'
-UNDO_LEVELS = 0
-LEVEL_NAME_LENGTH = 3
+EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
+BLANK_LEVEL = get('blank_level', '5 5')
+UNDO_LEVELS = get('undo_levels', 0)
+LEVEL_NAME_LENGTH = get('level_name_length', 3)
 
-# try to load local conf overrides
-path = sys.path
-sys.path = [CONF_DIR]
-try:
-    from local_conf import *
-except ImportError:
-    pass
-sys.path = path
-
-def load_conf ():
-    """Load settings dict from file."""
-    try:
-        with open(CONF_FILE) as f:
-            return eval(f.read())
-    except:
-        return {}
-
-def save_conf (conf):
-    """Save given settings dict to file.
-
-All values must have the property that eval(str(value)) == value.
-
-"""
-    if not os.path.exists(CONF_DIR):
-        os.makedirs(CONF_DIR)
-    with open(CONF_FILE, 'w') as f:
-        f.write(str(conf))
-
-def get (key, default = None):
-    """Get a setting's value.
-
-get(key[, default]) -> value
-
-key: the setting's name.
-default: the value to return if the setting has not been saved.  If not given,
-         this function tries to return an attribute of this module called
-         key.upper(); if this fails, None is returned.
-
-"""
-    if default is None:
-        try:
-            default = globals()[key.upper()]
-        except KeyError:
-            pass
-    return load_conf().get(key, default)
 
 def set (key, value):
     """Save the value of a setting to file.
 
 set(key, value)
 
-key: the setting's name.
+key: the setting's name; case-insensitive.
 value: the value to store.  This must have the property that
        eval(str(value)) == value.
 
 """
-    conf = load_conf()
-    conf[key] = value
-    save_conf(conf)
+    _local[key.upper()] = str(value)
+    save_conf()

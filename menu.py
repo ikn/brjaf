@@ -14,11 +14,13 @@ import conf
 # - u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
 # - keys should select next option, like u/d, l/r: flatten with others removed
 # - options:
-#       key bindings/repeat rates
+#       'puzzle speed' (FPS)
+#       key bindings
 #       delete data (progress, custom levels, solution history, local_conf)
 #       appearance (select from multiple themes)
 #       sound/music volume
 # - custom levels delete/rename/duplicate
+# - Selects need to be able to define a function to get an initial value (or just a constant) when the page containing them is loaded (through set_page(p >= 0))
 
 # Text
 # | Option
@@ -526,9 +528,6 @@ initial: the initial value; defaults to a.
         self.max = max(self.min, int(b))
         if initial is None:
             initial = self.min
-        else:
-            # choose next value down if given value not an option
-            initial = max(self.min, *(x for x in options if x <= initial))
         # 'longest' number is either most negative or most positive
         max_size = max(len(str(self.min)), len(str(self.max)))
         Select.__init__(self, text, initial, max_size, wrap)
@@ -955,8 +954,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5),
-                RangeSelect('%x', -200, 200)
+                Button('Options', self.set_page, 5)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3)
@@ -967,17 +965,11 @@ class MainMenu (Menu):
                 #Button('Rename'),
                 #Button('Duplicate')
             ), (
-                Button('Input', self.set_page, 6),
-                Button('Sound', self.set_page, 7)
-            ), (
-                Text('Key repeat'), # have Puzzle/Menu options, each with Delay/Speed
-                Option('Delay 0.2'), # 0.1 - 1.0 | FloatSelect('Delay %x', .1, 1, .1)
-                Option('Speed 10'), # 1 - 10 | RangeSelect('Speed %x', 1, conf.FPS, 1) | is 1 / repeat_delay
-                Button('Save', self.back)
+                Button('Sound', self.set_page, 6),
             ), (
                 Text('Volume'),
-                Option('Music 50'),
-                Option('Sound 50'),
+                RangeSelect('Music %x', 0, 100, conf.get('music_volume')),
+                RangeSelect('Sound %x', 0, 100, conf.get('sound_volume')),
                 Button('Save', self.back)
             )
         )
