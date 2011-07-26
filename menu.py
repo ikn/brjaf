@@ -16,23 +16,11 @@ import conf
 # - options:
 #       'puzzle speed' (FPS)
 #       key bindings
-#       delete data (progress, custom levels, solution history, local_conf)
+#       delete data (progress, custom levels, solution history, all)
 #       appearance (select from multiple themes)
 #       sound/music volume
 # - custom levels delete/rename/duplicate
 # - Selects need to be able to define a function to get an initial value (or just a constant) when the page containing them is loaded (through set_page(p >= 0))
-
-# Text
-# | Option
-# | | Button
-# | | | Entry
-# | | | | TextEntry
-# | | | | KeyEntry
-# | | Select
-# | | | DiscreteSelect
-# | | | RangeSelect
-# | | | | FloatSelect (.dp)
-# Image (.w, .h, .img, .border = (size, colour))
 
 class Text (object):
     """A simple widget to display (immutable) text.
@@ -413,6 +401,10 @@ value: initial value for the widget to hold.
 max_value_size: the maximum size a value can take; defaults to len(str(value)).
 wrap: whether to wrap end values around.
 
+    METHODS
+
+alter
+
     ATTRIBUTES
 
 orig_text: the 'text' argument passed to the constructor.
@@ -432,6 +424,7 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
             max_value_size = len(str(value))
         self.wrap = wrap
         max_size = len(text) + (max_value_size - 2) * text.count('%x')
+        self.size = max_size
         Option.__init__(self, self._set_value(value, True), size = max_size)
 
     ALTER_EVENT = 5
@@ -462,10 +455,6 @@ DiscreteSelect(text, options, index = 0, wrap = False)
 options: a list of the options the value can be chosen from.
 index: the index in the options list to set as the widget's initial value.
 wrap: whether to wrap end values around.
-
-    METHODS
-
-alter
 
     ATTRIBUTES
 
@@ -510,6 +499,7 @@ amount: 0 to go to start/end, otherwise spin by one step.
         # set value to that of next index
         self._set_value(self.options[self.index])
 
+
 class RangeSelect (Select):
     """Choose from integer values in a range.  Inherits from Select.
 
@@ -520,6 +510,11 @@ RangeSelect(text, a, b[, initial], wrap = False)
 a: minimum value.
 b: maximum value.
 initial: the initial value; defaults to a.
+
+    ATTRIBUTES
+
+min: a as given.
+max: b as given.
 
 """
 
@@ -558,8 +553,51 @@ amount: 0 to go to start/end, else 1 to 4 for a small to a large step.
         self._set_value(value)
 
 
-class Image (object):
-    pass
+class FloatSelect (RangeSelect):
+    """Choose from decimal values in a range.  Inherits from RangeSelect.
+
+    CONSTRUCTOR
+
+FloatSelect(text, a, b, dp[, initial], wrap = False)
+
+dp: number of decimal places to display.  Must be greater than 0.
+
+    ATTRIBUTES
+
+dp: as given.
+
+"""
+
+    def __init__ (self, text, a, b, dp, initial = None, wrap = False):
+        self.dp = max(1, int(dp))
+        # min, max should be ints
+        a = int(round(a * 10 ** self.dp))
+        b = int(round(b * 10 ** self.dp))
+        # trick RangeSelect by increasing max to take up one more digit, so
+        # that the proper max size gets propagated without doing much work here
+        c = 10 * max(abs(a * 10) if a < 0 else abs(a), b)
+        # but make sure that initial value is still constrained properly
+        if initial is not None:
+            initial = min(initial, b)
+        RangeSelect.__init__(self, text, a, c, initial, wrap)
+        self.max = b
+
+    def _set_value (self, value, *args, **kw):
+        """Set stored value."""
+        actual_value = value
+        neg = value < 0
+        value = str(abs(value))
+        # pad front to keep . in the same place
+        while len(value) <= self.dp:
+            value = '0' + value
+        while self.size > len(value) + 1 + neg:
+            value = ' ' + value
+        neg = '-' if neg else ''
+        value = neg + value[:-self.dp] + '.' + value[-self.dp:]
+        rtn = RangeSelect._set_value(self, value, *args, **kw)
+        # value should remain int so RangeSelect.alter works
+        self.value = actual_value
+        return rtn
 
 
 class Menu (object):
@@ -600,7 +638,7 @@ class Menu (object):
     def init (self, pages):
         self.pages = []
         for page in pages:
-            if isinstance(page[0], (Text, Image)):
+            if isinstance(page[0], Text):
                 # one column
                 page = [page]
             page = [col for col in page if col]
