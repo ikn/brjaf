@@ -22,6 +22,10 @@ import conf
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
 # - when choose to autosolve, if >1 solution, show choice of them (numbered)
+# - solution frame advance
+#   - KEYS_NEXT to toggle pause - shows 'paused' at bottom (but then this moves around when moves shown...)
+#   - KEYS_RIGHT/KEYS_DOWN to advance frame; go back a frame? (would have to store puzzle every frame)
+#   - acts like speed = 0 (do 'self._ff or self.paused')
 
 def get_levels (custom = False):
     """Get a list of existing levels.

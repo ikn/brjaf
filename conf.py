@@ -112,14 +112,14 @@ KEYS_REDO = get('keys_redo', ((pg.K_r, pg.KMOD_CTRL, True),
                               (pg.K_y, pg.KMOD_CTRL, True),
                               (pg.K_z, (pg.KMOD_CTRL, pg.KMOD_SHIFT), True)))
 
-MOVE_INITIAL_DELAY = get('move_initial_delay', .2)
-MOVE_REPEAT_DELAY = 1. / FPS
+MOVE_INITIAL_DELAY = get('move_initial_delay', 2. / FPS)
+MOVE_REPEAT_DELAY = 1. / FPS # shouldn't be edited: required for some puzzles
 MENU_INITIAL_DELAY = get('menu_initial_delay', .3)
 MENU_REPEAT_DELAY = get('menu_repeat_delay', .15)
 
 # puzzle
 FORCE_MOVE = get('force_move', 2)
-FORCE_ARROW = get('force_arrow', 2)
+FORCE_ARROW = FORCE_MOVE # some puzzles are impossible/too easy if different
 SOLVE_SPEED = get('solve_speed', 5) # delay between moves in frames
 FF_SPEEDUP = get('ff_speedup', 4)
 SOLN_DIRS = get('soln_dirs', 'lurd')
@@ -128,26 +128,26 @@ MUSIC_VOLUME = get('music_volume', 50)
 SOUND_VOLUME = get('sound_volume', 50)
 MOVE_SOUND = get('move_sound', None) # SOUND_DIR + 'move.ogg'
 
-# IDs
-MIN_ID = get('min_id', -6)
-MAX_ID = get('max_id', 4)
+# IDs (no point in being able to change them)
+MIN_ID = -6
+MAX_ID = 4
 
-S_BLANK = get('s_blank', -1)
-S_SLIDE = get('s_slide', -2)
-S_LEFT = get('s_left', -3)
-S_UP = get('s_up', -4)
-S_RIGHT = get('s_right', -5)
-S_DOWN = get('s_down', -6)
-S_ARROWS = get('s_arrows', (S_LEFT, S_UP, S_RIGHT, S_DOWN))
+S_BLANK = -1
+S_SLIDE = -2
+S_LEFT = -3
+S_UP = -4
+S_RIGHT = -5
+S_DOWN = -6
+S_ARROWS = (S_LEFT, S_UP, S_RIGHT, S_DOWN)
 DEFAULT_SURFACE = get('default_surface', S_BLANK)
 
-B_PLAYER = get('b_player', 0)
-B_IMMOVEABLE = get('b_immoveable', 1)
-B_STANDARD = get('b_standard', 2)
-B_SLIDE = get('b_slide', 3)
-B_BOUNCE = get('b_bounce', 4)
+B_PLAYER = 0
+B_IMMOVEABLE = 1
+B_STANDARD = 2
+B_SLIDE = 3
+B_BOUNCE = 4
 
-WALL = get('wall', 99)
+WALL = 99
 
 # colours
 BG = get('bg', (255, 255, 255))
@@ -186,8 +186,8 @@ PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
 PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
 PRINTABLE = get('printable', PRINTABLE)
 PRINTABLE.add(' ')
-RAND_B_RATIO = get('rand_b_ratio', 0.1)
-RAND_S_RATIO = get('rand_s_ratio', 0.1)
+RAND_B_RATIO = get('rand_b_ratio', .1)
+RAND_S_RATIO = get('rand_s_ratio', .1)
 MIN_CHAR_ID = get('min_char_id', 32)
 MAX_CHAR_ID = get('max_char_id', 255)
 SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
@@ -196,8 +196,8 @@ LEVEL_SELECT_COLS = get('level_select_cols', 5)
 NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
 # (small, mid, large, very large)
 # < 1 means fraction of total number of options, >= 1 means absolute value
-SELECT_STEP = get('select_step', (1, 0.01, 5, 0.05))
-MIN_SELECT_STEP = get('min_select_step', (1, 1, 0.01, 5))
+SELECT_STEP = get('select_step', (1, .01, 5, .05))
+MIN_SELECT_STEP = get('min_select_step', (1, 1, .01, 5))
 
 # editor
 EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width

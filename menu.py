@@ -1,5 +1,5 @@
 from math import ceil
-from random import randrange, randint
+from random import randrange, choice
 
 import pygame
 import evthandler as eh
@@ -9,18 +9,18 @@ import conf
 
 # TODO:
 # - document Menu
-# - home/end/page up/page down keys (paging is home/end for non-scrolling pages, else
-# - scrollable pages - set maximum number of rows and scroll if exceed it; show arrows in rows above top/below bottom if any up/down there (in far left/right tiles)
-# - u/d, l/r should go to prev/next col, row at ends: flatten elements to 1D list
-# - keys should select next option, like u/d, l/r: flatten with others removed
+# - home/end/page up/page down keys (paging is home/end for non-scrolling pages)
+# - scrollable pages - set maximum number of rows and scroll if exceed it
+#   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
+# - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
+# - keys should select next option, like l/r/u/d: flatten with others removed
 # - options:
-#       'puzzle speed' (FPS)
-#       key bindings
+#       'speed' (FPS)
 #       delete data (progress, custom levels, solution history, all)
 #       appearance (select from multiple themes)
 #       sound/music volume
 # - custom levels delete/rename/duplicate
-# - Selects need to be able to define a function to get an initial value (or just a constant) when the page containing them is loaded (through set_page(p >= 0))
+# - Selects need to be able to define a function (and args) to get an initial value (or just a constant) when the page containing them is loaded (through set_page(p >= 0))
 
 class Text (object):
     """A simple widget to display (immutable) text.
@@ -558,18 +558,23 @@ class FloatSelect (RangeSelect):
 
     CONSTRUCTOR
 
-FloatSelect(text, a, b, dp[, initial], wrap = False)
+FloatSelect(text, a, b, dp[, initial], wrap = False, pad = False)
 
 dp: number of decimal places to display.  Must be greater than 0.
+pad: whether to pad the start of the displayed number so that the decimal point
+     remains stationary for all possible values.
 
     ATTRIBUTES
 
 dp: as given.
+pad: as given.
 
 """
 
-    def __init__ (self, text, a, b, dp, initial = None, wrap = False):
+    def __init__ (self, text, a, b, dp, initial = None, wrap = False,
+                  pad = False):
         self.dp = max(1, int(dp))
+        self.pad = pad
         # min, max should be ints
         a = int(round(a * 10 ** self.dp))
         b = int(round(b * 10 ** self.dp))
@@ -587,11 +592,13 @@ dp: as given.
         actual_value = value
         neg = value < 0
         value = str(abs(value))
-        # pad front to keep . in the same place
+        # If we have no units/lower, add 0s until we do
         while len(value) <= self.dp:
             value = '0' + value
-        while self.size > len(value) + 1 + neg:
-            value = ' ' + value
+        # pad front to keep . in the same place
+        if self.pad:
+            while self.size > len(value) + 1 + neg:
+                value = ' ' + value
         neg = '-' if neg else ''
         value = neg + value[:-self.dp] + '.' + value[-self.dp:]
         rtn = RangeSelect._set_value(self, value, *args, **kw)
@@ -777,7 +784,9 @@ Options' first letters are used to select them.
                 n = min(n, n - len(things))
                 while i < n:
                     pos = (randrange(self.grid_w), randrange(self.grid_h))
-                    type_ID = randint(min_ID, conf.MAX_ID)
+                    x = xrange(min_ID, conf.MAX_ID + 1)
+                    # exclude arrows so we can use them for paging
+                    type_ID = choice([j for j in x if j not in conf.S_ARROWS])
                     if pos not in things:
                         things[pos] = type_ID
                         i += 1
@@ -1003,11 +1012,9 @@ class MainMenu (Menu):
                 #Button('Rename'),
                 #Button('Duplicate')
             ), (
-                Button('Sound', self.set_page, 6),
-            ), (
-                Text('Volume'),
                 RangeSelect('Music %x', 0, 100, conf.get('music_volume')),
                 RangeSelect('Sound %x', 0, 100, conf.get('sound_volume')),
+                RangeSelect('Speed %x', 1, 50, conf.get('fps')),
                 Button('Save', self.back)
             )
         )
