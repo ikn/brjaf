@@ -23,7 +23,7 @@ import conf
 # TODO:
 # - document classes
 # - portal blocks
-# - crop characters to fit in tiles
+# - crop characters to fit in tiles (try W)
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.

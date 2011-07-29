@@ -22,10 +22,6 @@ import conf
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
 # - when choose to autosolve, if >1 solution, show choice of them (numbered)
-# - solution frame advance
-#   - KEYS_NEXT to toggle pause - shows 'paused' at bottom (but then this moves around when moves shown...)
-#   - KEYS_RIGHT/KEYS_DOWN to advance frame; go back a frame? (would have to store puzzle every frame)
-#   - acts like speed = 0 (do 'self._ff or self.paused')
 
 def get_levels (custom = False):
     """Get a list of existing levels.
@@ -98,6 +94,7 @@ load
 move
 reset
 solve
+set_frozen
 stop_solving
 start_recording
 stop_recording
@@ -113,6 +110,7 @@ msg: puzzle message.
 solving: whether the puzzle is currently being solved.
 solving_index: the current step in the solution being used to solve the puzzle.
 recording: whether input is currently being recorded.
+frozen: whether the solution being played back is paused.
 win_cb: as given.
 
 """
@@ -128,13 +126,17 @@ win_cb: as given.
                 max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
                 max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
             )
+            move = lambda d: [(self._move, (d,)), self._step_solution]
+            freeze = lambda k, e, m: self.set_frozen()
             event_handler.add_key_handlers([
                 (conf.KEYS_LEFT, [(self._move, (0,))]) + args,
                 (conf.KEYS_UP, [(self._move, (1,))]) + args,
-                (conf.KEYS_RIGHT, [(self._move, (2,))]) + args,
-                (conf.KEYS_DOWN, [(self._move, (3,))]) + args,
+                (conf.KEYS_RIGHT, move(2)) + args,
+                (conf.KEYS_DOWN, move(3)) + args,
                 (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN),
-                (conf.KEYS_TAB, self._fast_forward, eh.MODE_HELD)
+                (conf.KEYS_TAB, self._fast_forward, eh.MODE_HELD),
+                (conf.KEYS_NEXT, freeze, eh.MODE_ONDOWN),
+                (conf.KEYS_RIGHT, self._step_solution) + args
             ])
         self.load(ID, definition)
         self.win_cb = win_cb
@@ -176,6 +178,7 @@ Takes ID and definition arguments as in the constructor.
         self.solving_index = None
         self._ff = False
         self.recording = False
+        self.frozen = False
 
     def move (self, *directions):
         """Apply force to all player blocks in the given directions."""
@@ -319,7 +322,8 @@ a bad idea to call this function while solving.
             else:
                 # wait
                 # if fast-forwarding, use the quicker solution
-                t = self._solve_time_ff if self._ff else self._solve_time
+                fast = self._ff or self.frozen
+                t = self._solve_time_ff if fast else self._solve_time
                 if t <= 0:
                     self.solving_index += 1
                     # do next step now
@@ -337,11 +341,25 @@ a bad idea to call this function while solving.
         self._ff = False
         return move
 
+    def set_frozen (self, frozen = None):
+        """Set paused state of solution, or toggle without an argument."""
+        if self.solving:
+            self.frozen = not self.frozen if frozen is None else frozen
+
+    def _step_solution (self, key, event, mods):
+        """If paused, step the solution forwards once."""
+        if self.solving and self.frozen:
+            self._next_step = True
+
     def stop_solving (self):
         """Stop solving the puzzle."""
         self.solving = False
         self.solving_index = None
-        del self._solution, self._solve_time
+        self.frozen = False
+        del self._solution, self._solution_ff, self._solve_time, \
+            self._solve_time_ff, self._next_step
+        if conf.RESET_ON_STOP_SOLVING:
+            self.reset()
 
     def _record (self, directions):
         """Add input to the current recording."""
@@ -397,8 +415,11 @@ function returns None.
 
     def update (self):
         """Update puzzle and check win conditions."""
-        # step puzzle forwards
-        self.puzzle.step()
+        step = not self.frozen or self._next_step
+        if step:
+            # step puzzle forwards
+            self.puzzle.step()
+            self._next_step = False
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:
@@ -442,7 +463,7 @@ function returns None.
             self.FRAME = self._FRAME
             del self._FRAME
         # continue solving
-        if self.solving:
+        if self.solving and step:
             self.solve()
         # continue recording
         if self.recording:
@@ -467,6 +488,8 @@ ID, definition and win_cb are as taken by Level.
     METHODS
 
 pause
+mk_msg
+draw
 
     ATTRIBUTES
 
@@ -508,7 +531,7 @@ pause_menu: as given.
             # show directions pressed in message
             self.msg = ''.join(conf.SOLN_DIRS_SHOWN[x] for x in move)
         else:
-            # blank message
+            # blank message (but still want it to take up a line)
             self.msg = ' '
         self.msg_dirty = True
         return move
@@ -535,6 +558,7 @@ pause_menu: as given.
     def _mk_msg (self, screen):
         """Draw message to screen."""
         if not self.msg:
+            self._msg_h = 0
             return
         # keep message size proportional to screen size (ss)
         w, h = screen.get_size()
@@ -557,7 +581,7 @@ pause_menu: as given.
             # centre message horizontally
             blit_x = (w - msg_w) / 2
             blit_y = int(round(h - self._msg_h - ss * conf.MSG_PADDING_BOTTOM))
-            screen.blit(msg, (blit_x, blit_y))
+            return msg, (blit_x, blit_y)
         else:
             # couldn't make font size small enough to fit the message on the
             # screen (_very_ unlikely): just don't display it
@@ -584,10 +608,14 @@ pause_menu: as given.
                 screen.fill(conf.BG, msg_rect)
                 msg_h = self._msg_h
             # generate message, if any
-            self._mk_msg(screen)
+            args = self._mk_msg(screen)
             if self._msg_h != msg_h:
                 # message height changed: need to change puzzle area
                 self.dirty = True
+                screen.fill(conf.BG)
+            # blit message to screen
+            if args is not None:
+                screen.blit(*args)
             self.msg_dirty = False
         if self.msg and self._msg_h:
             # reduce puzzle size to fit in message

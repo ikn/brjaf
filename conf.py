@@ -122,6 +122,7 @@ FORCE_MOVE = get('force_move', 2)
 FORCE_ARROW = FORCE_MOVE # some puzzles are impossible/too easy if different
 SOLVE_SPEED = get('solve_speed', 5) # delay between moves in frames
 FF_SPEEDUP = get('ff_speedup', 4)
+RESET_ON_STOP_SOLVING = get('reset_on_stop_solving', True)
 SOLN_DIRS = get('soln_dirs', 'lurd')
 SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
 MUSIC_VOLUME = get('music_volume', 50)
