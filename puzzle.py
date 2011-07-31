@@ -248,6 +248,7 @@ class Block (BoringBlock):
             r[not axis] = 0
             adj = self.target_tile(r)
             if is_immoveable(adj):
+                # TODO: hit wall sound here if adj == 99
                 # can't move on this axis
                 react[opposite_dir(force_dir(axis, force))] = (True, True)
                 # so can't move diagonally
@@ -259,6 +260,7 @@ class Block (BoringBlock):
                     self.add_targets(axis, diag)
         # if trying to move on both axes and can't move to diagonal
         if is_immoveable(diag) and not any(react):
+            # TODO: hit wall sound here if diag == 99
             r = [abs(f) for f in resultant]
             if r[0] != r[1]:
                 # unequal forces: reaction along weaker one's axis

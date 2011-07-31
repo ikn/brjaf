@@ -16,6 +16,9 @@ except IOError:
     pass
 else:
     for line in lines:
+        if line.startswith('#'):
+            # comment
+            continue
         # split line into key/value by first =
         eq = line.find('=')
         if eq == -1:

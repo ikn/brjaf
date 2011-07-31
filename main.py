@@ -11,6 +11,8 @@ from menu import MainMenu
 from level import LevelBackend
 import conf
 
+# TODO: have some sort of sound system: list of sound effects in conf, then play them through game.snd(ID) - and limits to one play of each ID per frame (fix current sound in Puzzle to use this)
+
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
 

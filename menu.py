@@ -67,7 +67,7 @@ CHANGE_EVENT: the text changed; called after the change is made.
         self.text = u''
         self.size = len(text) if size is None else int(size)
         self.ehs = {}
-        self.special = False
+        self.special = special
         self.pos = None
         self.menu = None
         self.puzzle = None
@@ -988,6 +988,11 @@ to start with).
         self.dirty = False
         return drawn
 
+    def _quit_then (self, f, *args):
+        """Quit the menu then call the given function (with *args)."""
+        self.game.quit_backend()
+        f(*args)
+
 
 # both of these need menu.Menu
 import level
@@ -1040,19 +1045,17 @@ class MainMenu (Menu):
                 if custom:
                     b = Button(lvl, self._custom_lvl_cb, ID)
                 else:
-                    b = Button(lvl, self.game.start_backend,
-                               level.LevelBackend, ID)
-                page[col].append(b)
-                if not custom:
                     # highlight completed levels
-                    if lvl in completed:
-                        b.special = True
-                    else:
-                        # only show a few unfinished levels
-                        uncompleted_to_show -= 1
-                        if uncompleted_to_show == 0:
-                            # only show a certain number of uncompleted levels
-                            break
+                    b = Button(lvl, self.game.start_backend,
+                               level.LevelBackend, ID,
+                               special = lvl in completed)
+                page[col].append(b)
+                if not custom and lvl not in completed:
+                    # only show a few unfinished levels
+                    uncompleted_to_show -= 1
+                    if uncompleted_to_show == 0:
+                        # only show a certain number of uncompleted levels
+                        break
                 col += 1
                 col %= conf.LEVEL_SELECT_COLS
 

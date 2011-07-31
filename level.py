@@ -1,4 +1,5 @@
 import os
+from math import ceil
 
 import pygame
 import evthandler as eh
@@ -50,7 +51,7 @@ Takes the LevelBackend instance.
 
     def init (self, level):
         if level.solving:
-            b = menu.Button('Stop solving', self._then_quit,
+            b = menu.Button('Stop solving', self._quit_then,
                             level.stop_solving)
         else:
             b = menu.Button('Help', self.set_page, 1)
@@ -62,15 +63,31 @@ Takes the LevelBackend instance.
             ),(
                 menu.Text('Are you sure?'),
                 menu.Button('Keep trying', self.game.quit_backend),
-                menu.Button('Show me how', self._then_quit,
-                            level.solve)
+                menu.Button('Show me how', self._quit_then,
+                            level.launch_solver)
             )
         ))
 
-    def _then_quit (self, f):
-        """Call the given function then quit the menu."""
-        f()
-        self.game.quit_backend()
+class SolnChooser (menu.Menu):
+    """Show a menu to choose a solution number."""
+
+    def init (self, cb, num_solns):
+        # display as a grid: aim for w/h = sw/sh with n = cols*rows
+        # using tiles for w, h, so get w = 2*cols+1, h = 2*rows+1
+        # not perfect, but should look okay-ish in most cases
+        sw, sh = self.game.screen.get_size()
+        r = float(sw) / sh
+        cols = (r - 1 + ((r - 1) ** 2 + 16 * num_solns * r) ** .5) / 4
+        cols = int(round(cols))
+        # create page
+        page = [[] for i in xrange(cols)]
+        # add buttons
+        col = 0
+        for i in xrange(num_solns):
+            page[col].append(menu.Button(str(i + 1), self._quit_then, cb, i))
+            col += 1
+            col %= cols
+        menu.Menu.init(self, (page,))
 
 
 class Level (object):
@@ -415,11 +432,26 @@ function returns None.
 
     def update (self):
         """Update puzzle and check win conditions."""
-        step = not self.frozen or self._next_step
-        if step:
+        if not self.frozen or self._next_step:
+            # fast-forward by increasing FPS
+            if self.solving and self._ff == 2:
+                if not hasattr(self, '_FRAME'):
+                    self._FRAME = self.FRAME
+                    self.FRAME /= conf.FF_SPEEDUP
+            elif hasattr(self, '_FRAME'):
+                self.FRAME = self._FRAME
+                del self._FRAME
+            # continue solving
+            if self.solving:
+                self.solve()
+            # continue recording
+            if self.recording:
+                self._recording_frame += 1
             # step puzzle forwards
             self.puzzle.step()
             self._next_step = False
+            # reset list of moves made this frame
+            self._moved = []
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:
@@ -454,22 +486,6 @@ function returns None.
                 self._winning = True
         else:
             self._winning = False
-        # fast-forward by increasing FPS
-        if self.solving and self._ff == 2:
-            if not hasattr(self, '_FRAME'):
-                self._FRAME = self.FRAME
-                self.FRAME /= conf.FF_SPEEDUP
-        elif hasattr(self, '_FRAME'):
-            self.FRAME = self._FRAME
-            del self._FRAME
-        # continue solving
-        if self.solving and step:
-            self.solve()
-        # continue recording
-        if self.recording:
-            self._recording_frame += 1
-        # reset list of moves made this frame
-        self._moved = []
 
 
 class LevelBackend (Level):
@@ -521,6 +537,16 @@ pause_menu: as given.
         if not self.solving:
             self._first = True
         Level.reset(self, *args, **kw)
+
+    def launch_solver (self):
+        """If more than one solution exists, ask which to use, then run it."""
+        n = len(self._solutions)
+        if n > 1:
+            # show menu giving choice of solutions
+            self.game.start_backend(SolnChooser, None, self.solve, n)
+        else:
+            # use only solution
+            self.solve()
 
     def solve (self, *args, **kw):
         if self.solving_index is None:
