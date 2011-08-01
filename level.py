@@ -22,7 +22,6 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-# - when choose to autosolve, if >1 solution, show choice of them (numbered)
 
 def get_levels (custom = False):
     """Get a list of existing levels.

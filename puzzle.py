@@ -248,19 +248,22 @@ class Block (BoringBlock):
             r[not axis] = 0
             adj = self.target_tile(r)
             if is_immoveable(adj):
-                # TODO: hit wall sound here if adj == 99
+                self.puzzle.game.play_snd('wall')
                 # can't move on this axis
                 react[opposite_dir(force_dir(axis, force))] = (True, True)
                 # so can't move diagonally
                 self.rm_targets(axis, diag)
             else:
                 if adj:
+                    self.puzzle.game.play_snd('hit')
                     self.add_targets(axis, adj)
                 if diag and not is_immoveable(diag):
                     self.add_targets(axis, diag)
         # if trying to move on both axes and can't move to diagonal
+        if diag and not is_immoveable(diag):
+            self.puzzle.game.play_snd('hit')
         if is_immoveable(diag) and not any(react):
-            # TODO: hit wall sound here if diag == 99
+            self.puzzle.game.play_snd('wall')
             r = [abs(f) for f in resultant]
             if r[0] != r[1]:
                 # unequal forces: reaction along weaker one's axis
@@ -310,15 +313,10 @@ class Block (BoringBlock):
 
 class Puzzle (object):
     def __init__ (self, game, defn, physics = False, **tiler_kw_args):
+        self.game = game
         self.physics = physics
         self.selected = None
         self._changed = False
-        if conf.MOVE_SOUND:
-            self._move_sound = pygame.mixer.Sound(conf.MOVE_SOUND)
-        else:
-            self._move_sound = None
-        if game is not None:
-            self.img = game.img
         self.load(defn, **tiler_kw_args)
 
     def _next_ints (self, lines):
@@ -666,7 +664,7 @@ dirty).  Preserves any selection, if possible.
             # image might be transparent
             if prefix == 's':
                 surface.fill(conf.BG, rect)
-            surface.blit(self.img(ID, fn, rect), rect)
+            surface.blit(self.game.img(ID, fn, rect), rect)
             return True
         return False
 
@@ -717,9 +715,9 @@ dirty).  Preserves any selection, if possible.
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
                 h = rect[3]
-                text = self.img((b.type, h),
-                                ((conf.PUZZLE_FONT, h, False), c, colour),
-                                text = True)
+                text = self.game.img((b.type, h),
+                                     ((conf.PUZZLE_FONT, h, False), c, colour),
+                                     text = True)
                 # centre inside tile rect
                 source = autocrop(text)
                 if source: # else blank
@@ -729,8 +727,8 @@ dirty).  Preserves any selection, if possible.
 
     def draw (self, screen, everything = False, size = None):
         # draw grid and tiles
-        if self._move_sound and self._changed:
-            self._move_sound.play()
+        if self._changed:
+            self.game.play_snd('move')
             self._changed = False
         if everything:
             self.tiler.reset()

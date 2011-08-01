@@ -143,6 +143,7 @@ backend: the current running backend.
 backends: a list of previous (nested) backends, most 'recent' last.
 imgs: image cache.
 files: loaded image cache (before resize).
+sounds: sound effect cache.
 
 """
 
@@ -150,6 +151,8 @@ files: loaded image cache (before resize).
         self.running = False
         self.imgs = {}
         self.files = {}
+        self.sounds = {}
+        self._sounds = set()
         # load display settings
         conf.FULLSCREEN = conf.get('fullscreen')
         conf.RES_W = conf.get('res_w')
@@ -258,7 +261,8 @@ data: if text is True, a tuple of args to pass to Fonts.text, else a filename
       to load.
 size: if given, scale the image to this size.  Can be a rect, in which case its
       dimension is used.
-text: determine how to get the required image (what to do with data).
+text: whether the image should be rendered from a font (data is list of args to
+      pass to Font.text).
 
 """
         if size is not None:
@@ -292,6 +296,32 @@ text: determine how to get the required image (what to do with data).
         self.imgs[key] = img
         return img
 
+    def play_snd (self, ID):
+        """Play a sound with the given ID.
+
+Only one instance of a sound will be played each frame.
+
+"""
+        if ID in self.sounds:
+            snd = self.sounds[ID]
+        else:
+            # load sound
+            try:
+                snd = pygame.mixer.Sound(conf.SOUND_DIR + conf.SOUNDS[ID])
+                if snd.get_length() < 10 ** -3:
+                    # no way this is valid
+                    return
+            except IndexError:
+                return # just don't play the sound if it's not registered
+            self.sounds[ID] = snd
+        self._sounds.add(ID)
+
+    def _play_snds (self):
+        """Play queued up sounds for this frame."""
+        for ID in self._sounds:
+            self.sounds[ID].play()
+        self._sounds = set()
+
     def quit (self, event = None):
         """Quit the game."""
         self.running = False
@@ -317,12 +347,17 @@ text: determine how to get the required image (what to do with data).
         self.running = True
         t0 = time()
         while self.running:
+            # update
             self._update_again = False
             self._update()
             if self._update_again:
                 self._update_again = False
                 self._update()
+            # play sounds
+            self._play_snds()
+            # draw
             self._draw()
+            # wait
             t1 = time()
             wait(int(1000 * (self.backend.FRAME - t1 + t0)))
             t0 += self.backend.FRAME

@@ -128,9 +128,15 @@ FF_SPEEDUP = get('ff_speedup', 4)
 RESET_ON_STOP_SOLVING = get('reset_on_stop_solving', True)
 SOLN_DIRS = get('soln_dirs', 'lurd')
 SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
+
+# audio
 MUSIC_VOLUME = get('music_volume', 50)
 SOUND_VOLUME = get('sound_volume', 50)
-MOVE_SOUND = get('move_sound', None) # SOUND_DIR + 'move.ogg'
+SOUNDS = get('sounds', {
+    'move': 'move.ogg',
+    'wall': 'wall.ogg',
+    'hit': 'hit.ogg'
+})
 
 # IDs (no point in being able to change them)
 MIN_ID = -6
