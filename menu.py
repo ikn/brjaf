@@ -20,7 +20,6 @@ import conf
 #       appearance (select from multiple themes)
 #       sound/music volume
 # - custom levels delete/rename/duplicate
-# - Selects need to be able to define a function (and args) to get an initial value (or just a constant) when the page containing them is loaded (through set_page(p >= 0))
 
 class Text (object):
     """A simple widget to display (immutable) text.
@@ -77,7 +76,7 @@ CHANGE_EVENT: the text changed; called after the change is made.
 
     def __str__ (self):
         text = self.text.encode('utf-8')
-        return '<{0}: \'{1}\'>'.format(self.__class__.__name__, text)
+        return '<{0}: \'{1}\'>'.format(type(self).__name__, text)
 
     __repr__ = __str__
 
@@ -425,11 +424,11 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
         self.wrap = wrap
         max_size = len(text) + (max_value_size - 2) * text.count('%x')
         self.size = max_size
-        Option.__init__(self, self._set_value(value, True), size = max_size)
+        Option.__init__(self, self.set_value(value, True), size = max_size)
 
     ALTER_EVENT = 5
 
-    def _set_value (self, value, return_only = False):
+    def set_value (self, value, return_only = False):
         """Set stored value."""
         try:
             if value == self.value:
@@ -450,10 +449,11 @@ class DiscreteSelect (Select):
 
     CONSTRUCTOR
 
-DiscreteSelect(text, options, index = 0, wrap = False)
+DiscreteSelect(text, options, initial = 0, wrap = False)
 
 options: a list of the options the value can be chosen from.
-index: the index in the options list to set as the widget's initial value.
+initial: the index of the option in the options list to set as the widget's
+         initial value.
 wrap: whether to wrap end values around.
 
     ATTRIBUTES
@@ -463,9 +463,9 @@ index: index of the current value in options.
 
 """
 
-    def __init__ (self, text, options, index = 0, wrap = False):
+    def __init__ (self, text, options, initial = 0, wrap = False):
         self.options = options
-        self.index = int(index)
+        self.index = int(initial)
         self.wrap = wrap
         value = options[self.index]
         max_value_size = max(len(str(val)) for val in options)
@@ -497,7 +497,10 @@ amount: 0 to go to start/end, otherwise spin by one step.
         else:
             self.index = max(min(self.index, len(self.options) - 1), 0)
         # set value to that of next index
-        self._set_value(self.options[self.index])
+        self.set_value(self.index)
+
+    def set_value (value, *args, **kw):
+        Select.set_value(self, self.options[value])
 
 
 class RangeSelect (Select):
@@ -550,7 +553,7 @@ amount: 0 to go to start/end, else 1 to 4 for a small to a large step.
             step = max(step, min_step)
             # get new value
             value = max(min(self.value + direction * step, self.max), self.min)
-        self._set_value(value)
+        self.set_value(value)
 
 
 class FloatSelect (RangeSelect):
@@ -587,7 +590,7 @@ pad: as given.
         RangeSelect.__init__(self, text, a, c, initial, wrap)
         self.max = b
 
-    def _set_value (self, value, *args, **kw):
+    def set_value (self, value, *args, **kw):
         """Set stored value."""
         actual_value = value
         neg = value < 0
@@ -601,7 +604,7 @@ pad: as given.
                 value = ' ' + value
         neg = '-' if neg else ''
         value = neg + value[:-self.dp] + '.' + value[-self.dp:]
-        rtn = RangeSelect._set_value(self, value, *args, **kw)
+        rtn = RangeSelect.set_value(self, value, *args, **kw)
         # value should remain int so RangeSelect.alter works
         self.value = actual_value
         return rtn
@@ -634,6 +637,7 @@ class Menu (object):
         self.last_pages = []
         self.captured = False
         self._default_selections = {}
+        self._selects = {}
         # call subclass's init method
         page_ID_sub = self.init(*extra_args)
         # page_ID argument to constructor takes precedence over return value
@@ -711,6 +715,11 @@ class Menu (object):
             except KeyError:
                 select = [0, 0]
         self.set_selected(select)
+        # set values of Selects
+        for col in self.page:
+            for w in col:
+                if isinstance(w, Select) and w in self._selects:
+                    w.set_value(self._get_initial(self._selects[w]))
         self.dirty = True
 
     def refresh_text (self, page_ID = None, widget = None):
@@ -993,6 +1002,47 @@ to start with).
         self.game.quit_backend()
         f(*args)
 
+    def _get_initial (self, initial):
+        """Compute initialisation value from object stored in self._selects."""
+        if hasattr(initial, '__call__'):
+            return initial()
+        else:
+            try:
+                return initial[0](*initial[1])
+            except (TypeError, IndexError):
+                return initial
+
+    def _new_select (self, cls, initial, *args, **kw):
+        """Add a Select instance and define how to initialise its value.
+
+_new_select(cls, initial, ...) -> select_instance
+
+cls: subclass of Select to instantiate.
+initial: value to set the widget to on page load, or a function that returns
+         the value to use, or (function, args) to do function(*args) to get the
+         value.
+
+Arguments to the created Select instance follow, excluding the 'initial'
+argument.
+
+select_instance: the created Select instance.
+
+"""
+        # zero-indexed
+        init_arg_pos = {DiscreteSelect: 2, RangeSelect: 3, FloatSelect: 4}
+        # add initial value to args
+        val = self._get_initial(initial)
+        i = init_arg_pos[cls]
+        if len(args) > i:
+            args = list(args)
+            args.insert(i, val)
+        else:
+            kw['initial'] = val
+        # create widget
+        s = cls(*args, **kw)
+        self._selects[s] = initial
+        return s
+
 
 # both of these need menu.Menu
 import level
@@ -1017,9 +1067,12 @@ class MainMenu (Menu):
                 #Button('Rename'),
                 #Button('Duplicate')
             ), (
-                RangeSelect('Music %x', 0, 100, conf.get('music_volume')),
-                RangeSelect('Sound %x', 0, 100, conf.get('sound_volume')),
-                RangeSelect('Speed %x', 1, 50, conf.get('fps')),
+                self._new_select(RangeSelect, (conf.get, ('music_volume',)),
+                                 'Music %x', 0, 100),
+                self._new_select(RangeSelect, (conf.get, ('sound_volume',)),
+                                 'Sound %x', 0, 100),
+                self._new_select(RangeSelect, (conf.get, ('fps',)), 'Speed %x',
+                                 1, 50),
                 Button('Save', self.back)
             )
         )
