@@ -11,7 +11,6 @@ import conf
 # TODO:
 # - 'Save draft' option
 # - save level message
-# - mouse control: left click to select/place (does both in one click), right to delete
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -236,6 +235,7 @@ state: the current position in the history.
     def __init__ (self, game, event_handler, ID = None):
         self.game = game
         # add event handlers
+        event_handler.add_event_handlers({pygame.MOUSEBUTTONDOWN: self._click})
         pzl_args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
@@ -402,6 +402,31 @@ state: the current position in the history.
         """Redo undone changes."""
         if self.state < len(self.history) - 1:
             self.load_state(self.state + 1)
+
+    def _click (self, evt):
+        """Handle mouse clicks."""
+        if evt.button in (1, 3):
+            # get clicked tile
+            pos = self.editor.point_tile(evt.pos)
+            if pos is not None:
+                # clicked a tile in self.editor: select
+                if not self.editing:
+                    self.switch_puzzle()
+                self.editor.select(*pos)
+                if evt.button == 1:
+                    # left-click to insert
+                    self.insert()
+                else:
+                    # right-click to delete
+                    self.delete()
+            else:
+                pos = self.selector.point_tile(evt.pos)
+                if pos is not None:
+                    # clicked a tile in self.selector: switch to selector, then
+                    # select the tile
+                    if self.editor:
+                        self.switch_puzzle()
+                    self.selector.select(*pos)
 
     def switch_puzzle (self, *args):
         """Switch selected puzzle between editor and block selector."""

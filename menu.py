@@ -15,10 +15,8 @@ import conf
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options:
-#       'speed' (FPS)
 #       delete data (progress, custom levels, solution history, all)
 #       appearance (select from multiple themes)
-#       sound/music volume
 # - custom levels delete/rename/duplicate
 
 class Text (object):
@@ -591,7 +589,6 @@ pad: as given.
         self.max = b
 
     def set_value (self, value, *args, **kw):
-        """Set stored value."""
         actual_value = value
         neg = value < 0
         value = str(abs(value))

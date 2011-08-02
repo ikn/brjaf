@@ -24,6 +24,7 @@ import conf
 # - document classes
 # - portal blocks
 # - crop characters to fit in tiles (try W)
+# - reverse frame advance
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -316,6 +317,7 @@ class Puzzle (object):
         self.game = game
         self.physics = physics
         self.selected = None
+        self.rect = None
         self._changed = False
         self.load(defn, **tiler_kw_args)
 
@@ -736,6 +738,32 @@ dirty).  Preserves any selection, if possible.
         if rects is None:
             return None
         elif isinstance(rects[0], int):
-            return rects
+            # drew everything and got back the tiler rect: store it
+            self.rect = pygame.Rect(rects)
+            return [rects]
         else:
             return rects[1:]
+
+    def point_tile (self, p):
+        """Get tile containing given (x, y) point, or None."""
+        if self.rect is None or not self.rect.collidepoint(p):
+            return None
+        result = []
+        for i in xrange(2):
+            pos = int(p[i])
+            n_tiles = self.size[i]
+            border = self.tiler.border[i]
+            gap = self.tiler.gap[i]
+            # take into account 
+            tile_size = (self.rect.size[i] - 2 * border - gap * (n_tiles - 1)) / n_tiles
+            pos -= self.rect[i] + border
+            if pos % (tile_size + gap) >= tile_size:
+                # between tiles/on border
+                return None
+            tile = pos / (tile_size + gap)
+            if 0 <= tile < n_tiles:
+                result.append(tile)
+            else:
+                # on border
+                return None
+        return result
