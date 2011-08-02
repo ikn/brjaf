@@ -12,11 +12,15 @@ import conf
 # - home/end/page up/page down keys (paging is home/end for non-scrolling pages)
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
+# - show arrows to sides of Selects when not at min/max if don't wrap
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
-# - options:
-#       delete data (progress, custom levels, solution history, all)
-#       appearance (select from multiple themes)
+# - options
+#       - existing ones need a working save button (should apply music volume to currently playing, set volume of main.Game's sounds)
+#       - new ones:
+#           delete data (progress, custom levels, solution history, all)
+#           appearance (select from multiple themes) (can changes colours, images, puzzle line sizes, font/size)
+#           sound theme (like appearance)
 # - custom levels delete/rename/duplicate
 
 class Text (object):

@@ -309,6 +309,7 @@ Only one instance of a sound will be played each frame.
                 if snd.get_length() < 10 ** -3:
                     # no way this is valid
                     return
+                snd.set_volume(conf.SOUND_VOLUME * .01)
             except IndexError:
                 return # just don't play the sound if it's not registered
             self.sounds[ID] = snd

@@ -23,7 +23,6 @@ import conf
 # TODO:
 # - document classes
 # - portal blocks
-# - crop characters to fit in tiles (try W)
 # - reverse frame advance
 
 def autocrop (s):
@@ -720,11 +719,19 @@ dirty).  Preserves any selection, if possible.
                 text = self.game.img((b.type, h),
                                      ((conf.PUZZLE_FONT, h, False), c, colour),
                                      text = True)
-                # centre inside tile rect
+                # crop off empty bits
                 source = autocrop(text)
                 if source: # else blank
-                    target = (rect[0] + (rect[2] - source[2]) / 2,
-                            rect[1] + (rect[3] - source[3]) / 2)
+                    # centre in tile rect
+                    target = [rect[0] + (rect[2] - source[2]) / 2,
+                              rect[1] + (h - source[3]) / 2]
+                    # crop to fit in tile rect (remove previous crop and move
+                    # to current target position first)
+                    s = pygame.Rect(source).move(-source[0], -source[1])
+                    s = s.move(target).clip(rect).move(-target[0], -target[1])
+                    # offset the target position by the same amount
+                    target = [target[0] + s[0], target[1] + s[1]]
+                    source = s.move(source[:2])
                     surface.blit(text, target, source)
 
     def draw (self, screen, everything = False, size = None):
