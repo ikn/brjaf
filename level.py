@@ -473,7 +473,7 @@ function returns None.
                     levels = conf.get('completed_levels', [])
                     if self.ID not in levels:
                         levels.append(self.ID)
-                        conf.set('completed_levels', levels)
+                        conf.set(completed_levels = levels)
                         self.game.set_backend_attrs(menu.MainMenu,
                                                     're_init', True)
                 # call win callback
@@ -519,7 +519,7 @@ pause_menu: as given.
             (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN)
         ])
         self.event_handler = event_handler
-        self.FRAME = 1. / conf.FPS
+        self.FRAME = conf.FRAME
         self.pause_menu = pause_menu
         if win_cb == 'default':
             win_cb = game.quit_backend

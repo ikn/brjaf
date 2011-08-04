@@ -152,8 +152,6 @@ sounds: sound effect cache.
         self.sounds = {}
         self._sounds = set()
         # load display settings
-        conf.FULLSCREEN = conf.get('fullscreen')
-        conf.RES_W = conf.get('res_w')
         self.refresh_display()
         self.fonts = Fonts()
         # start first backend
@@ -360,9 +358,6 @@ Only one instance of a sound will be played each frame.
             t1 = time()
             wait(int(1000 * (self.backend.FRAME - t1 + t0)))
             t0 += self.backend.FRAME
-        # save display settings
-        conf.set('fullscreen', conf.FULLSCREEN)
-        conf.set('res_w', conf.RES_W)
 
     def restart (self):
         """Restart the game."""
@@ -394,7 +389,7 @@ Only one instance of a sound will be played each frame.
 
     def toggle_fullscreen (self, *args):
         """Toggle fullscreen mode."""
-        conf.FULLSCREEN = not conf.FULLSCREEN
+        conf.set(fullscreen = not conf.FULLSCREEN)
         self.refresh_display()
 
     def minimise (self, *args):
@@ -405,7 +400,7 @@ Only one instance of a sound will be played each frame.
 
     def _resize_cb (self, event):
         """Callback to handle a window resize."""
-        conf.RES_W = (event.w, event.h)
+        conf.set(res_w = (event.w, event.h))
         self.refresh_display()
 
 if __name__ == '__main__':

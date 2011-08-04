@@ -16,7 +16,7 @@ import conf
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options
-#       - existing ones need a working save button (should apply music volume to currently playing, set volume of main.Game's sounds)
+#       - save button should apply music volume to currently playing, set volume of main.Game's sounds
 #       - new ones:
 #           delete data (progress, custom levels, solution history, settings (exclude progress, solution history), all)
 #           appearance (select from multiple themes) (can changes colours, images, puzzle line sizes, font/size)
@@ -1076,9 +1076,9 @@ class MainMenu (Menu):
                 s(RangeSelect, g('sound_volume'), 'Sound %x', 0, 100),
                 s(RangeSelect, g('fps'), 'Speed %x', 1, 50),
                 Button('Save', self._save, {
-                    (5, 0): 'music_volume',
-                    (5, 1): 'sound_volume',
-                    (5, 2): 'fps'
+                    ((5, 0), 'music_volume'),#, self._update_music_vol),
+                    ((5, 1), 'sound_volume', self._update_snd_vol),
+                    ((5, 2), 'fps')
                 })
             )
         )
@@ -1120,6 +1120,11 @@ class MainMenu (Menu):
 
         return Menu.init(self, pages)
 
+    def _update_snd_vol (self, vol):
+        """Set the volume of existing sounds."""
+        # TODO
+        pass
+
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""
         self._custom_lvl_ID = ID
@@ -1134,17 +1139,30 @@ class MainMenu (Menu):
 
 _save(settings, back = True)
 
-settings: a (pos, setting) dict, where:
+settings: a list of (pos, setting[, cb[, args...]]) tuples, where:
     pos: (page_ID, col, row) tuple indicating the widget's location.
          (page_ID, row) can be used if the page has only one column.
     setting: setting ID to pass to with conf.set.
+    cb: a function to call after the setting has been saved; it is passed the
+        new value.
+    args: positional arguments to pass to cb (after the compulsory argument).
 back: go back a page after saving.
 
 Text instances are supported, where we save widget.value if widget is a Select
 instance, else save widget.text.
 
 """
-        for pos, ID in settings.iteritems():
+        to_save = {}
+        cbs = []
+        for data in settings:
+            if len(data) >= 3:
+                cb = data[2]
+                args = data[3:]
+                data = data[:2]
+            else:
+                cb = None
+                args = ()
+            pos, ID = data
             # get widget
             if len(pos) == 2:
                 pos = (pos[0], 0, pos[1])
@@ -1155,7 +1173,14 @@ instance, else save widget.text.
                 val = widget.value
             else:
                 val = widget.text
-            # save setting
-            conf.set(ID, val)
+            # store data to save all settings together
+            to_save[ID] = val
+            cbs.append((cb, val, args))
+        # save settings
+        conf.set(**to_save)
+        # call callbacks
+        for cb, val, args in cbs:
+            if cb is not None:
+                cb(val, *args)
         if back:
             self.back()

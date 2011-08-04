@@ -56,6 +56,7 @@ default: the value to return if the setting has not been saved.
 
 # timing
 FPS = get('fps', 10)
+FRAME = get('frame', 1. / FPS)
 MENU_FPS = get('menu_fps', 30)
 MENU_FRAME = get('menu_frame', 1. / MENU_FPS)
 
@@ -192,7 +193,8 @@ PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
 PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
 PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
 PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
-PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
+# get set from builtins to avoid conflict with set as defined here
+PRINTABLE = __builtins__['set'](c for c in string.printable if c not in string.whitespace)
 PRINTABLE = get('printable', PRINTABLE)
 PRINTABLE.add(' ')
 RAND_B_RATIO = get('rand_b_ratio', .1)
@@ -215,16 +217,24 @@ UNDO_LEVELS = get('undo_levels', 0)
 LEVEL_NAME_LENGTH = get('level_name_length', 3)
 
 
-def set (key, value):
+def set (**settings):
     """Save the value of a setting to file.
 
-set(key, value)
+set(**settings)
 
 key: the setting's name; case-insensitive.
 value: the value to store.  This must have the property that
        eval(str(value)) == value.
 
 """
-    setattr(sys.modules[__name__], key.upper(), value)
-    _local[key.upper()] = str(value)
-    save_conf()
+    for key, value in settings.iteritems():
+        self = sys.modules[__name__]
+        setattr(self, key.upper(), value)
+        _local[key.upper()] = str(value)
+        save_conf()
+    # hack: delete settings stored here first, so loading settings doesn't get
+    # previous ones in the module (and need to ignore __name__, for example)
+    for attr in [a for a in vars(self).keys() if not a.startswith('__')]:
+        delattr(self, attr)
+    # reload this module to ensure settings depending on this one are updated
+    reload(self)
