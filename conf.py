@@ -56,7 +56,6 @@ default: the value to return if the setting has not been saved.
 
 # timing
 FPS = get('fps', 10)
-FRAME = get('frame', 1. / FPS)
 MENU_FPS = get('menu_fps', 30)
 MENU_FRAME = get('menu_frame', 1. / MENU_FPS)
 

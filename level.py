@@ -519,7 +519,7 @@ pause_menu: as given.
             (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN)
         ])
         self.event_handler = event_handler
-        self.FRAME = conf.FRAME
+        self.FRAME = 1. / conf.FPS
         self.pause_menu = pause_menu
         if win_cb == 'default':
             win_cb = game.quit_backend

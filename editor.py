@@ -275,7 +275,7 @@ state: the current position in the history.
         self.selector = Puzzle(game, self._selector_defn, border = 1)
         self.selector.old_selected = (0, 0)
 
-        self.FRAME = conf.FRAME
+        self.FRAME = 1. / conf.FPS
         self.load(ID)
 
     def load (self, ID = None):
