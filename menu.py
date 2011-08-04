@@ -18,7 +18,7 @@ import conf
 # - options
 #       - existing ones need a working save button (should apply music volume to currently playing, set volume of main.Game's sounds)
 #       - new ones:
-#           delete data (progress, custom levels, solution history, all)
+#           delete data (progress, custom levels, solution history, settings (exclude progress, solution history), all)
 #           appearance (select from multiple themes) (can changes colours, images, puzzle line sizes, font/size)
 #           sound theme (like appearance)
 # - custom levels delete/rename/duplicate
@@ -1053,6 +1053,10 @@ class MainMenu (Menu):
     """The game's main menu."""
 
     def init (self):
+        # some shortcuts
+        s = self._new_select
+        r = RangeSelect
+        g = lambda i: (conf.get, (i,))
         pages = (
             (
                 Button('Play', self.set_page, 1),
@@ -1068,13 +1072,14 @@ class MainMenu (Menu):
                 #Button('Rename'),
                 #Button('Duplicate')
             ), (
-                self._new_select(RangeSelect, (conf.get, ('music_volume',)),
-                                 'Music %x', 0, 100),
-                self._new_select(RangeSelect, (conf.get, ('sound_volume',)),
-                                 'Sound %x', 0, 100),
-                self._new_select(RangeSelect, (conf.get, ('fps',)), 'Speed %x',
-                                 1, 50),
-                Button('Save', self.back)
+                s(RangeSelect, g('music_volume'), 'Music %x', 0, 100),
+                s(RangeSelect, g('sound_volume'), 'Sound %x', 0, 100),
+                s(RangeSelect, g('fps'), 'Speed %x', 1, 50),
+                Button('Save', self._save, {
+                    (5, 0): 'music_volume',
+                    (5, 1): 'sound_volume',
+                    (5, 2): 'fps'
+                })
             )
         )
 
@@ -1123,3 +1128,34 @@ class MainMenu (Menu):
     def _with_custom_lvl (self, obj):
         """Start backend with self._custom_lvl_ID."""
         self.game.start_backend(obj, self._custom_lvl_ID)
+
+    def _save (self, settings, back = True):
+        """Save settings in the menu.
+
+_save(settings, back = True)
+
+settings: a (pos, setting) dict, where:
+    pos: (page_ID, col, row) tuple indicating the widget's location.
+         (page_ID, row) can be used if the page has only one column.
+    setting: setting ID to pass to with conf.set.
+back: go back a page after saving.
+
+Text instances are supported, where we save widget.value if widget is a Select
+instance, else save widget.text.
+
+"""
+        for pos, ID in settings.iteritems():
+            # get widget
+            if len(pos) == 2:
+                pos = (pos[0], 0, pos[1])
+            page, col, row = pos
+            widget = self.pages[page][col][row]
+            # get new value for the setting
+            if isinstance(widget, Select):
+                val = widget.value
+            else:
+                val = widget.text
+            # save setting
+            conf.set(ID, val)
+        if back:
+            self.back()

@@ -23,7 +23,6 @@ import conf
 # TODO:
 # - document classes
 # - portal blocks
-# - reverse frame advance
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -317,7 +316,6 @@ class Puzzle (object):
         self.physics = physics
         self.selected = None
         self.rect = None
-        self._changed = False
         self.load(defn, **tiler_kw_args)
 
     def _next_ints (self, lines):
@@ -638,7 +636,7 @@ dirty).  Preserves any selection, if possible.
         change = set()
         retain_forces = []
         if dest:
-            self._changed = True
+            self.game.play_snd('move')
         for pos, b in dest.iteritems():
             # remove
             change.add(tuple(b.pos))
@@ -736,9 +734,6 @@ dirty).  Preserves any selection, if possible.
 
     def draw (self, screen, everything = False, size = None):
         # draw grid and tiles
-        if self._changed:
-            self.game.play_snd('move')
-            self._changed = False
         if everything:
             self.tiler.reset()
         rects = self.tiler.draw_changed(screen, size)

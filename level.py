@@ -322,7 +322,6 @@ a bad idea to call this function while solving.
             move = self.solve()
         elif i == len(self._solution):
             # finished: just wait until the level ends
-            # TODO: if haven't solved after max(2, 0 if self._ff else conf.SOLVE_SPEED) frames, show some sort of error
             move = []
         else:
             # continuing

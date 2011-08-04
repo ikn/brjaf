@@ -226,5 +226,6 @@ value: the value to store.  This must have the property that
        eval(str(value)) == value.
 
 """
+    setattr(sys.modules[__name__], key.upper(), value)
     _local[key.upper()] = str(value)
     save_conf()
