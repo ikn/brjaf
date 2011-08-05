@@ -1076,7 +1076,7 @@ class MainMenu (Menu):
                 s(RangeSelect, g('sound_volume'), 'Sound %x', 0, 100),
                 s(RangeSelect, g('fps'), 'Speed %x', 1, 50),
                 Button('Save', self._save, {
-                    ((5, 0), 'music_volume'),#, self._update_music_vol),
+                    ((5, 0), 'music_volume', self._update_music_vol),
                     ((5, 1), 'sound_volume', self._update_snd_vol),
                     ((5, 2), 'fps')
                 })
@@ -1122,8 +1122,12 @@ class MainMenu (Menu):
 
     def _update_snd_vol (self, vol):
         """Set the volume of existing sounds."""
-        # TODO
-        pass
+        for snd in self.game.sounds.itervalues():
+            snd.set_volume(vol * .01)
+
+    def _update_music_vol (self, vol):
+        """Set the volume of the currently playing music."""
+        pygame.mixer.music.set_volume(vol * .01)
 
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""

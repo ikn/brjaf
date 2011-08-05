@@ -193,8 +193,7 @@ PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
 PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
 PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
 PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
-# get set from builtins to avoid conflict with set as defined here
-PRINTABLE = __builtins__['set'](c for c in string.printable if c not in string.whitespace)
+PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
 PRINTABLE = get('printable', PRINTABLE)
 PRINTABLE.add(' ')
 RAND_B_RATIO = get('rand_b_ratio', .1)
@@ -224,13 +223,13 @@ set(**settings)
 
 key: the setting's name; case-insensitive.
 value: the value to store.  This must have the property that
-       eval(str(value)) == value.
+       eval(repr(value)) == value.
 
 """
     for key, value in settings.iteritems():
         self = sys.modules[__name__]
         setattr(self, key.upper(), value)
-        _local[key.upper()] = str(value)
+        _local[key.upper()] = repr(value)
         save_conf()
     # hack: delete settings stored here first, so loading settings doesn't get
     # previous ones in the module (and need to ignore __name__, for example)
