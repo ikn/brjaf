@@ -34,7 +34,7 @@ Takes a boolean determining whether to load custom levels.
 
 def defn_wins (defn):
     """Check if the given definition starts in a winning state."""
-    lvl = Level(None, None, defn)
+    lvl = Level(definition = defn, sound = False)
     # need to simulate for two frames to be sure (something might move)
     lvl.update()
     lvl.update()
@@ -94,13 +94,14 @@ class Level (object):
 
     CONSTRUCTOR
 
-Level([event_handler][, ID][, definition][, win_cb])
+Level([event_handler][, ID][, definition][, win_cb], sound = True)
 
 event_handler: evthandler.EventHandler instance to use for keybindings.  If not
                given, the level cannot be controlled by the keyboard.
 ID: level ID to load in the form (is_custom, level_ID).
 definition: a level definition to use; see the puzzle module for details.
 win_cb: function to call when the player wins.
+sound: whether to play sounds.
 
 One of ID and definition is required.
 
@@ -128,11 +129,12 @@ solving_index: the current step in the solution being used to solve the puzzle.
 recording: whether input is currently being recorded.
 frozen: whether the solution being played back is paused.
 win_cb: as given.
+sound: as given.
 
 """
 
     def __init__ (self, event_handler = None, ID = None, definition = None,
-                  win_cb = None):
+                  win_cb = None, sound = True):
         if not hasattr(self, 'game'):
             self.game = None
         if event_handler is not None:
@@ -154,6 +156,7 @@ win_cb: as given.
                 (conf.KEYS_NEXT, freeze, eh.MODE_ONDOWN),
                 (conf.KEYS_RIGHT, self._step_solution) + args
             ])
+        self.sound = sound
         self.load(ID, definition)
         self.win_cb = win_cb
 
@@ -169,7 +172,8 @@ Takes ID and definition arguments as in the constructor.
             path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
             with open(path + ID[1]) as f:
                 definition = f.read()
-        self.puzzle = Puzzle(self.game, definition, True, border = 1)
+        self.puzzle = Puzzle(self.game, definition, True, self.sound,
+                             border = 1)
         self.players = [b for b in self.puzzle.blocks
                         if b.type == conf.B_PLAYER]
         # store message and solutions
@@ -492,12 +496,13 @@ class LevelBackend (Level):
     CONSTRUCTOR
 
 LevelBackend(game, event_handler[, ID][, definition],
-             pause_menu = PauseMenu, win_cb = game.quit_backend)
+             pause_menu = PauseMenu, win_cb = game.quit_backend, sound = True)
 
 pause_menu: menu.Menu subclass to start as a Game backend on pausing.  Its init
             method is passed this LevelBackend instance.
 
-ID, definition and win_cb are as taken by Level.
+ID, definition, win_cb and sound are as taken by Level (pass None for no
+win_cb).
 
     METHODS
 
@@ -513,7 +518,7 @@ pause_menu: as given.
 """
 
     def __init__ (self, game, event_handler, ID = None, definition = None,
-                  pause_menu = PauseMenu, win_cb = 'default'):
+                  pause_menu = PauseMenu, win_cb = 'default', sound = True):
         self.game = game
         event_handler.add_key_handlers([
             (conf.KEYS_BACK, self.pause, eh.MODE_ONDOWN)
@@ -523,7 +528,7 @@ pause_menu: as given.
         self.pause_menu = pause_menu
         if win_cb == 'default':
             win_cb = game.quit_backend
-        Level.__init__(self, event_handler, ID, definition, win_cb)
+        Level.__init__(self, event_handler, ID, definition, win_cb, sound)
 
     def load (self, *args, **kw):
         Level.load(self, *args, **kw)

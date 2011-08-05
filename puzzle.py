@@ -247,22 +247,22 @@ class Block (BoringBlock):
             r[not axis] = 0
             adj = self.target_tile(r)
             if is_immoveable(adj):
-                self.puzzle.game.play_snd('wall')
+                self.puzzle.play_snd('wall')
                 # can't move on this axis
                 react[opposite_dir(force_dir(axis, force))] = (True, True)
                 # so can't move diagonally
                 self.rm_targets(axis, diag)
             else:
                 if adj:
-                    self.puzzle.game.play_snd('hit')
+                    self.puzzle.play_snd('hit')
                     self.add_targets(axis, adj)
                 if diag and not is_immoveable(diag):
                     self.add_targets(axis, diag)
         # if trying to move on both axes and can't move to diagonal
         if diag and not is_immoveable(diag):
-            self.puzzle.game.play_snd('hit')
+            self.puzzle.play_snd('hit')
         if is_immoveable(diag) and not any(react):
-            self.puzzle.game.play_snd('wall')
+            self.puzzle.play_snd('wall')
             r = [abs(f) for f in resultant]
             if r[0] != r[1]:
                 # unequal forces: reaction along weaker one's axis
@@ -311,9 +311,11 @@ class Block (BoringBlock):
 
 
 class Puzzle (object):
-    def __init__ (self, game, defn, physics = False, **tiler_kw_args):
+    def __init__ (self, game, defn, physics = False, sound = False,
+                  **tiler_kw_args):
         self.game = game
         self.physics = physics
+        self.sound = sound
         self.selected = None
         self.rect = None
         self.load(defn, **tiler_kw_args)
@@ -554,6 +556,11 @@ dirty).  Preserves any selection, if possible.
             '\n'.join(data for s, data in ss if s != common_s)
         )
 
+    def play_snd (self, ID):
+        """Wrapper around Game.play_snd."""
+        if self.sound:
+            self.game.play_snd(ID)
+
     def step (self):
         if conf.DEBUG:
             print 'start step'
@@ -636,7 +643,7 @@ dirty).  Preserves any selection, if possible.
         change = set()
         retain_forces = []
         if dest:
-            self.game.play_snd('move')
+            self.play_snd('move')
         for pos, b in dest.iteritems():
             # remove
             change.add(tuple(b.pos))
