@@ -424,7 +424,7 @@ state: the current position in the history.
                 if pos is not None:
                     # clicked a tile in self.selector: switch to selector, then
                     # select the tile
-                    if self.editor:
+                    if self.editing:
                         self.switch_puzzle()
                     self.selector.select(*pos)
 
