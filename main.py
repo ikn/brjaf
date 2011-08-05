@@ -12,7 +12,7 @@ from menu import MainMenu
 from level import LevelBackend
 import conf
 
-# TODO: possible sounds: menu navigation/adjust, level victory fanfare
+# TODO: possible sounds: menu navigation/adjust, level victory fanfare, editor placing blocks
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""

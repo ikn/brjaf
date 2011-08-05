@@ -85,8 +85,6 @@ WINDOW_TITLE = get('window_title', 'Puzzle game thing')
 MAX_RATIO = get('max_ratio', 3)
 
 # input
-KEYS_ALPHA = get('keys_alpha', range(pg.K_a, pg.K_z + 1))
-KEYS_NUM = get('keys_num', range(pg.K_0, pg.K_9 + 1))
 KEYS_LEFT = get('keys_left', (pg.K_LEFT,))
 KEYS_UP = get('keys_up', (pg.K_UP,))
 KEYS_RIGHT = get('keys_right', (pg.K_RIGHT,))

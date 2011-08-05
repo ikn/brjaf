@@ -15,12 +15,11 @@ import conf
 # - show arrows to sides of Selects when not at min/max if don't wrap
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
-# - options
-#       - save button should apply music volume to currently playing, set volume of main.Game's sounds
-#       - new ones:
-#           delete data (progress, custom levels, solution history, settings (exclude progress, solution history), all)
-#           appearance (select from multiple themes) (can changes colours, images, puzzle line sizes, font/size)
-#           sound theme (like appearance)
+# - new options
+#       sound: volumes, theme (like appearance)
+#       gameplay (speed, whether to show message)
+#       appearance (select from multiple themes) (can changes colours, images, puzzle line sizes, font/size/colours)
+#       delete data (progress, custom levels, solution history, settings (exclude progress, solution history), all)
 # - custom levels delete/rename/duplicate
 
 class Text (object):
@@ -1072,9 +1071,9 @@ class MainMenu (Menu):
                 #Button('Rename'),
                 #Button('Duplicate')
             ), (
-                s(RangeSelect, g('music_volume'), 'Music %x', 0, 100),
-                s(RangeSelect, g('sound_volume'), 'Sound %x', 0, 100),
-                s(RangeSelect, g('fps'), 'Speed %x', 1, 50),
+                s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
+                s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
+                s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 Button('Save', self._save, {
                     ((5, 0), 'music_volume', self._update_music_vol),
                     ((5, 1), 'sound_volume', self._update_snd_vol),
