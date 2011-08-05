@@ -1,6 +1,7 @@
 import sys
-from os import sep
+import os
 from time import time
+from random import choice
 
 import pygame
 from pygame.time import wait
@@ -10,6 +11,8 @@ import evthandler as eh
 from menu import MainMenu
 from level import LevelBackend
 import conf
+
+# TODO: possible sounds: menu navigation/adjust, level victory fanfare
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
@@ -24,7 +27,7 @@ class Fonts (object):
         font = tuple(font)
         if force_reload or font not in self.fonts:
             fn, size, bold = font
-            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + sep + fn,
+            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + os.sep + fn,
                                                 int(size), bold = bold)
         return self.fonts[font]
 
@@ -151,6 +154,12 @@ sounds: sound effect cache.
         self.files = {}
         self.sounds = {}
         self._sounds = set()
+        # start playing music
+        pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
+        pygame.mixer.music.set_endevent(conf.EVENT_ENDMUSIC)
+        d = conf.MUSIC_DIR
+        self._music = [d + f for f in os.listdir(d) if os.path.isfile(d + f)]
+        self._play_music()
         # load display settings
         self.refresh_display()
         self.fonts = Fonts()
@@ -190,7 +199,8 @@ EventHandler_instance in its event_handler attribute.
         # create event handler for this backend
         h = eh.MODE_HELD
         event_handler = eh.EventHandler({
-            pygame.VIDEORESIZE: self._resize_cb
+            pygame.VIDEORESIZE: self._resize_cb,
+            conf.EVENT_ENDMUSIC: self._play_music
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
@@ -318,6 +328,13 @@ Only one instance of a sound will be played each frame.
         for ID in self._sounds:
             self.sounds[ID].play()
         self._sounds = set()
+
+    def _play_music (self, event = None):
+        """Play next piece of music."""
+        if self._music:
+            f = choice(self._music)
+            pygame.mixer.music.load(f)
+            pygame.mixer.music.play()
 
     def quit (self, event = None):
         """Quit the game."""

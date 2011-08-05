@@ -64,6 +64,7 @@ MENU_FRAME = get('menu_frame', 1. / MENU_FPS)
 DATA_DIR = get('data_dir', '')
 IMG_DIR = get('img_dir', DATA_DIR + 'img' + os.sep)
 SOUND_DIR = get('sound_dir', DATA_DIR + 'sound' + os.sep)
+MUSIC_DIR = get('music_dir', DATA_DIR + 'music' + os.sep)
 LEVEL_DIR_MAIN = get('level_dir_main', DATA_DIR + 'lvl' + os.sep)
 FONT_DIR = get('font_dir', DATA_DIR + 'font' + os.sep)
 LEVEL_DIR_CUSTOM = get('level_dir_custom', CONF_DIR + 'lvl' + os.sep)
@@ -131,6 +132,7 @@ SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
 
 # audio
 MUSIC_VOLUME = get('music_volume', 50)
+EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
 SOUNDS = get('sounds', {
     'move': 'move.ogg',
