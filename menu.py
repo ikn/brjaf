@@ -554,7 +554,12 @@ amount: 0 to go to start/end, else 1 to 4 for a small to a large step.
                 min_step = int(min_step * (self.max - self.min))
             step = max(step, min_step)
             # get new value
-            value = max(min(self.value + direction * step, self.max), self.min)
+            value = self.value + direction * step
+            if self.wrap:
+                value = (value - self.min) % (self.max - self.min + 1)
+                value += self.min
+            else:
+                value = max(min(value, self.max), self.min)
         self.set_value(value)
 
 
@@ -1074,7 +1079,7 @@ class MainMenu (Menu):
                 Button('Rename'), # do duplicate, then delete original
                 Button('Duplicate') # reuse editor's save menu if possible
             ), (
-                s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100, wrap = True),
+                s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 Button('Save', self._save, {
