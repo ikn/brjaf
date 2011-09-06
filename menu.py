@@ -479,7 +479,11 @@ alter(direction, amount = 1)
 direction: -1 for left, 1 for right.
 amount: 0 to go to start/end, otherwise spin by one step.
 
+Returns whether the change was successful (can fail if wrapping is disabled).
+
 """
+        rtn = 1
+        old_index = self.index
         if direction != 1:
             direction = -1
         if amount == 0:
@@ -491,13 +495,20 @@ amount: 0 to go to start/end, otherwise spin by one step.
             amount = 1
         # alter index
         self.index += amount * direction
+        if self.index == old_index:
+            rtn = 0
         # confine index to a value within bounds
         if self.wrap:
             self.index %= len(self.options)
         else:
+            index = self.index
             self.index = max(min(self.index, len(self.options) - 1), 0)
+            if self.index != index and self.index == old_index:
+                # tried to change, but couldn't
+                rtn = 2
         # set value to that of next index
         self.set_value(self.index)
+        return rtn
 
     def set_value (self, value, *args, **kw):
         if isinstance(value, int):
@@ -540,7 +551,10 @@ alter(direction, amount = 1)
 direction: -1 for left, 1 for right.
 amount: 0 to go to start/end, else 1 to 4 for a small to a large step.
 
+Returns whether the change was successful (can fail if wrapping is disabled).
+
 """
+        rtn = 1
         if amount == 0:
             value = self.max if direction == 1 else self.min
         else:
@@ -559,8 +573,15 @@ amount: 0 to go to start/end, else 1 to 4 for a small to a large step.
                 value = (value - self.min) % (self.max - self.min + 1)
                 value += self.min
             else:
+                old_val = value
                 value = max(min(value, self.max), self.min)
+                if value != old_val and value == self.value:
+                    # tried to change, but couldn't
+                    rtn = 2
+        if rtn == 1 and value == self.value:
+            rtn = 0
         self.set_value(value)
+        return rtn
 
 
 class FloatSelect (RangeSelect):
@@ -896,9 +917,9 @@ Options' first letters are used to select them.
                 selected = self.selected(sel)
             amount -= direction
         # change selection
-        self.set_selected(sel)
         if sel != self.sel:
-            self.game.play_snd('move')
+            self.game.play_snd('move_selection')
+        self.set_selected(sel)
 
     def alter (self, key, event, mods, direction, amount):
         if self.sel is None:
@@ -912,7 +933,11 @@ Options' first letters are used to select them.
             if event == 2 and amount:
                 # go faster if holding the key
                 amount += 1
-            element.alter(direction, amount)
+            altered = element.alter(direction, amount)
+            if altered == 1:
+                self.game.play_snd('alter')
+            elif altered == 2:
+                self.game.play_snd('alter_fail')
         else:
             # else move selection left/right
             self.move_selection(None, None, None, direction, 0)
@@ -924,6 +949,7 @@ Options' first letters are used to select them.
             return
         option = self.page[self.sel[0]][self.sel[1]]
         if hasattr(option, 'click'):
+            self.game.play_snd('select')
             option.click()
 
     def back (self, *args):

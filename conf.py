@@ -134,9 +134,10 @@ EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
 SOUNDS = get('sounds', {
     # menu
-    'select': 'wall.ogg',
-    'move': 'hit.ogg',
+    #'select': '',
+    #'move_selection': '',
     'alter': 'move.ogg',
+    'alter_fail': 'wall.ogg',
     # playing
     'move': 'move.ogg',
     'wall': 'wall.ogg',
