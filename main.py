@@ -12,7 +12,7 @@ from menu import MainMenu
 from level import LevelBackend
 import conf
 
-# TODO: possible sounds: menu navigation/adjust, level victory fanfare, editor placing blocks
+# TODO: possible sounds: menu navigation/adjust, level victory fanfare
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
@@ -318,7 +318,7 @@ Only one instance of a sound will be played each frame.
                     # no way this is valid
                     return
                 snd.set_volume(conf.SOUND_VOLUME * .01)
-            except IndexError:
+            except KeyError:
                 return # just don't play the sound if it's not registered
             self.sounds[ID] = snd
         self._sounds.add(ID)

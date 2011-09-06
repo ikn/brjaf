@@ -483,6 +483,8 @@ function returns None.
                 # call win callback
                 if self.win_cb is not None:
                     self.win_cb()
+                # play victory sound
+                self.game.play_snd('win')
                 self.won = True
             else:
                 self._winning = True

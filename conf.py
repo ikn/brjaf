@@ -133,9 +133,19 @@ MUSIC_VOLUME = get('music_volume', 50)
 EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
 SOUNDS = get('sounds', {
+    # menu
+    'select': 'wall.ogg',
+    'move': 'hit.ogg',
+    'alter': 'move.ogg',
+    # playing
     'move': 'move.ogg',
     'wall': 'wall.ogg',
-    'hit': 'hit.ogg'
+    'hit': 'hit.ogg',
+    #'win': '',
+    # editing
+    #'place_surface': '',
+    #'place_block': '',
+    #'delete': ''
 })
 
 # IDs (no point in being able to change them)

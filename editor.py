@@ -365,11 +365,16 @@ state: the current position in the history.
             ID = -row - 1
             if ID >= 0:
                 ID = conf.DEFAULT_SURFACE
-        # make changes to selected tile in editor puzzle
+        # make changes to selected tile in editor puzzle if necessary
+        current = self.editor.grid[x][y]
         if is_block:
-            self.editor.add_block((BoringBlock, ID), x, y)
+            if current[1] is None or current[1].type != ID:
+                self.editor.add_block((BoringBlock, ID), x, y)
+                self.game.play_snd('place_block')
         else:
-            self.editor.set_surface(x, y, ID)
+            if current[0] != ID:
+                self.editor.set_surface(x, y, ID)
+                self.game.play_snd('place_surface')
         self.store_state()
 
     def _insert_cb (self, *args):
@@ -384,6 +389,7 @@ state: the current position in the history.
         if self.editing:
             x, y = self.editor.selected
             data = self.editor.grid[x][y]
+            snd = True
             # delete block, if any
             if data[1] is not None:
                 self.editor.rm_block(None, x, y)
@@ -392,6 +398,10 @@ state: the current position in the history.
             elif data[0] != conf.S_BLANK:
                 self.editor.set_surface(x, y, conf.S_BLANK)
                 self.store_state()
+            else:
+                snd = False
+            if snd:
+                self.game.play_snd('delete')
 
     def undo (self, *args):
         """Undo changes to the puzzle."""

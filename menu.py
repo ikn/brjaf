@@ -15,11 +15,11 @@ import conf
 # - show arrows to sides of Selects when not at min/max if don't wrap
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
-# - new options
+# - options pages:
 #       sound: volumes, theme (like appearance)
-#       gameplay (speed, whether to show message)
-#       appearance (select from multiple themes) (can changes colours, images, puzzle line sizes, font/size/colours)
-#       delete data (progress, custom levels, solution history, settings (exclude progress, solution history), all)
+#       gameplay: speed, whether to show message
+#       appearance: select from multiple themes (can change colours, images, puzzle line sizes, font/size/colours)
+#       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
 # - custom levels delete/rename/duplicate
 
 class Text (object):
@@ -467,7 +467,6 @@ index: index of the current value in options.
     def __init__ (self, text, options, initial = 0, wrap = False):
         self.options = options
         self.index = int(initial)
-        self.wrap = wrap
         value = options[self.index]
         max_value_size = max(len(str(val)) for val in options)
         Select.__init__(self, text, value, max_value_size, wrap)
@@ -500,8 +499,10 @@ amount: 0 to go to start/end, otherwise spin by one step.
         # set value to that of next index
         self.set_value(self.index)
 
-    def set_value (value, *args, **kw):
-        Select.set_value(self, self.options[value])
+    def set_value (self, value, *args, **kw):
+        if isinstance(value, int):
+            value = self.options[value]
+        return Select.set_value(self, value, *args, **kw)
 
 
 class RangeSelect (Select):
@@ -891,6 +892,8 @@ Options' first letters are used to select them.
             amount -= direction
         # change selection
         self.set_selected(sel)
+        if sel != self.sel:
+            self.game.play_snd('move')
 
     def alter (self, key, event, mods, direction, amount):
         if self.sel is None:
@@ -1067,11 +1070,11 @@ class MainMenu (Menu):
             ), [], (
                 Button('Play', self._with_custom_lvl, level.LevelBackend),
                 Button('Edit', self._with_custom_lvl, editor.Editor),
-                #Button('Delete'),
-                #Button('Rename'),
-                #Button('Duplicate')
+                Button('Delete'), # confirm
+                Button('Rename'), # do duplicate, then delete original
+                Button('Duplicate') # reuse editor's save menu if possible
             ), (
-                s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
+                s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100, wrap = True),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 Button('Save', self._save, {
