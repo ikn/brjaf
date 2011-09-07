@@ -189,7 +189,7 @@ Takes ID and definition arguments as in the constructor.
                     val.append(line[1:].strip())
                     # won't start with the other one if it starts with this one
                     continue
-        self.msg = msgs[0] if msgs else None
+        self.msg = msgs[0] if msgs and conf.SHOW_MSG else None
         self._solutions = solns
 
         self._moved = []

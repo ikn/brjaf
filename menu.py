@@ -12,11 +12,11 @@ import conf
 # - home/end/page up/page down keys (paging is home/end for non-scrolling pages)
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
-# - show arrows to sides of Selects when not at min/max if don't wrap
+# - show arrows to sides of Selects if wrap or when not at min/max
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options pages:
-#       sound: volumes, theme (like appearance)
+#       sound: volumes, theme
 #       gameplay: speed, whether to show message
 #       appearance: select from multiple themes (can change colours, images, puzzle line sizes, font/size/colours)
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
@@ -1108,16 +1108,26 @@ class MainMenu (Menu):
                 Button('Rename'), # do duplicate, then delete original
                 Button('Duplicate') # reuse editor's save menu if possible
             ), (
+                Button('Sound', self.set_page, 6),
+                Button('Gameplay', self.set_page, 7),
+                Button('Appearance', self.set_page, 8)
+            ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, g('sound_theme'), 'Theme: %x',
                   [x[0] for x in conf.SOUNDS], True),
-                s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 Button('Save', self._save, {
-                    ((5, 0), 'music_volume', self._update_music_vol),
-                    ((5, 1), 'sound_volume', self._update_snd_vol),
-                    ((5, 2), 'sound_theme', self._refresh_sounds),
-                    ((5, 3), 'fps')
+                    ((6, 0), 'music_volume', self._update_music_vol),
+                    ((6, 1), 'sound_volume', self._update_snd_vol),
+                    ((6, 2), 'sound_theme', self._refresh_sounds)
+                })
+            ), (
+                s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
+                s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'), 
+                  True),
+                Button('Save', self._save, {
+                    ((7, 0), 'fps'),
+                    ((7, 1), 'show_msg')
                 })
             )
         )

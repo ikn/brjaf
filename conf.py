@@ -119,6 +119,28 @@ MOVE_REPEAT_DELAY = 1. / FPS # shouldn't be edited: required for some puzzles
 MENU_INITIAL_DELAY = get('menu_initial_delay', .3)
 MENU_REPEAT_DELAY = get('menu_repeat_delay', .15)
 
+# menu
+PUZZLE_FONT = get('puzzle_font', 'orbitron-black.otf')
+PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
+PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
+PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
+PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
+PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
+PRINTABLE = get('printable', PRINTABLE)
+PRINTABLE.add(' ')
+RAND_B_RATIO = get('rand_b_ratio', .1)
+RAND_S_RATIO = get('rand_s_ratio', .1)
+MIN_CHAR_ID = get('min_char_id', 32)
+MAX_CHAR_ID = get('max_char_id', 255)
+SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
+SPECIAL_CHAR_ID_OFFSET = get('special_char_id_offset', 512)
+LEVEL_SELECT_COLS = get('level_select_cols', 5)
+NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
+# (small, mid, large, very large)
+# < 1 means fraction of total number of options, >= 1 means absolute value
+SELECT_STEP = get('select_step', (1, .01, 5, .05))
+MIN_SELECT_STEP = get('min_select_step', (1, 1, .01, 5))
+
 # puzzle
 FORCE_MOVE = get('force_move', 2)
 FORCE_ARROW = FORCE_MOVE # some puzzles are impossible/too easy if different
@@ -127,30 +149,6 @@ FF_SPEEDUP = get('ff_speedup', 4)
 RESET_ON_STOP_SOLVING = get('reset_on_stop_solving', True)
 SOLN_DIRS = get('soln_dirs', 'lurd')
 SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
-
-# audio
-MUSIC_VOLUME = get('music_volume', 50)
-EVENT_ENDMUSIC = pg.USEREVENT
-SOUND_VOLUME = get('sound_volume', 50)
-SOUND_THEME = get('sound_theme', 0)
-SOUNDS = get('sounds', (
-    ('default', {
-        # menu
-        #'select': '',
-        #'move_selection': '',
-        #'alter': '',
-        #'alter_fail': '',
-        # playing
-        'move': 'move.ogg',
-        'wall': 'wall.ogg',
-        'hit': 'hit.ogg',
-        #'win': '',
-        # editing
-        #'place_surface': '',
-        #'place_block': '',
-        #'delete': ''
-    }), ('other', {})
-))
 
 # IDs (no point in being able to change them)
 MIN_ID = -6
@@ -187,12 +185,8 @@ block_colours = get('block_colours', {
     B_BOUNCE: (100, 255, 100)
 })
 
-# selection
-SEL_COLOUR = get('sel_colour', (255, 0, 0))
-MIN_SEL_WIDTH = get('min_sel_width', 1)
-SEL_WIDTH = get('sel_width', .05) # proportion of tile size
-
 # messages
+SHOW_MSG = get('show_msg', 1)
 MSG_FONT = get('msg_font', 'orbitron-black.otf')
 MSG_TEXT_COLOUR = get('msg_text_colour', (0, 0, 0))
 # proportion of smaller screen dimension
@@ -201,33 +195,40 @@ MSG_PADDING_TOP = get('msg_padding_top', .02)
 MSG_PADDING_BOTTOM = get('msg_padding_bottom', .01)
 MSG_MAX_HEIGHT = get('msg_max_height', .2) # proportion of screen height
 
-# menu
-PUZZLE_FONT = get('puzzle_font', 'orbitron-black.otf')
-PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
-PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
-PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
-PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
-PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
-PRINTABLE = get('printable', PRINTABLE)
-PRINTABLE.add(' ')
-RAND_B_RATIO = get('rand_b_ratio', .1)
-RAND_S_RATIO = get('rand_s_ratio', .1)
-MIN_CHAR_ID = get('min_char_id', 32)
-MAX_CHAR_ID = get('max_char_id', 255)
-SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
-SPECIAL_CHAR_ID_OFFSET = get('special_char_id_offset', 512)
-LEVEL_SELECT_COLS = get('level_select_cols', 5)
-NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
-# (small, mid, large, very large)
-# < 1 means fraction of total number of options, >= 1 means absolute value
-SELECT_STEP = get('select_step', (1, .01, 5, .05))
-MIN_SELECT_STEP = get('min_select_step', (1, 1, .01, 5))
+# selection
+SEL_COLOUR = get('sel_colour', (255, 0, 0))
+MIN_SEL_WIDTH = get('min_sel_width', 1)
+SEL_WIDTH = get('sel_width', .05) # proportion of tile size
 
 # editor
 EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
 BLANK_LEVEL = get('blank_level', '5 5')
 UNDO_LEVELS = get('undo_levels', 0)
 LEVEL_NAME_LENGTH = get('level_name_length', 3)
+
+# audio
+MUSIC_VOLUME = get('music_volume', 50)
+EVENT_ENDMUSIC = pg.USEREVENT
+SOUND_VOLUME = get('sound_volume', 50)
+SOUND_THEME = get('sound_theme', 0)
+SOUNDS = get('sounds', (
+    ('default', {
+        # menu
+        #'select': '',
+        #'move_selection': '',
+        #'alter': '',
+        #'alter_fail': '',
+        # playing
+        'move': 'move.ogg',
+        'wall': 'wall.ogg',
+        'hit': 'hit.ogg',
+        #'win': '',
+        # editing
+        #'place_surface': '',
+        #'place_block': '',
+        #'delete': ''
+    }),
+))
 
 
 def set (**settings):
