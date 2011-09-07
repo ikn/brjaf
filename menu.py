@@ -746,7 +746,10 @@ class Menu (object):
         for col in self.page:
             for w in col:
                 if isinstance(w, Select) and w in self._selects:
-                    w.set_value(self._get_initial(self._selects[w]))
+                    val = self._get_initial(self._selects[w][0])
+                    w.set_value(val)
+                    # store initialisation value
+                    self._selects[w][1] = val
         self.dirty = True
 
     def refresh_text (self, page_ID = None, widget = None):
@@ -1074,7 +1077,7 @@ select_instance: the created Select instance.
             kw['initial'] = val
         # create widget
         s = cls(*args, **kw)
-        self._selects[s] = initial
+        self._selects[s] = [initial, val]
         return s
 
 
@@ -1166,8 +1169,10 @@ class MainMenu (Menu):
         pygame.mixer.music.set_volume(vol * .01)
 
     def _refresh_sounds (self, theme):
-        """Clear all cached game sounds."""
+        """Clear all cached game sounds and music files."""
         self.game.sounds = {}
+        self.game.find_music()
+        self.game.play_music()
 
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""
@@ -1220,11 +1225,18 @@ widget.text.
                 val = widget.value
             else:
                 val = widget.text
-            # store data to save all settings together
-            to_save[ID] = val
-            cbs.append((cb, val, args))
+            if widget in self._selects and self._selects[widget][1] == val:
+                # value didn't change: don't save
+                # (do this only for registered Selects since all other widgets
+                #  have static initial values and so this check is easy)
+                pass
+            else:
+                # store data to save all settings together
+                to_save[ID] = val
+                cbs.append((cb, val, args))
         # save settings
-        conf.set(**to_save)
+        if to_save:
+            conf.set(**to_save)
         # call callbacks
         for cb, val, args in cbs:
             if cb is not None:

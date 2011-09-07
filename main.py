@@ -155,9 +155,8 @@ sounds: sound effect cache.
         # start playing music
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         pygame.mixer.music.set_endevent(conf.EVENT_ENDMUSIC)
-        d = conf.MUSIC_DIR
-        self._music = [d + f for f in os.listdir(d) if os.path.isfile(d + f)]
-        self._play_music()
+        self.find_music()
+        self.play_music()
         # load display settings
         self.refresh_display()
         self.fonts = Fonts()
@@ -198,7 +197,7 @@ EventHandler_instance in its event_handler attribute.
         h = eh.MODE_HELD
         event_handler = eh.EventHandler({
             pygame.VIDEORESIZE: self._resize_cb,
-            conf.EVENT_ENDMUSIC: self._play_music
+            conf.EVENT_ENDMUSIC: self.play_music
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
             (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
@@ -329,12 +328,26 @@ Only one instance of a sound will be played each frame.
             self.sounds[ID].play()
         self._sounds = set()
 
-    def _play_music (self, event = None):
+    def find_music (self):
+        """Store a list of music files for the current theme."""
+        d = conf.MUSIC_DIR + conf.SOUNDS[conf.SOUND_THEME][0] + os.sep
+        try:
+            files = os.listdir(d)
+        except OSError:
+            # no directory
+            self.music = []
+        else:
+            self.music = [d + f for f in files if os.path.isfile(d + f)]
+
+    def play_music (self, event = None):
         """Play next piece of music."""
-        if self._music:
-            f = choice(self._music)
+        if self.music:
+            f = choice(self.music)
             pygame.mixer.music.load(f)
             pygame.mixer.music.play()
+        else:
+            # stop currently playing music if there's no music to play
+            pygame.mixer.music.stop()
 
     def quit (self, event = None):
         """Quit the game."""
