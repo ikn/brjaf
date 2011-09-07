@@ -132,22 +132,25 @@ SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
 MUSIC_VOLUME = get('music_volume', 50)
 EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
-SOUNDS = get('sounds', {
-    # menu
-    #'select': '',
-    #'move_selection': '',
-    'alter': 'move.ogg',
-    'alter_fail': 'wall.ogg',
-    # playing
-    'move': 'move.ogg',
-    'wall': 'wall.ogg',
-    'hit': 'hit.ogg',
-    #'win': '',
-    # editing
-    #'place_surface': '',
-    #'place_block': '',
-    #'delete': ''
-})
+SOUND_THEME = get('sound_theme', 0)
+SOUNDS = get('sounds', (
+    ('default', {
+        # menu
+        #'select': '',
+        #'move_selection': '',
+        #'alter': '',
+        #'alter_fail': '',
+        # playing
+        'move': 'move.ogg',
+        'wall': 'wall.ogg',
+        'hit': 'hit.ogg',
+        #'win': '',
+        # editing
+        #'place_surface': '',
+        #'place_block': '',
+        #'delete': ''
+    }), ('other', {})
+))
 
 # IDs (no point in being able to change them)
 MIN_ID = -6

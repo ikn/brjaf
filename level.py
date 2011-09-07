@@ -22,6 +22,7 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
+# - probably need some sort of 'long text' element that straddles multiple tiles
 
 def get_levels (custom = False):
     """Get a list of existing levels.

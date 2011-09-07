@@ -12,8 +12,6 @@ from menu import MainMenu
 from level import LevelBackend
 import conf
 
-# TODO: possible sounds: menu navigation/adjust, level victory fanfare
-
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
 
@@ -313,7 +311,9 @@ Only one instance of a sound will be played each frame.
         else:
             # load sound
             try:
-                snd = pygame.mixer.Sound(conf.SOUND_DIR + conf.SOUNDS[ID])
+                theme, sounds = conf.SOUNDS[conf.SOUND_THEME]
+                snd = conf.SOUND_DIR + theme + os.sep + sounds[ID]
+                snd = pygame.mixer.Sound(snd)
                 if snd.get_length() < 10 ** -3:
                     # no way this is valid
                     return

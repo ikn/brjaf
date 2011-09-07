@@ -1107,11 +1107,14 @@ class MainMenu (Menu):
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
+                s(DiscreteSelect, g('sound_theme'), 'Theme: %x',
+                  [x[0] for x in conf.SOUNDS], True),
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 Button('Save', self._save, {
                     ((5, 0), 'music_volume', self._update_music_vol),
                     ((5, 1), 'sound_volume', self._update_snd_vol),
-                    ((5, 2), 'fps')
+                    ((5, 2), 'sound_theme', self._refresh_sounds),
+                    ((5, 3), 'fps')
                 })
             )
         )
@@ -1162,6 +1165,10 @@ class MainMenu (Menu):
         """Set the volume of the currently playing music."""
         pygame.mixer.music.set_volume(vol * .01)
 
+    def _refresh_sounds (self, theme):
+        """Clear all cached game sounds."""
+        self.game.sounds = {}
+
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""
         self._custom_lvl_ID = ID
@@ -1186,7 +1193,8 @@ settings: a list of (pos, setting[, cb[, args...]]) tuples, where:
 back: go back a page after saving.
 
 Text instances are supported, where we save widget.value if widget is a Select
-instance, else save widget.text.
+instance, widget.index if it is a DiscreteSelect instance, else save
+widget.text.
 
 """
         to_save = {}
@@ -1206,7 +1214,9 @@ instance, else save widget.text.
             page, col, row = pos
             widget = self.pages[page][col][row]
             # get new value for the setting
-            if isinstance(widget, Select):
+            if isinstance(widget, DiscreteSelect):
+                val = widget.index
+            elif isinstance(widget, Select):
                 val = widget.value
             else:
                 val = widget.text
