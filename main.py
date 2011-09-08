@@ -392,7 +392,7 @@ Only one instance of a sound will be played each frame.
             wait(int(1000 * (self.backend.FRAME - t1 + t0)))
             t0 += self.backend.FRAME
 
-    def restart (self):
+    def restart (self, *args):
         """Restart the game."""
         global restarting
         restarting = True

@@ -16,7 +16,6 @@ import conf
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options pages:
-#       appearance: select from multiple themes (can change colours, images, puzzle line sizes, font/size/colours)
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
 # - custom levels delete/rename/duplicate
 
@@ -1093,6 +1092,7 @@ class MainMenu (Menu):
         r = RangeSelect
         g = lambda i: (conf.get, (i,))
         snd_theme_index = lambda: conf.SOUND_THEMES.index(conf.SOUND_THEME)
+        theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
             (
                 Button('Play', self.set_page, 1),
@@ -1117,19 +1117,24 @@ class MainMenu (Menu):
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
-                Button('Save', self._save, {
+                Button('Save', self._save, (
                     ((6, 0), 'music_volume', self._update_music_vol),
                     ((6, 1), 'sound_volume', self._update_snd_vol),
                     ((6, 2), ('sound_theme', False), self._refresh_sounds)
-                })
+                ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'), 
                   True),
-                Button('Save', self._save, {
+                Button('Save', self._save, (
                     ((7, 0), 'fps'),
                     ((7, 1), 'show_msg')
-                })
+                ))
+            ), (
+                s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
+                Button('Save', self._save, (
+                    ((8, 0), ('theme', False), self.game.restart),
+                ))
             )
         )
 
@@ -1235,13 +1240,17 @@ else widget.text.
             page, col, row = pos
             widget = self.pages[page][col][row]
             # get new value for the setting
-            if isinstance(widget, DiscreteSelect) and save_index:
-                val = widget.index
+            if isinstance(widget, DiscreteSelect):
+                if save_index:
+                    val = widget.index
+                else:
+                    val = widget.value
+                real_val = widget.index
             elif isinstance(widget, Select):
-                val = widget.value
+                real_val = val = widget.value
             else:
-                val = widget.text
-            if widget in self._selects and self._selects[widget][1] == val:
+                real_val = val = widget.text
+            if widget in self._selects and self._selects[widget][1] == real_val:
                 # value didn't change: don't save
                 # (do this only for registered Selects since all other widgets
                 #  have static initial values and so this check is easy)
