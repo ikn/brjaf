@@ -13,6 +13,7 @@ Axes are:
 """
 # TODO: document definition format, including solutions
 
+from os import sep as path_sep
 from os.path import exists
 
 import pygame
@@ -382,6 +383,11 @@ dirty).  Preserves any selection, if possible.
             resized = self.resize_abs(w, h)
         else:
             # create grid handler
+            for key, attr in (('line', 'PUZZLE_LINE_COLOUR'),
+                              ('gap', 'PUZZLE_LINE_WIDTH'),
+                              ('border', 'PUZZLE_LINE_WIDTH')):
+                if key not in tiler_kw_args:
+                    tiler_kw_args[key] = getattr(conf, attr)[conf.THEME]
             self.tiler = Tiler(w, h, self.draw_tile, track_tiles = False,
                                **tiler_kw_args)
             resized = False
@@ -665,11 +671,11 @@ dirty).  Preserves any selection, if possible.
 
     def _draw_from_img (self, surface, rect, prefix, ID):
         ID = prefix + str(ID)
-        fn = conf.IMG_DIR + ID + '.png'
+        fn = conf.IMG_DIR + conf.THEME + path_sep + ID + '.png'
         if exists(fn):
             # image might be transparent
             if prefix == 's':
-                surface.fill(conf.BG, rect)
+                surface.fill(conf.BG[conf.THEME], rect)
             surface.blit(self.game.img(ID, fn, rect), rect)
             return True
         return False
@@ -683,16 +689,17 @@ dirty).  Preserves any selection, if possible.
             if self._draw_from_img(surface, rect, 's', s):
                 colour = ()
             else:
-                colour = conf.surface_colours[s]
+                colour = conf.SURFACE_COLOURS[conf.THEME][s]
         else:
             # goal: use block colour
-            colour = conf.block_colours[s]
+            colour = conf.BLOCK_COLOURS[conf.THEME][s]
         if colour:
             surface.fill(colour, rect)
         # selection ring
         if selected:
-            width = max(int(rect[2] * conf.SEL_WIDTH), conf.MIN_SEL_WIDTH)
-            draw_rect(surface, conf.SEL_COLOUR, rect, width)
+            width = int(rect[2] * conf.SEL_WIDTH[conf.THEME])
+            width = max(width, conf.MIN_SEL_WIDTH[conf.THEME])
+            draw_rect(surface, conf.SEL_COLOUR[conf.THEME], rect, width)
         # block
         if b is not None:
             if b.type < conf.MIN_CHAR_ID:
@@ -702,28 +709,28 @@ dirty).  Preserves any selection, if possible.
                     p = rect.center
                     r = rect.w / 2
                     pygame.draw.circle(surface, (0, 0, 0), p, r)
-                    pygame.draw.circle(surface, conf.block_colours[b.type], p,
-                                       int(r * .8))
+                    c = conf.BLOCK_COLOURS[conf.THEME][b.type]
+                    pygame.draw.circle(surface, c, p, int(r * .8))
             else:
                 # draw character in tile
                 c = b.type
                 if c < conf.SELECTED_CHAR_ID_OFFSET:
                     # normal
-                    colour = conf.PUZZLE_TEXT_COLOUR
+                    colour = conf.PUZZLE_TEXT_COLOUR[conf.THEME]
                 elif c < conf.SPECIAL_CHAR_ID_OFFSET:
                     # selected
                     c -= conf.SELECTED_CHAR_ID_OFFSET
-                    colour = conf.PUZZLE_TEXT_SELECTED_COLOUR
+                    colour = conf.PUZZLE_TEXT_SELECTED_COLOUR[conf.THEME]
                 else:
                     # special
                     c -= conf.SPECIAL_CHAR_ID_OFFSET
-                    colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR
+                    colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR[conf.THEME]
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
                 h = rect[3]
                 text = self.game.img((b.type, h),
-                                     ((conf.PUZZLE_FONT, h, False), c, colour),
-                                     text = True)
+                                     ((conf.PUZZLE_FONT[conf.THEME], h, False),
+                                     c, colour), text = True)
                 # crop off empty bits
                 source = autocrop(text)
                 if source: # else blank

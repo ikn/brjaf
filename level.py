@@ -173,8 +173,7 @@ Takes ID and definition arguments as in the constructor.
             path = conf.LEVEL_DIR_CUSTOM if ID[0] else conf.LEVEL_DIR_MAIN
             with open(path + ID[1]) as f:
                 definition = f.read()
-        self.puzzle = Puzzle(self.game, definition, True, self.sound,
-                             border = 1)
+        self.puzzle = Puzzle(self.game, definition, True, self.sound)
         self.players = [b for b in self.puzzle.blocks
                         if b.type == conf.B_PLAYER]
         # store message and solutions
@@ -595,8 +594,9 @@ pause_menu: as given.
         # keep message size proportional to screen size (ss)
         w, h = screen.get_size()
         ss = min(w, h)
-        font = [conf.MSG_FONT, int(round(ss * conf.MSG_LINE_HEIGHT)), False]
-        args = (self.msg, conf.MSG_TEXT_COLOUR, None, w, 0, True)
+        font = conf.MSG_FONT[conf.THEME]
+        font = [font, int(round(ss * conf.MSG_LINE_HEIGHT)), False]
+        args = (self.msg, conf.MSG_TEXT_COLOUR[conf.THEME], None, w, 0, True)
         # reduce font size until fits in screen width/proportion of height
         target_height = h * conf.MSG_MAX_HEIGHT
         while font[1] > 0:
@@ -626,7 +626,7 @@ pause_menu: as given.
         ss = min(w, h)
         msg_rect = None
         if self.dirty:
-            screen.fill(conf.BG)
+            screen.fill(conf.BG[conf.THEME])
         if self.dirty or self.msg_dirty:
             if not hasattr(self, '_msg_h'):
                 # haven't generated message before
@@ -637,14 +637,14 @@ pause_menu: as given.
                 # redrawing message: blank previous message area
                 y = int(round(h - self._msg_h - ss * conf.MSG_PADDING_BOTTOM))
                 msg_rect = (0, y, w, h - y)
-                screen.fill(conf.BG, msg_rect)
+                screen.fill(conf.BG[conf.THEME], msg_rect)
                 msg_h = self._msg_h
             # generate message, if any
             args = self._mk_msg(screen)
             if self._msg_h != msg_h:
                 # message height changed: need to change puzzle area
                 self.dirty = True
-                screen.fill(conf.BG)
+                screen.fill(conf.BG[conf.THEME])
             # blit message to screen
             if args is not None:
                 screen.blit(*args)

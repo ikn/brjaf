@@ -128,6 +128,10 @@ start_backend
 quit_backend
 set_backend_attrs
 img
+play_snd
+find_music
+play_music
+quit
 run
 restart
 refresh_display
@@ -137,12 +141,13 @@ minimise
     ATTRIBUTES
 
 running: set to False to exit the main loop (Game.run).
-fonts: a Fonts instance.
-backend: the current running backend.
-backends: a list of previous (nested) backends, most 'recent' last.
 imgs: image cache.
 files: loaded image cache (before resize).
 sounds: sound effect cache.
+music: filenames for known music for the current theme.
+fonts: a Fonts instance.
+backend: the current running backend.
+backends: a list of previous (nested) backends, most 'recent' last.
 
 """
 
@@ -278,7 +283,6 @@ text: whether the image should be rendered from a font (data is list of args to
             return self.imgs[key]
         # else new: load/render
         if text:
-            # TODO: if this raises pygame.error, fallback to some standard font
             img = self.fonts.text(*data)
         else:
             # also cache loaded images to reduce file I/O

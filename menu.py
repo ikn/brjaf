@@ -813,8 +813,9 @@ Options' first letters are used to select them.
         if self.definition is None:
             # create definition for random surfaces and blocks
             definition = ['{0} {1}\n'.format(self.grid_w, self.grid_h)]
-            for min_ID, rand_ratio in ((0, conf.RAND_B_RATIO),
-                                       (conf.MIN_ID, conf.RAND_S_RATIO)):
+            t = conf.THEME
+            for min_ID, rand_ratio in ((0, conf.RAND_B_RATIO[t]),
+                                       (conf.MIN_ID, conf.RAND_S_RATIO[t])):
                 things = {} # blocks or surfaces depending on the iteration
                 i = 0
                 n = int(min(rand_ratio, 1) * self.grid_w * self.grid_h)

@@ -158,7 +158,7 @@ BLANK_LEVEL = get('blank_level', '5 5')
 UNDO_LEVELS = get('undo_levels', 0)
 LEVEL_NAME_LENGTH = get('level_name_length', 3)
 
-# IDs (no point in being able to change them)
+# IDs
 MIN_ID = -6
 MAX_ID = 4
 
@@ -180,38 +180,72 @@ B_BOUNCE = 4
 WALL = 99
 
 # appearance
+THEMES = ('default',)
+THEME = get('theme', 'default')
 # menu
-RAND_B_RATIO = get('rand_b_ratio', .1)
-RAND_S_RATIO = get('rand_s_ratio', .1)
-# puzzle
-PUZZLE_FONT = get('puzzle_font', 'orbitron-black.otf')
-PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
-PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
-PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
-MSG_FONT = get('msg_font', 'orbitron-black.otf')
-MSG_TEXT_COLOUR = get('msg_text_colour', (0, 0, 0))
-PUZZLE_LINE_COLOUR = get('puzzle_line_colour', (200, 200, 200))
-PUZZLE_LINE_WIDTH = get('puzzle_line_width', 1)
-# selection
-SEL_COLOUR = get('sel_colour', (255, 0, 0))
-MIN_SEL_WIDTH = get('min_sel_width', 1)
-SEL_WIDTH = get('sel_width', .05) # proportion of tile size
-# colours
-BG = get('bg', (255, 255, 255))
-surface_colours = get('surface_colours', {
-    S_BLANK: (255, 255, 255),
-    S_SLIDE: (200, 200, 255),
-    S_LEFT: (90, 90, 90),
-    S_UP: (50, 50, 50),
-    S_RIGHT: (130, 130, 130),
-    S_DOWN: (170, 170, 170)
+RAND_B_RATIO = get('rand_b_ratio', {
+    'default': .1
 })
-block_colours = get('block_colours', {
-    B_PLAYER: (200, 0, 0),
-    B_IMMOVEABLE: (70, 70, 70),
-    B_STANDARD: (150, 150, 150),
-    B_SLIDE: (150, 150, 255),
-    B_BOUNCE: (100, 255, 100)
+RAND_S_RATIO = get('rand_s_ratio', {
+    'default': .1
+})
+# puzzle
+PUZZLE_FONT = get('puzzle_font', {
+    'default': 'orbitron-black.otf'
+})
+PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', {
+    'default': (0, 0, 0)
+})
+PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', {
+    'default': (255, 0, 0)
+})
+PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', {
+    'default': (0, 180, 0)
+})
+MSG_FONT = get('msg_font', {
+    'default': 'orbitron-black.otf'
+})
+MSG_TEXT_COLOUR = get('msg_text_colour', {
+    'default': (0, 0, 0)
+})
+PUZZLE_LINE_COLOUR = get('puzzle_line_colour', {
+    'default': (200, 200, 200)
+})
+PUZZLE_LINE_WIDTH = get('puzzle_line_width', {
+    'default': 1
+})
+# selection
+SEL_COLOUR = get('sel_colour', {
+    'default': (255, 0, 0)
+})
+MIN_SEL_WIDTH = get('min_sel_width', {
+    'default': 1
+})
+SEL_WIDTH = get('sel_width', { # proportion of tile size
+    'default': .05
+})
+# colours
+BG = get('bg', {
+    'default': (255, 255, 255)
+})
+SURFACE_COLOURS = get('surface_colours', {
+    'default': {
+        S_BLANK: (255, 255, 255),
+        S_SLIDE: (200, 200, 255),
+        S_LEFT: (90, 90, 90),
+        S_UP: (50, 50, 50),
+        S_RIGHT: (130, 130, 130),
+        S_DOWN: (170, 170, 170)
+    }
+})
+BLOCK_COLOURS = get('block_colours', {
+    'default': {
+        B_PLAYER: (200, 0, 0),
+        B_IMMOVEABLE: (70, 70, 70),
+        B_STANDARD: (150, 150, 150),
+        B_SLIDE: (150, 150, 255),
+        B_BOUNCE: (100, 255, 100)
+    }
 })
 
 # audio

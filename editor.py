@@ -272,7 +272,7 @@ state: the current position in the history.
             '\n'.join('{0} 1 {1}'.format(b, i) for i, b in enumerate(blocks)),
             '\n'.join('{0} 2 {1}'.format(s, i) for i, s in enumerate(surfaces))
         )
-        self.selector = Puzzle(game, self._selector_defn, border = 1)
+        self.selector = Puzzle(game, self._selector_defn)
         self.selector.old_selected = (0, 0)
 
         self.FRAME = conf.FRAME
@@ -294,7 +294,7 @@ state: the current position in the history.
         if hasattr(self, 'editor'):
             self.editor.load(definition)
         else:
-            self.editor = Puzzle(self.game, definition, border = 1)
+            self.editor = Puzzle(self.game, definition)
         self.editor.select(0, 0)
         self.puzzle = self.editor
         self.editing = True
@@ -480,7 +480,7 @@ state: the current position in the history.
     def draw (self, screen):
         """Draw the puzzles."""
         if self.dirty:
-            screen.fill(conf.BG)
+            screen.fill(conf.BG[conf.THEME])
         # get puzzle sizes
         w, h = screen.get_size()
         w1 = int(conf.EDITOR_WIDTH * w)
