@@ -16,8 +16,6 @@ import conf
 # - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options pages:
-#       sound: volumes, theme
-#       gameplay: speed, whether to show message
 #       appearance: select from multiple themes (can change colours, images, puzzle line sizes, font/size/colours)
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
 # - custom levels delete/rename/duplicate
@@ -1093,6 +1091,7 @@ class MainMenu (Menu):
         s = self._new_select
         r = RangeSelect
         g = lambda i: (conf.get, (i,))
+        snd_theme_index = lambda: conf.SOUND_THEMES.index(conf.SOUND_THEME)
         pages = (
             (
                 Button('Play', self.set_page, 1),
@@ -1110,16 +1109,17 @@ class MainMenu (Menu):
             ), (
                 Button('Sound', self.set_page, 6),
                 Button('Gameplay', self.set_page, 7),
-                Button('Appearance', self.set_page, 8)
+                Button('Appearance', self.set_page, 8),
+                Button('Delete data', self.set_page, 9)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
-                s(DiscreteSelect, g('sound_theme'), 'Theme: %x',
-                  [x[0] for x in conf.SOUNDS], True),
+                s(DiscreteSelect, snd_theme_index, 'Theme: %x',
+                  conf.SOUND_THEMES, True),
                 Button('Save', self._save, {
                     ((6, 0), 'music_volume', self._update_music_vol),
                     ((6, 1), 'sound_volume', self._update_snd_vol),
-                    ((6, 2), 'sound_theme', self._refresh_sounds)
+                    ((6, 2), ('sound_theme', False), self._refresh_sounds)
                 })
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
@@ -1201,15 +1201,17 @@ _save(settings, back = True)
 settings: a list of (pos, setting[, cb[, args...]]) tuples, where:
     pos: (page_ID, col, row) tuple indicating the widget's location.
          (page_ID, row) can be used if the page has only one column.
-    setting: setting ID to pass to with conf.set.
+    setting: setting ID to pass to with conf.set, or (setting_ID, False) to
+             save the value attribute of a DiscreteSelect instance (rather
+             than the index attribute).
     cb: a function to call after the setting has been saved; it is passed the
         new value.
     args: positional arguments to pass to cb (after the compulsory argument).
 back: go back a page after saving.
 
 Text instances are supported, where we save widget.value if widget is a Select
-instance, widget.index if it is a DiscreteSelect instance, else save
-widget.text.
+instance, widget.index (or widget.value) if it is a DiscreteSelect instance,
+else widget.text.
 
 """
         to_save = {}
@@ -1223,13 +1225,16 @@ widget.text.
                 cb = None
                 args = ()
             pos, ID = data
+            if isinstance(ID, basestring):
+                ID = (ID, True)
+            ID, save_index = ID
             # get widget
             if len(pos) == 2:
                 pos = (pos[0], 0, pos[1])
             page, col, row = pos
             widget = self.pages[page][col][row]
             # get new value for the setting
-            if isinstance(widget, DiscreteSelect):
+            if isinstance(widget, DiscreteSelect) and save_index:
                 val = widget.index
             elif isinstance(widget, Select):
                 val = widget.value

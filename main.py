@@ -310,8 +310,7 @@ Only one instance of a sound will be played each frame.
         else:
             # load sound
             try:
-                theme, sounds = conf.SOUNDS[conf.SOUND_THEME]
-                snd = conf.SOUND_DIR + theme + os.sep + sounds[ID]
+                snd = conf.SOUND_DIR + conf.SOUND_THEME + os.sep + ID + '.ogg'
                 snd = pygame.mixer.Sound(snd)
                 if snd.get_length() < 10 ** -3:
                     # no way this is valid
@@ -330,7 +329,7 @@ Only one instance of a sound will be played each frame.
 
     def find_music (self):
         """Store a list of music files for the current theme."""
-        d = conf.MUSIC_DIR + conf.SOUNDS[conf.SOUND_THEME][0] + os.sep
+        d = conf.MUSIC_DIR + conf.SOUND_THEME + os.sep
         try:
             files = os.listdir(d)
         except OSError:

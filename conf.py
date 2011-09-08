@@ -120,16 +120,10 @@ MENU_INITIAL_DELAY = get('menu_initial_delay', .3)
 MENU_REPEAT_DELAY = get('menu_repeat_delay', .15)
 
 # menu
-PUZZLE_FONT = get('puzzle_font', 'orbitron-black.otf')
-PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
-PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
-PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
 PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
 PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
 PRINTABLE = get('printable', PRINTABLE)
 PRINTABLE.add(' ')
-RAND_B_RATIO = get('rand_b_ratio', .1)
-RAND_S_RATIO = get('rand_s_ratio', .1)
 MIN_CHAR_ID = get('min_char_id', 32)
 MAX_CHAR_ID = get('max_char_id', 255)
 SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
@@ -149,6 +143,20 @@ FF_SPEEDUP = get('ff_speedup', 4)
 RESET_ON_STOP_SOLVING = get('reset_on_stop_solving', True)
 SOLN_DIRS = get('soln_dirs', 'lurd')
 SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
+
+# messages
+SHOW_MSG = get('show_msg', 1)
+# proportion of smaller screen dimension
+MSG_LINE_HEIGHT = get('msg_line_height', .1)
+MSG_PADDING_TOP = get('msg_padding_top', .02)
+MSG_PADDING_BOTTOM = get('msg_padding_bottom', .01)
+MSG_MAX_HEIGHT = get('msg_max_height', .2) # proportion of screen height
+
+# editor
+EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
+BLANK_LEVEL = get('blank_level', '5 5')
+UNDO_LEVELS = get('undo_levels', 0)
+LEVEL_NAME_LENGTH = get('level_name_length', 3)
 
 # IDs (no point in being able to change them)
 MIN_ID = -6
@@ -171,11 +179,32 @@ B_BOUNCE = 4
 
 WALL = 99
 
+# appearance
+# menu
+RAND_B_RATIO = get('rand_b_ratio', .1)
+RAND_S_RATIO = get('rand_s_ratio', .1)
+# puzzle
+PUZZLE_FONT = get('puzzle_font', 'orbitron-black.otf')
+PUZZLE_TEXT_COLOUR = get('puzzle_text_colour', (0, 0, 0))
+PUZZLE_TEXT_SELECTED_COLOUR = get('puzzle_text_selected_colour', (255, 0, 0))
+PUZZLE_TEXT_SPECIAL_COLOUR = get('puzzle_text_special_colour', (0, 180, 0))
+MSG_FONT = get('msg_font', 'orbitron-black.otf')
+MSG_TEXT_COLOUR = get('msg_text_colour', (0, 0, 0))
+PUZZLE_LINE_COLOUR = get('puzzle_line_colour', (200, 200, 200))
+PUZZLE_LINE_WIDTH = get('puzzle_line_width', 1)
+# selection
+SEL_COLOUR = get('sel_colour', (255, 0, 0))
+MIN_SEL_WIDTH = get('min_sel_width', 1)
+SEL_WIDTH = get('sel_width', .05) # proportion of tile size
 # colours
 BG = get('bg', (255, 255, 255))
 surface_colours = get('surface_colours', {
     S_BLANK: (255, 255, 255),
-    S_SLIDE: (200, 200, 255)
+    S_SLIDE: (200, 200, 255),
+    S_LEFT: (90, 90, 90),
+    S_UP: (50, 50, 50),
+    S_RIGHT: (130, 130, 130),
+    S_DOWN: (170, 170, 170)
 })
 block_colours = get('block_colours', {
     B_PLAYER: (200, 0, 0),
@@ -185,50 +214,12 @@ block_colours = get('block_colours', {
     B_BOUNCE: (100, 255, 100)
 })
 
-# messages
-SHOW_MSG = get('show_msg', 1)
-MSG_FONT = get('msg_font', 'orbitron-black.otf')
-MSG_TEXT_COLOUR = get('msg_text_colour', (0, 0, 0))
-# proportion of smaller screen dimension
-MSG_LINE_HEIGHT = get('msg_line_height', .1)
-MSG_PADDING_TOP = get('msg_padding_top', .02)
-MSG_PADDING_BOTTOM = get('msg_padding_bottom', .01)
-MSG_MAX_HEIGHT = get('msg_max_height', .2) # proportion of screen height
-
-# selection
-SEL_COLOUR = get('sel_colour', (255, 0, 0))
-MIN_SEL_WIDTH = get('min_sel_width', 1)
-SEL_WIDTH = get('sel_width', .05) # proportion of tile size
-
-# editor
-EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
-BLANK_LEVEL = get('blank_level', '5 5')
-UNDO_LEVELS = get('undo_levels', 0)
-LEVEL_NAME_LENGTH = get('level_name_length', 3)
-
 # audio
 MUSIC_VOLUME = get('music_volume', 50)
 EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
-SOUND_THEME = get('sound_theme', 0)
-SOUNDS = get('sounds', (
-    ('default', {
-        # menu
-        #'select': '',
-        #'move_selection': '',
-        #'alter': '',
-        #'alter_fail': '',
-        # playing
-        'move': 'move.ogg',
-        'wall': 'wall.ogg',
-        'hit': 'hit.ogg',
-        #'win': '',
-        # editing
-        #'place_surface': '',
-        #'place_block': '',
-        #'delete': ''
-    }),
-))
+SOUND_THEMES = sorted(set(os.listdir(SOUND_DIR) + os.listdir(MUSIC_DIR)))
+SOUND_THEME = get('sound_theme', 'default')
 
 
 def set (**settings):
