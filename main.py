@@ -407,8 +407,8 @@ Only one instance of a sound will be played each frame.
         else:
             w = max(conf.MIN_RES_W[0], conf.RES_W[0])
             h = max(conf.MIN_RES_W[1], conf.RES_W[1])
-            w = min(w, int(h * conf.MAX_RATIO))
-            h = min(h, int(w * conf.MAX_RATIO))
+            w = min(w, int(h * conf.MAX_RATIO[0]))
+            h = min(h, int(w * conf.MAX_RATIO[1]))
             self.res = (w, h)
         if conf.RESIZABLE:
             flags |= pygame.RESIZABLE

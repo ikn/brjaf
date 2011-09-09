@@ -689,8 +689,8 @@ class Menu (object):
         self.w, self.h = (max(self.page_dim(page)[i] for page in self.pages)
                           for i in xrange(2))
         # create grid
-        self.grid_w = max(self.w, int(ceil(self.h * conf.MAX_RATIO)))
-        self.grid_h = max(self.h, int(ceil(self.w * conf.MAX_RATIO)))
+        self.grid_w = max(self.w, int(ceil(self.h * conf.MAX_RATIO[0])))
+        self.grid_h = max(self.h, int(ceil(self.w * conf.MAX_RATIO[1])))
         if self.grid_w % 2 != self.w % 2:
             self.grid_w += 1
         if self.grid_h % 2 != self.h % 2:

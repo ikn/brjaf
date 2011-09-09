@@ -82,7 +82,7 @@ RESIZABLE = get('resizable', True)
 FULLSCREEN = get('fullscreen', False)
 WINDOW_ICON = get('window_icon', None)
 WINDOW_TITLE = get('window_title', 'Puzzle game thing')
-MAX_RATIO = get('max_ratio', 3)
+MAX_RATIO = get('max_ratio', (3, 2))
 
 # input
 KEYS_LEFT = get('keys_left', (pg.K_LEFT,))
