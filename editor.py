@@ -9,7 +9,7 @@ import level
 import conf
 
 # TODO:
-# * save level message
+# - save level message
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -204,7 +204,7 @@ Takes the Editor instance.
                                         SolveMenu, self._level_won)
             self._lvl.start_recording()
 
-    def _reset (self, editor):
+    def _reset (self):
         """Call back for 'reset' option."""
         self._editor._do_reset()
         self.game.quit_backend()
