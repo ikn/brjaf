@@ -221,7 +221,8 @@ reset
 
     ATTRIBUTES
 
-game: Game instance.
+game: as given.
+event_handler: as given.
 ID: as given.
 selector: puzzle used to select blocks/surfaces to add.
 editor: the puzzle being edited.

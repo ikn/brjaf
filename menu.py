@@ -426,6 +426,10 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
 
     ALTER_EVENT = 5
 
+    def __str__ (self):
+        text = self.orig_text.encode('utf-8')
+        return '<{0}: \'{1}\'>'.format(type(self).__name__, text)
+
     def set_value (self, value, return_only = False):
         """Set stored value."""
         try:
@@ -635,6 +639,71 @@ pad: as given.
 
 
 class Menu (object):
+    """Abstract base class for a menu with navigable pages containing widgets.
+
+    CONSTRUCTOR
+
+Menu(game, event_handler[, page_ID][, args...])
+
+game: running Game instance.
+event_handler: evthandler.EventHandler instance to use for keybindings.
+page_ID: ID of page to start at.
+args: positional arguments to pass to subclass's init method.
+
+Subclasses should override this class's init method and call Menu.init therein.
+Widgets are Text instances (and subclasses).
+
+    METHODS
+
+init
+page_dim
+set_page
+refresh_text
+generate_access_keys
+generate_grid
+selected
+set_selected
+move_selection
+alter
+select
+back
+capture_input
+release_input
+update
+draw
+
+    and for subclasses:
+
+_quit_then
+_new_select
+
+    ATTRIBUTES
+
+game: as passed to constructor.
+event_handler: as passed to constructor.
+last_pages: navigation stack: list of previous (self.page_ID, self.sel) tuples.
+captured: whether a widget has captured input.
+pages: list of pages, each a list of columns, each a list of rows, each a list
+       of widgets.
+re_init: set this to True to have the menu reinitialised (init called and
+         page/selection restored).
+sel: selected widget on the current page: [col, row] or None.
+page_ID: the index of the current page in self.pages.
+page: the current page from self.pages.
+definition: data structure defining contents of the puzzle for the current
+            page, excluding widgets.  See generate_grid method documentation
+            for details.
+w: width of the widget area of the menu in tiles.
+h: height of the widget area of the menu in tiles.
+grid_w: width of the menu puzzle in tiles (larger to accommodate window
+        resizing.
+grid_h: height of the menu puzzle in tiles.
+grids: (page_ID: puzzle) dict for pages that have been loaded.
+keys: widget access keys: (keycode: widgets) dict where widgets is a list of
+      (col, row) tuples.
+
+"""
+
     def __init__ (self, game, event_handler, page_ID = None, *extra_args):
         self.game = game
         event_handler.add_event_handlers({pygame.KEYDOWN: self._access_keys})
@@ -808,6 +877,7 @@ Options' first letters are used to select them.
                             self.keys[k] = [(i, j)]
 
     def generate_grid (self):
+        # docstring has self.definition structure
         # generate a grid containing random stuff and this page's text
         if self.definition is None:
             # create definition for random surfaces and blocks
@@ -1110,7 +1180,7 @@ class MainMenu (Menu):
             ), (
                 Button('Sound', self.set_page, 6),
                 Button('Gameplay', self.set_page, 7),
-                Button('Appearance', self.set_page, 8),
+                Button('Display', self.set_page, 8),
                 Button('Delete data', self.set_page, 9)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
@@ -1133,7 +1203,7 @@ class MainMenu (Menu):
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 Button('Save', self._save, (
-                    ((8, 0), ('theme', False), self.game.restart),
+                    ((8, 0), ('theme', False), self._refresh_graphics),
                 ))
             )
         )
@@ -1189,6 +1259,12 @@ class MainMenu (Menu):
         self.game.sounds = {}
         self.game.find_music()
         self.game.play_music()
+
+    def _refresh_graphics (self, theme):
+        """Clear cached game images and reinitialise the menu."""
+        self.re_init = True
+        self.game.files = {}
+        self.game.imgs = {}
 
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""

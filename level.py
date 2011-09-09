@@ -514,7 +514,8 @@ draw
 
     ATTRIBUTES
 
-game: Game instance.
+game: as given.
+event_handler: as given.
 pause_menu: as given.
 
 """
