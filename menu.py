@@ -643,7 +643,7 @@ class Menu (object):
 
     CONSTRUCTOR
 
-Menu(game, event_handler[, page_ID][, args...])
+Menu(game, event_handler[, page_ID], *args)
 
 game: running Game instance.
 event_handler: evthandler.EventHandler instance to use for keybindings.
@@ -682,7 +682,7 @@ _new_select
 game: as passed to constructor.
 event_handler: as passed to constructor.
 last_pages: navigation stack: list of previous (self.page_ID, self.sel) tuples.
-captured: whether a widget has captured input.
+captured: the widget that has captured input, or False.
 pages: list of pages, each a list of columns, each a list of rows, each a list
        of widgets.
 re_init: set this to True to have the menu reinitialised (init called and
@@ -699,6 +699,7 @@ grid_w: width of the menu puzzle in tiles (larger to accommodate window
         resizing.
 grid_h: height of the menu puzzle in tiles.
 grids: (page_ID: puzzle) dict for pages that have been loaded.
+grid: the current puzzle.
 keys: widget access keys: (keycode: widgets) dict where widgets is a list of
       (col, row) tuples.
 
@@ -740,6 +741,13 @@ keys: widget access keys: (keycode: widgets) dict where widgets is a list of
         self.set_page(page_ID)
 
     def init (self, pages):
+        """Load the given pages into the menu.
+
+The argument is a list of pages, each a list of columns, each a list of rows.
+Rows are lists of widgets (Text instances) they contain.  If a page has only
+one column, it can just be a list of rows.
+
+"""
         self.pages = []
         for page in pages:
             if isinstance(page[0], Text):
@@ -767,6 +775,15 @@ keys: widget access keys: (keycode: widgets) dict where widgets is a list of
         self.grids = {}
 
     def page_dim (self, page, padding = True):
+        """Get the dimensions of a page, in tiles.
+
+page_dim(page, padding = True) -> (width, height)
+
+page: list of columns, each a list of rows, each a list of widgets.
+padding: whether to include padding around widgets (1 tile between each and
+         around the border).
+
+"""
         if padding:
             return (sum(max(text.size + 1 for text in c) for c in page) + 1,
                     2 * max(len(c) for c in page) + 1)
@@ -774,7 +791,7 @@ keys: widget access keys: (keycode: widgets) dict where widgets is a list of
             return (len(page), max(len(c) for c in page))
 
     def set_page (self, page):
-        # change the current menu page and its associated elements
+        """Set the page to the given ID."""
         if page == self.page_ID:
             return
         select = None
@@ -877,8 +894,17 @@ Options' first letters are used to select them.
                             self.keys[k] = [(i, j)]
 
     def generate_grid (self):
-        # docstring has self.definition structure
-        # generate a grid containing random stuff and this page's text
+        """Generate the Puzzle for the current page.
+
+The puzzle is stored in this Menu instance's grid and grids attributes, and the
+definition attribute is set.  refresh_text is called.
+
+The definition attribute is a list: [size, blocks, surfaces], where:
+
+size: as the first line of a puzzle definition.
+blocks, surfaces: both ((col, row): ID) dicts for things in the puzzle.
+
+"""
         if self.definition is None:
             # create definition for random surfaces and blocks
             definition = ['{0} {1}\n'.format(self.grid_w, self.grid_h)]
@@ -927,6 +953,14 @@ Options' first letters are used to select them.
         self.refresh_text()
 
     def selected (self, sel = None):
+        """Get the widget given by a selection.
+
+selected([sel]) -> widget
+
+sel defaults to self.sel if not given, and so is (col, row).  If there is no
+widget at the give position (selection is out of bounds), None is returned.
+
+"""
         if sel is None:
             sel = self.sel
         try:
@@ -935,7 +969,23 @@ Options' first letters are used to select them.
             return None
 
     def set_selected (self, sel, force = False):
-        # set the currently selected option
+        """Set the currently selected widget.
+
+set_selected(sel, force = False)
+
+sel: (col, row) position of the widget to select, or None to deselect any
+     currently selected widget.
+force: re-select the widget even if it is already the selected widget.
+
+If sel points to a widget that cannot be selected (not an Option instance),
+this function selects the next selectable widget (that for which
+(col, row) > sel and (col, row) is minimal), if any.  If there are none, no
+widget is selected (but any currently selected widget _is_ deselected).
+
+Behaviour in the case that sel does not point to a widget (out of bounds) is
+undefined.
+
+"""
         if sel is not None:
             sel = list(sel)
         if sel != self.sel or force:
@@ -968,7 +1018,7 @@ Options' first letters are used to select them.
             self.sel = sel
 
     def move_selection (self, key, event, mods, amount, axis = 1):
-        # change the selected option
+        """Change the currently selected option (key callback)."""
         if self.sel is None:
             return
         sel = self.sel[:]
@@ -993,6 +1043,7 @@ Options' first letters are used to select them.
         self.set_selected(sel)
 
     def alter (self, key, event, mods, direction, amount):
+        """Alter the currently selected Select widget (key callback.)"""
         if self.sel is None:
             return
         else:
@@ -1015,7 +1066,12 @@ Options' first letters are used to select them.
             return
 
     def select (self, *args):
-        # choose the currently selected option, if any
+        """Choose the currently selected Option widget, if any.
+
+'Choosing' a widget means calling its click method.  We also play a sound
+effect if defined by the theme.
+
+"""
         if self.sel is None:
             return
         option = self.page[self.sel[0]][self.sel[1]]
@@ -1024,10 +1080,11 @@ Options' first letters are used to select them.
             option.click()
 
     def back (self, *args):
-        # go back one page, if possible
+        """Go backwards one page, if possible."""
         self.set_page(-1)
 
     def _access_keys (self, event):
+        """Callback for all keypresses to check against access keys."""
         if self.captured:
             # pass input to capture function
             self.captured.input(event)
@@ -1082,6 +1139,7 @@ to start with).
             return True
 
     def update (self):
+        """Check if need to reinitialise."""
         if self.re_init:
             # pages might have changed
             ID = self.page_ID
@@ -1091,6 +1149,7 @@ to start with).
             self.set_selected(selected)
 
     def draw (self, screen):
+        """Draw the menu."""
         if self.dirty:
             # make sure the options fit nicely on the screen in both dimensions
             res = self.game.res
@@ -1103,7 +1162,14 @@ to start with).
         return drawn
 
     def _quit_then (self, f, *args):
-        """Quit the menu then call the given function (with *args)."""
+        """Quit the menu then call the given function.
+
+_quit_then(f, *args)
+
+f: the function to call.
+args: positional arguments to pass to the function.
+
+"""
         self.game.quit_backend()
         f(*args)
 
@@ -1149,7 +1215,7 @@ select_instance: the created Select instance.
         return s
 
 
-# both of these need menu.Menu
+# both of these need Menu
 import level
 import editor
 
@@ -1280,7 +1346,7 @@ class MainMenu (Menu):
 
 _save(settings, back = True)
 
-settings: a list of (pos, setting[, cb[, args...]]) tuples, where:
+settings: a list of (pos, setting[, cb, *args]) tuples, where:
     pos: (page_ID, col, row) tuple indicating the widget's location.
          (page_ID, row) can be used if the page has only one column.
     setting: setting ID to pass to with conf.set, or (setting_ID, False) to
