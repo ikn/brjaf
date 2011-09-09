@@ -122,8 +122,8 @@ MENU_REPEAT_DELAY = get('menu_repeat_delay', .15)
 # menu
 PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
 PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
-PRINTABLE = get('printable', PRINTABLE)
 PRINTABLE.add(' ')
+PRINTABLE = get('printable', PRINTABLE)
 MIN_CHAR_ID = get('min_char_id', 32)
 MAX_CHAR_ID = get('max_char_id', 255)
 SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
@@ -253,6 +253,7 @@ MUSIC_VOLUME = get('music_volume', 50)
 EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
 SOUND_THEMES = sorted(set(os.listdir(SOUND_DIR) + os.listdir(MUSIC_DIR)))
+SOUND_THEMES.append('none')
 SOUND_THEME = get('sound_theme', 'default')
 
 

@@ -22,16 +22,16 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-# - probably need some sort of 'long text' element that doesn't have one character per tile
+#   [probably need some sort of 'long text' element that doesn't have one character per tile]
 
-def get_levels (custom = False):
+def get_levels (ID = False):
     """Get a list of existing levels.
 
 Takes a boolean determining whether to load custom levels.
 
 """
-    path = conf.LEVEL_DIR_CUSTOM if custom else conf.LEVEL_DIR_MAIN
-    return sorted(f for f in os.listdir(path) if os.path.isfile(path + f))
+    d = (conf.LEVEL_DIR_MAIN, conf.LEVEL_DIR_CUSTOM, conf.LEVEL_DIR_DRAFT)[ID]
+    return sorted(f for f in os.listdir(d) if os.path.isfile(d + f))
 
 def defn_wins (defn):
     """Check if the given definition starts in a winning state."""

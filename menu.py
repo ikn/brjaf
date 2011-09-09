@@ -8,7 +8,6 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# - document Menu
 # - home/end/page up/page down keys (paging is home/end for non-scrolling pages)
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
@@ -17,7 +16,7 @@ import conf
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
-# - custom levels delete/rename/duplicate
+# * custom levels delete/rename/duplicate
 
 class Text (object):
     """A simple widget to display (immutable) text.
@@ -1225,7 +1224,6 @@ class MainMenu (Menu):
     def init (self):
         # some shortcuts
         s = self._new_select
-        r = RangeSelect
         g = lambda i: (conf.get, (i,))
         snd_theme_index = lambda: conf.SOUND_THEMES.index(conf.SOUND_THEME)
         theme_index = lambda: conf.THEMES.index(conf.THEME)
@@ -1233,49 +1231,55 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 5)
+                Button('Options', self.set_page, 7)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
-                Button('Load', self.set_page, 3)
-            ), [], (
+                Button('Load', self.set_page, 3),
+                Button('Load draft', self.set_page, 4)
+            ), [], [], (
                 Button('Play', self._with_custom_lvl, level.LevelBackend),
                 Button('Edit', self._with_custom_lvl, editor.Editor),
                 Button('Delete'), # confirm
                 Button('Rename'), # do duplicate, then delete original
                 Button('Duplicate') # reuse editor's save menu if possible
             ), (
-                Button('Sound', self.set_page, 6),
-                Button('Gameplay', self.set_page, 7),
-                Button('Display', self.set_page, 8),
-                Button('Delete data', self.set_page, 9)
+                Button('Edit', self._with_custom_lvl, editor.Editor),
+                Button('Delete'), # confirm
+                Button('Rename'), # do duplicate, then delete original
+                Button('Duplicate') # reuse editor's save menu if possible
+            ), (
+                Button('Sound', self.set_page, 8),
+                Button('Gameplay', self.set_page, 9),
+                Button('Display', self.set_page, 10),
+                Button('Delete data', self.set_page, 11)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((6, 0), 'music_volume', self._update_music_vol),
-                    ((6, 1), 'sound_volume', self._update_snd_vol),
-                    ((6, 2), ('sound_theme', False), self._refresh_sounds)
+                    ((8, 0), 'music_volume', self._update_music_vol),
+                    ((8, 1), 'sound_volume', self._update_snd_vol),
+                    ((8, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'), 
                   True),
                 Button('Save', self._save, (
-                    ((7, 0), 'fps'),
-                    ((7, 1), 'show_msg')
+                    ((9, 0), 'fps'),
+                    ((9, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 Button('Save', self._save, (
-                    ((8, 0), ('theme', False), self._refresh_graphics),
+                    ((10, 0), ('theme', False), self._refresh_graphics),
                 ))
             )
         )
 
         # create level pages
-        for page, custom in ((1, False), (3, True)):
+        for page, custom in ((1, 0), (3, 1), (4, 2)):
             lvls = level.get_levels(custom)
             page = pages[page]
             if not lvls:
@@ -1335,7 +1339,7 @@ class MainMenu (Menu):
     def _custom_lvl_cb (self, ID):
         """Set up page shown on selecting a custom level."""
         self._custom_lvl_ID = ID
-        self.set_page(4)
+        self.set_page(6 if ID[0] == 2 else 5)
 
     def _with_custom_lvl (self, obj):
         """Start backend with self._custom_lvl_ID."""

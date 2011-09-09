@@ -9,8 +9,7 @@ import level
 import conf
 
 # TODO:
-# - 'Save draft' option
-# - save level message
+# * save level message
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -142,6 +141,7 @@ Takes the Editor instance.
             (
                 menu.Button('Continue', self.game.quit_backend),
                 menu.Button('Save', self._save),
+                menu.Button('Save draft', self._save, True),
                 menu.Button('Reset', self.set_page, 1),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ), (
@@ -164,36 +164,45 @@ Takes the Editor instance.
 
     def _level_won (self):
         """Callback for solving the created level."""
-        self.game.quit_backend()
-        # retrieve solution and add to definition
-        self._defn += '\n: ' + self._lvl.stop_recording()
+        if hasattr(self, '_lvl'):
+            self.game.quit_backend()
+            # retrieve solution and add to definition
+            self._defn += '\n: ' + self._lvl.stop_recording()
+            del self._lvl
+            d = conf.LEVEL_DIR_CUSTOM
+        else:
+            d = conf.LEVEL_DIR_DRAFT
         # ask for level name
-        self.game.start_backend(SaveMenu, None, conf.LEVEL_DIR_CUSTOM,
-                                self._defn, self._editor.ID, success_cb,
-                                (self._editor,))
+        self.game.start_backend(SaveMenu, None, d, self._defn, self._editor.ID,
+                                success_cb, (self._editor,))
         del self._defn
 
-    def _save (self):
+    def _save (self, draft = False):
         """Callback for 'save' option."""
         e = self._editor
         # try to save the current puzzle
-        # check if there's a player block
-        if not any(b.type == conf.B_PLAYER for b in e.editor.blocks):
-            self.set_page(2)
-            return
-        # check if already winning: create a puzzle and run it for one frame
         defn = e.history[e.state]
-        if level.defn_wins(defn):
-            self.set_page(3)
-            return
-        # ask the player to solve the puzzle
+        if not draft:
+            # check if there's a player block
+            if not any(b.type == conf.B_PLAYER for b in e.editor.blocks):
+                self.set_page(2)
+                return
+            # check if already winning
+            if level.defn_wins(defn):
+                self.set_page(3)
+                return
         self._defn = defn
         self.game.quit_backend()
-        # show message making it clear what's going on
-        defn += '\n@Solve the level first.'
-        self._lvl = self.game.start_backend(level.LevelBackend, None, defn,
-                                      SolveMenu, self._level_won)
-        self._lvl.start_recording()
+        if draft:
+            # skip checks and solving
+            self._level_won()
+        else:
+            # ask the player to solve the puzzle
+            # show message making it clear what's going on
+            defn += '\n@Solve the level first.'
+            self._lvl = self.game.start_backend(level.LevelBackend, None, defn,
+                                        SolveMenu, self._level_won)
+            self._lvl.start_recording()
 
     def _reset (self, editor):
         """Call back for 'reset' option."""
@@ -287,9 +296,8 @@ state: the current position in the history.
             self.ID = None
         else:
             # get data from file
-            path = conf.LEVEL_DIR_CUSTOM
-            #path = conf.LEVEL_DIR_DRAFT if ID[0] else conf.LEVEL_DIR_CUSTOM
-            with open(path + ID[1]) as f:
+            d = conf.LEVEL_DIR_DRAFT if ID[0] == 2 else conf.LEVEL_DIR_CUSTOM
+            with open(d + ID[1]) as f:
                 definition = f.read()
             self.ID = ID[1]
         if hasattr(self, 'editor'):
