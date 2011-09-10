@@ -156,7 +156,7 @@ MSG_MAX_HEIGHT = get('msg_max_height', .2) # proportion of screen height
 EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
 BLANK_LEVEL = get('blank_level', '5 5')
 UNDO_LEVELS = get('undo_levels', 0)
-LEVEL_NAME_LENGTH = get('level_name_length', 3)
+LEVEL_NAME_LENGTH = get('level_name_length', 6)
 
 # IDs
 MIN_ID = -6

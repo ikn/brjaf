@@ -16,7 +16,6 @@ import conf
 # - keys should select next option, like l/r/u/d: flatten with others removed
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
-# * custom levels delete/rename/duplicate
 
 class Text (object):
     """A simple widget to display (immutable) text.
@@ -702,6 +701,11 @@ grid: the current puzzle.
 keys: widget access keys: (keycode: widgets) dict where widgets is a list of
       (col, row) tuples.
 
+    and for subclasses:
+
+_default_selections: (page_ID: (col, row)) dict of initial widgets to select
+                     where different from the first selectable widget.
+
 """
 
     def __init__ (self, game, event_handler, page_ID = None, *extra_args):
@@ -1225,6 +1229,7 @@ class MainMenu (Menu):
         # some shortcuts
         s = self._new_select
         g = lambda i: (conf.get, (i,))
+        w = self._with_custom_lvl
         snd_theme_index = lambda: conf.SOUND_THEMES.index(conf.SOUND_THEME)
         theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
@@ -1237,21 +1242,21 @@ class MainMenu (Menu):
                 Button('Load', self.set_page, 3),
                 Button('Load draft', self.set_page, 4)
             ), [], [], (
-                Button('Play', self._with_custom_lvl, level.LevelBackend),
-                Button('Edit', self._with_custom_lvl, editor.Editor),
-                Button('Delete'), # confirm
-                Button('Rename'), # do duplicate, then delete original
-                Button('Duplicate') # reuse editor's save menu if possible
+                Button('Play', w, level.LevelBackend),
+                Button('Edit', w, editor.Editor),
+                Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
+                Button('Rename', self._rename),
+                Button('Duplicate', self._rename, False)
             ), (
-                Button('Edit', self._with_custom_lvl, editor.Editor),
-                Button('Delete'), # confirm
-                Button('Rename'), # do duplicate, then delete original
-                Button('Duplicate') # reuse editor's save menu if possible
+                Button('Edit', w, editor.Editor),
+                Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
+                Button('Rename', self._rename),
+                Button('Duplicate', self._rename, False)
             ), (
                 Button('Sound', self.set_page, 8),
                 Button('Gameplay', self.set_page, 9),
                 Button('Display', self.set_page, 10),
-                Button('Delete data', self.set_page, 11)
+                #Button('Delete data', self.set_page, 11)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
@@ -1315,6 +1320,26 @@ class MainMenu (Menu):
 
         return Menu.init(self, pages)
 
+    def _done_rename (self, name, old_name, d, then_del):
+        """Cleanup after renaming/duplicating a level."""
+        if old_name != name:
+            if then_del:
+                editor.delete_lvl(d + old_name)
+            self.re_init = True
+        self.back()
+
+    def _rename (self, then_del = True):
+        """Rename a level.  Pass False to skip deleting it afterwards."""
+        # get definition
+        ID = self._custom_lvl_ID
+        d = conf.LEVEL_DIR_CUSTOM if ID[0] == 1 else conf.LEVEL_DIR_DRAFT
+        name = ID[1]
+        with open(d + name) as f:
+            defn = f.read()
+        # ask for new name
+        self.game.start_backend(editor.SaveMenu, None, d, defn, name,
+                                self._done_rename, name, d, then_del)
+
     def _update_snd_vol (self, vol):
         """Set the volume of existing sounds."""
         for snd in self.game.sounds.itervalues():
@@ -1341,9 +1366,11 @@ class MainMenu (Menu):
         self._custom_lvl_ID = ID
         self.set_page(6 if ID[0] == 2 else 5)
 
-    def _with_custom_lvl (self, obj):
+    def _with_custom_lvl (self, obj, ID_pos = 0, *args):
         """Start backend with self._custom_lvl_ID."""
-        self.game.start_backend(obj, self._custom_lvl_ID)
+        args = list(args)
+        args.insert(ID_pos, self._custom_lvl_ID)
+        self.game.start_backend(obj, *args)
 
     def _save (self, settings, back = True):
         """Save settings in the menu.

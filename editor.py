@@ -10,6 +10,7 @@ import conf
 
 # TODO:
 # - save level message
+# - don't allow, e.g. ., .. as filenames
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -24,6 +25,31 @@ Takes the Level backend instance.
             menu.Button('Quit', self.game.quit_backend, 2)
         ),))
 
+def delete_lvl (fn):
+    print 'delete'
+
+class DeleteMenu (menu.Menu):
+    """Menu for deleting custom level saves.
+
+Takes the level ID.
+
+"""
+
+    def init (self, ID, success_cb):
+        self._default_selections[0] = (0, 2)
+        menu.Menu.init(self, ((
+                menu.Text('Delete?'),
+                menu.Button('Yes', self._delete, ID, success_cb),
+                menu.Button('No', self.game.quit_backend)
+        ),))
+
+    def _delete (self, ID, success_cb):
+        """Delete the level with the given ID."""
+        d = conf.LEVEL_DIR_CUSTOM if ID[0] == 1 else conf.LEVEL_DIR_DRAFT
+        delete_lvl(d + ID[1])
+        self.game.quit_backend()
+        self.game.set_backend_attrs(menu.MainMenu, 're_init', True)
+        success_cb()
 
 def success_cb (fn, editor):
     """Callback for SaveMenu on successful save.
@@ -40,14 +66,14 @@ given to the level.
 class SaveMenu (menu.Menu):
     """Menu for saving a created level.
 
-Further arguments: (directory, defn, fn = ''[, success_cb[, success_cb_args]])
+Further arguments: (directory, defn, fn = ''[, success_cb, *success_cb_args])
 
 directory: directory to save in.
 defn: level definition to save.
 fn: text to initialise filename text entry with.
 success_cb: a function to call with the filename the level is saved under on
             success.
-success_cb_args: list of arguments to pass to success_cb after the filename.
+success_cb_args: arguments to pass to success_cb after the filename.
 
 """
 
@@ -56,7 +82,7 @@ success_cb_args: list of arguments to pass to success_cb after the filename.
         self._entry.toggle_focus()
 
     def init (self, directory, defn, fn = '', success_cb = None,
-              success_cb_args = ()):
+              *success_cb_args):
         if not fn:
             fn = ''
         # most bad characters will be caught when we try to create the file,
@@ -80,7 +106,8 @@ success_cb_args: list of arguments to pass to success_cb after the filename.
                 menu.Button('Cancel', self.game.quit_backend)
             ), (
                 menu.Text('Level name'),
-                menu.Text('is blank.')
+                menu.Text('is blank.'),
+                menu.Button('OK', self.back)
             ), (
                 menu.Text('Overwrite?'),
                 menu.Button('Yes', self._save, True),
@@ -174,7 +201,7 @@ Takes the Editor instance.
             d = conf.LEVEL_DIR_DRAFT
         # ask for level name
         self.game.start_backend(SaveMenu, None, d, self._defn, self._editor.ID,
-                                success_cb, (self._editor,))
+                                success_cb, self._editor)
         del self._defn
 
     def _save (self, draft = False):
