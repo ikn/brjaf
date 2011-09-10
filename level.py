@@ -31,7 +31,11 @@ Takes a boolean determining whether to load custom levels.
 
 """
     d = (conf.LEVEL_DIR_MAIN, conf.LEVEL_DIR_CUSTOM, conf.LEVEL_DIR_DRAFT)[ID]
-    return sorted(f for f in os.listdir(d) if os.path.isfile(d + f))
+    try:
+        fs = os.listdir(d)
+    except (OSError, WindowsError):
+        return []
+    return sorted(f for f in fs if os.path.isfile(d + f))
 
 def defn_wins (defn):
     """Check if the given definition starts in a winning state."""
