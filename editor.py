@@ -25,9 +25,6 @@ Takes the Level backend instance.
             menu.Button('Quit', self.game.quit_backend, 2)
         ),))
 
-def delete_lvl (fn):
-    print 'delete'
-
 class DeleteMenu (menu.Menu):
     """Menu for deleting custom level saves.
 
@@ -46,7 +43,10 @@ Takes the level ID.
     def _delete (self, ID, success_cb):
         """Delete the level with the given ID."""
         d = conf.LEVEL_DIR_CUSTOM if ID[0] == 1 else conf.LEVEL_DIR_DRAFT
-        delete_lvl(d + ID[1])
+        try:
+            os.remove(d + ID[1])
+        except OSError:
+            pass
         self.game.quit_backend()
         self.game.set_backend_attrs(menu.MainMenu, 're_init', True)
         success_cb()

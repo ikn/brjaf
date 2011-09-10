@@ -1,3 +1,4 @@
+import os
 from math import ceil
 from random import randrange, choice
 
@@ -1324,7 +1325,10 @@ class MainMenu (Menu):
         """Cleanup after renaming/duplicating a level."""
         if old_name != name:
             if then_del:
-                editor.delete_lvl(d + old_name)
+                try:
+                    os.remove(d + old_name)
+                except OSError:
+                    pass
             self.re_init = True
         self.back()
 
