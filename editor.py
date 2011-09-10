@@ -10,7 +10,6 @@ import conf
 
 # TODO:
 # - save level message
-# - don't allow, e.g. ., .. as filenames
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -89,7 +88,7 @@ success_cb_args: arguments to pass to success_cb after the filename.
         # but space would create problems in listing the names, os.sep
         # would create files in directories if they exist, and : does weird
         # things without errors on Windows
-        not_allowed = ' :' + os.sep
+        not_allowed = '/ ' + os.sep
         allowed = set(c for c in conf.PRINTABLE if c not in not_allowed)
         self._entry = menu.TextEntry(conf.LEVEL_NAME_LENGTH, fn, allowed)
         self.directory = directory
@@ -129,7 +128,15 @@ success_cb_args: arguments to pass to success_cb after the filename.
         if fn == '':
             self.set_page(1)
             return
-        # confirm overwrite if exists
+        # other filename validity checks that won't get caught when we try to
+        # create the file:
+        # - don't want to end up destroying parent/current directories
+        # - Windows removes trailing spaces/dots
+        if fn in ('.', '..') or (os.name == 'nt' and name[-1] in (' ', '.')):
+            self.set_page(3)
+            return
+        # confirm overwrite if exists (should cover case-insensitivity of
+        # Windows filenames too)
         if not overwrite and os.path.exists(d + fn):
             self.set_page(2)
             return
@@ -147,6 +154,9 @@ success_cb_args: arguments to pass to success_cb after the filename.
             else:
                 # unknown error
                 self.set_page(4)
+            return
+        except OSError:
+            self.set_page(4)
             return
         # success
         self.game.quit_backend()
