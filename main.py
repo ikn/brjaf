@@ -6,6 +6,7 @@ from random import choice
 import pygame
 from pygame.time import wait
 pygame.init()
+import pygame._view # for Windows freeze support
 import evthandler as eh
 
 from menu import MainMenu
