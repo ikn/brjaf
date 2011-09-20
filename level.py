@@ -23,7 +23,7 @@ import conf
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
 #   [probably need some sort of 'long text' element that doesn't have one character per tile]
-# - solving frame reverse
+# - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
 
 def get_levels (ID = False):
     """Get a list of existing levels.

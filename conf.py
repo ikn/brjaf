@@ -128,6 +128,7 @@ MIN_CHAR_ID = get('min_char_id', 32)
 MAX_CHAR_ID = get('max_char_id', 255)
 SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
 SPECIAL_CHAR_ID_OFFSET = get('special_char_id_offset', 512)
+ACCESS_KEY_SELECT_ORDER = 0 # 0 for horizontal, 1 for vertical
 LEVEL_SELECT_COLS = get('level_select_cols', 5)
 NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
 # (small, mid, large, very large)

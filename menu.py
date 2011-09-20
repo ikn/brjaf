@@ -13,8 +13,6 @@ import conf
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
 # - show arrows to sides of Selects if wrap or when not at min/max
-# - u/d / l/r should go to prev/next col / row at ends: flatten elements to 1D list
-# - keys should select next option, like l/r/u/d: flatten with others removed
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
 
@@ -719,8 +717,8 @@ _default_selections: (page_ID: (col, row)) dict of initial widgets to select
             max(int(conf.MENU_REPEAT_DELAY * conf.MENU_FPS), 1)
         )
         event_handler.add_key_handlers([
-            (conf.KEYS_UP, [(self.move_selection, (-1,))]) + args,
-            (conf.KEYS_DOWN, [(self.move_selection, (1,))]) + args,
+            (conf.KEYS_UP, [(self._move_selection, (-1,))]) + args,
+            (conf.KEYS_DOWN, [(self._move_selection, (1,))]) + args,
             (conf.KEYS_ALTER_LEFT, [(self.alter, (-1, 1))]) + args,
             (conf.KEYS_ALTER_RIGHT, [(self.alter, (1, 1))]) + args,
             (conf.KEYS_ALTER_LEFT_BIG, [(self.alter, (-1, 3))]) + args,
@@ -1021,30 +1019,54 @@ undefined.
                     self.selected(sel).set_selected(True)
             self.sel = sel
 
-    def move_selection (self, key, event, mods, amount, axis = 1):
+    def _move_selection (self, key, event, mods, direction, axis = 1,
+                        source = None):
         """Change the currently selected option (key callback)."""
         if self.sel is None:
             return
-        sel = self.sel[:]
-        direction = 1 if amount > 0 else -1
+        sel = tuple(self.sel)
+        direction = 1 if direction > 0 else -1
+        p = self.page
+        num_elements = self.page_dim(self.page, False)
+        # flatten elements grid to get a list in the order we'll select them
+        pos = [[(i, j) for j in xrange(len(p[i]))] for i in xrange(len(p))]
+        elements = reduce(list.__add__, pos)
+        # sort elements to match selection order
         if axis == 0:
-            num_elements = len(self.page)
+            elements.sort(cmp = lambda a, b: cmp((a[1], a[0]), (b[1], b[0])))
         else:
-            num_elements = max(len(col) for col in self.page)
-        while amount:
-            sel[axis] += amount
-            sel[axis] %= num_elements
+            elements.sort()
+        if source is None:
+            source = elements
+        again = True
+        # find new selected element
+        while again:
+            pos = elements.index(sel)
+            pos += direction
+            pos %= len(elements)
+            sel = elements[pos]
             selected = self.selected(sel)
             # skip non-existent and non-selectable elements
-            while selected is None or not isinstance(selected, Option):
-                sel[axis] += amount
-                sel[axis] %= num_elements
-                selected = self.selected(sel)
-            amount -= direction
+            if selected is not None and isinstance(selected, Option) and \
+               sel in source:
+                again = False
         # change selection
         if sel != self.sel:
             self.game.play_snd('move_selection')
         self.set_selected(sel)
+
+    def move_selection (self, direction, axis = 1, source = None):
+        """Change the currently selected option.
+
+move_selection(direction, axis = 1[, source])
+
+direction: 1 to move right/down, -1 to move up/left.
+axis: 0 for horizontal, 1 for vertical.
+source: list of (x, y) tuples indicating an element's (col, row) position for
+        elements to select from; defaults to all elements on the page.
+
+"""
+        self._move_selection(None, None, None, direction, axis, source)
 
     def alter (self, key, event, mods, direction, amount):
         """Alter the currently selected Select widget (key callback.)"""
@@ -1066,7 +1088,7 @@ undefined.
                 self.game.play_snd('alter_fail')
         else:
             # else move selection left/right
-            self.move_selection(None, None, None, direction, 0)
+            self.move_selection(direction, 0)
             return
 
     def select (self, *args):
@@ -1105,10 +1127,12 @@ effect if defined by the theme.
             self.select()
         else:
             # multiple matches: select next one
+            self.move_selection(1, conf.ACCESS_KEY_SELECT_ORDER, elements)
+            return
             x, y = self.sel
             w, h = self.page_dim(self.page, False)
             sel = min(((j - y) % h, (i - x) % w, i, j)
-                    for i, j in elements if i != x or j != y)[2:]
+                      for i, j in elements if i != x or j != y)[2:]
             self.set_selected(sel)
 
     def capture_input (self, element):
