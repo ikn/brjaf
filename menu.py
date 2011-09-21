@@ -9,9 +9,10 @@ from puzzle import Puzzle, BoringBlock
 import conf
 
 # TODO:
-# - home/end/page up/page down keys (paging is home/end for non-scrolling pages)
+# - have Menu.set_arrows(visible, *arrows), each (conf.ARROW_*, (x, y))
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
+#   - change page up/page down action for scrollable pages
 # - show arrows to sides of Selects if wrap or when not at min/max
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
@@ -725,6 +726,10 @@ _default_selections: (page_ID: (col, row)) dict of initial widgets to select
             (conf.KEYS_ALTER_RIGHT_BIG, [(self.alter, (1, 3))]) + args,
             (conf.KEYS_ALTER_HOME, [(self.alter, (-1, 0,))]) + args,
             (conf.KEYS_ALTER_END, [(self.alter, (1, 0))]) + args,
+            (conf.KEYS_HOME, [(self._set_selected, (0,))]) + args,
+            (conf.KEYS_END, [(self._set_selected, (1,))]) + args,
+            (conf.KEYS_PAGE_UP, [(self._set_selected, (2,))]) + args,
+            (conf.KEYS_PAGE_DOWN, [(self._set_selected, (3,))]) + args,
             (conf.KEYS_NEXT, self.select, od),
             (conf.KEYS_BACK, self.back, od)
         ])
@@ -970,6 +975,23 @@ widget at the give position (selection is out of bounds), None is returned.
         except IndexError:
             return None
 
+    def _set_selected (self, key, event, mods, what):
+        """Key callback for home/end/page up/page down."""
+        if what == 0 or what == 2:
+            # home
+            self.set_selected((0, 0))
+        elif what == 1 or what == 3:
+            # end
+            page = self.page
+            es = self._flattened_elements(page, conf.DEFAULT_SELECT_ORDER)
+            i = len(es) - 1
+            while i >= 0:
+                x, y = es[i]
+                if isinstance(page[x][y], Option):
+                    self.set_selected((x, y))
+                    return
+                i -= 1
+
     def set_selected (self, sel, force = False):
         """Set the currently selected widget.
 
@@ -1019,6 +1041,27 @@ undefined.
                     self.selected(sel).set_selected(True)
             self.sel = sel
 
+    def _flattened_elements (self, page, order):
+        """Return a flattened list of the elements in the given page.
+
+flattened_elements(page, order) -> element_list
+
+page: list of columns, each a list of elements.
+order: 0 for rows to take precedence, 1 for columns.
+
+element_list: each element is represented by its row i and column j as (i, j).
+
+"""
+        pos = [[(i, j) for j in xrange(len(page[i]))]
+               for i in xrange(len(page))]
+        elements = reduce(list.__add__, pos)
+        # sort elements to match selection order
+        if order == 0:
+            elements.sort(cmp = lambda a, b: cmp((a[1], a[0]), (b[1], b[0])))
+        else:
+            elements.sort()
+        return elements
+
     def _move_selection (self, key, event, mods, direction, axis = 1,
                         source = None):
         """Change the currently selected option (key callback)."""
@@ -1026,16 +1069,9 @@ undefined.
             return
         sel = tuple(self.sel)
         direction = 1 if direction > 0 else -1
-        p = self.page
         num_elements = self.page_dim(self.page, False)
         # flatten elements grid to get a list in the order we'll select them
-        pos = [[(i, j) for j in xrange(len(p[i]))] for i in xrange(len(p))]
-        elements = reduce(list.__add__, pos)
-        # sort elements to match selection order
-        if axis == 0:
-            elements.sort(cmp = lambda a, b: cmp((a[1], a[0]), (b[1], b[0])))
-        else:
-            elements.sort()
+        elements = self._flattened_elements(self.page, axis)
         if source is None:
             source = elements
         again = True
@@ -1127,7 +1163,7 @@ effect if defined by the theme.
             self.select()
         else:
             # multiple matches: select next one
-            self.move_selection(1, conf.ACCESS_KEY_SELECT_ORDER, elements)
+            self.move_selection(1, conf.DEFAULT_SELECT_ORDER, elements)
             return
             x, y = self.sel
             w, h = self.page_dim(self.page, False)

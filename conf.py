@@ -92,6 +92,8 @@ KEYS_DOWN = get('keys_down', (pg.K_DOWN,))
 KEYS_DIR = get('keys_dir', (pg.K_LEFT, pg.K_UP, pg.K_RIGHT, pg.K_DOWN))
 KEYS_HOME = get('keys_home', (pg.K_HOME,))
 KEYS_END = get('keys_end', (pg.K_END,))
+KEYS_PAGE_UP = get('keys_page_up', (pg.K_PAGEUP,))
+KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
 
 KEYS_MINIMISE = get('keys_minimise', (pg.K_F10,))
 KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,))
@@ -128,7 +130,7 @@ MIN_CHAR_ID = get('min_char_id', 32)
 MAX_CHAR_ID = get('max_char_id', 255)
 SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
 SPECIAL_CHAR_ID_OFFSET = get('special_char_id_offset', 512)
-ACCESS_KEY_SELECT_ORDER = 0 # 0 for horizontal, 1 for vertical
+DEFAULT_SELECT_ORDER = 0 # 0 for rows take precedence, 1 for columns
 LEVEL_SELECT_COLS = get('level_select_cols', 5)
 NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
 # (small, mid, large, very large)
