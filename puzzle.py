@@ -112,7 +112,10 @@ class Block (BoringBlock):
         # reset some stuff to get ready for the next step
         if keep_resultant:
             resultant = self.resultant()
-            self.sources = [{None: resultant[axis]} for axis in (0, 1)]
+            self.sources = [{}, {}]
+            for axis in (0, 1):
+                if resultant[axis] != 0:
+                    self.sources[axis][None] = [resultant[axis], False]
             self.handled = False
         else:
             self.sources = [{}, {}]
@@ -123,7 +126,8 @@ class Block (BoringBlock):
 
     def resultant (self):
         # calculate resultant force on each axis
-        return [sum(self.sources[axis].values()) for axis in (0, 1)]
+        return [sum(f for f, used in self.sources[axis].values())
+                for axis in (0, 1)]
 
     def add_force (self, direction, force):
         # wrapper for adding non-Block force sources
@@ -133,10 +137,11 @@ class Block (BoringBlock):
     def add_sources (self, axis, sources):
         if conf.DEBUG:
             print 'add_sources', self, axis, sources
+        sources = dict((k, [v, False]) for k, v in sources.iteritems())
         # None means not from a block; might be more than one
         if sources:
             try:
-                self.sources[axis][None] += sources[None]
+                self.sources[axis][None][0] += sources[None][0]
             except KeyError:
                 pass
             else:
@@ -205,12 +210,12 @@ class Block (BoringBlock):
         axis = react_dir % 2
         react_on = []
         sources = self.sources[axis]
-        for source in sources.keys():
-            if source is not None:
-                react_on.append(source)
-            del sources[source]
+        for source, (force, used) in sources.items():
+            if used:
+                if source is not None:
+                    react_on.append(source)
+                del sources[source]
         # redistribute diagonal forces
-        targets = set(self.unhandled_targets[axis] + self.targets[axis].keys())
         u = self.unhandled_targets
         t = self.targets
         for axis in (0, 1):
@@ -227,8 +232,12 @@ class Block (BoringBlock):
 
     def update (self):
         if conf.DEBUG:
-            print 'update:', self
+            print 'update:', self, self.sources
         resultant = self.resultant()
+        # mark current sources as used
+        for sources in self.sources:
+            for source in sources.itervalues():
+                source[1] = True
         # check diagonal if need to
         if all(resultant):
             diag = self.target_tile(resultant)
@@ -239,8 +248,9 @@ class Block (BoringBlock):
         for axis in (0, 1):
             force = resultant[axis]
             if not force:
-                # no resultant force on this axis: reaction
-                react[axis] = react[axis + 2] = (True, False)
+                if self.sources[axis]:
+                    # no resultant force on this axis: reaction
+                    react[axis] = react[axis + 2] = (True, False)
                 # won't push anything anyway
                 continue
             # get adjacent target tile
@@ -292,6 +302,7 @@ class Block (BoringBlock):
                 self.rm_targets(axis, *old.keys())
             # distribute forces among new targets
             new = self.unhandled_targets[axis]
+            assert len(new) <= 2
             if len(new) == 2:
                 force = resultant[axis] / 2
                 if force == 0:
