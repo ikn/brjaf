@@ -31,7 +31,7 @@ def autocrop (s):
 Returns False if the image is completely transparent.
 
 """
-    alpha = pygame.surfarray.array_alpha(s)
+    alpha = pygame.surfarray.pixels_alpha(s)
     alpha = (alpha, alpha.T)
     w, h = s.get_size()
     borders = []
@@ -347,7 +347,7 @@ class Puzzle (object):
                 return False
 
     def init (self):
-        self.tiler.reset()
+        self._reset_tiler()
         lines = self.lines[:]
         # create grid with default surface
         self.grid = []
@@ -379,6 +379,7 @@ Returns whether the puzzle was resized (may leave areas outside the puzzle
 dirty).  Preserves any selection, if possible.
 
 """
+        self._draw_cbs = {}
         self.lines = defn.split('\n')
         # dimensions in first line
         first = self._next_ints(self.lines)
@@ -486,6 +487,17 @@ dirty).  Preserves any selection, if possible.
         selected[axis] %= self.size[axis]
         self.select(*selected)
 
+    def _reset_tiler (self):
+        self.tiler.reset()
+        self.text_adjust = []
+
+    def tile_size (self, axis):
+        n_tiles = self.size[axis]
+        border = self.tiler.border[axis]
+        gap = self.tiler.gap[axis]
+        tile_size = (self.rect.size[axis] - 2 * border - gap * (n_tiles - 1))
+        return tile_size / n_tiles
+
     def resize (self, amount, direction):
         if amount == 0:
             return False
@@ -505,7 +517,7 @@ dirty).  Preserves any selection, if possible.
         # resize tiler
         self.tiler.w = w
         self.tiler.h = h
-        self.tiler.reset()
+        self._reset_tiler()
         # create new grid
         grid = []
         di, dj = offset
@@ -680,6 +692,11 @@ dirty).  Preserves any selection, if possible.
         if conf.DEBUG:
             print 'end step'
 
+    def add_draw_cb (self, f, call_once = False, *tiles):
+        for t in tiles:
+            assert t not in self._draw_cbs
+            self._draw_cbs[t] = (f, call_once)
+
     def _draw_from_img (self, surface, rect, prefix, ID):
         ID = prefix + str(ID)
         fn = conf.IMG_DIR + conf.THEME + path_sep + ID + '.png'
@@ -744,6 +761,9 @@ dirty).  Preserves any selection, if possible.
                                      c, colour), text = True)
                 # crop off empty bits
                 source = autocrop(text)
+                # hack
+                if len(self.text_adjust) < 30 and source:
+                    self.text_adjust.append(source[2:])
                 if source: # else blank
                     # centre in tile rect
                     target = [rect[0] + (rect[2] - source[2]) / 2,
@@ -760,30 +780,43 @@ dirty).  Preserves any selection, if possible.
     def draw (self, screen, everything = False, size = None):
         # draw grid and tiles
         if everything:
-            self.tiler.reset()
+            self._reset_tiler()
+        try:
+            changed = list(self.tiler._changed)
+        except TypeError:
+            pass
         rects = self.tiler.draw_changed(screen, size)
         if rects is None:
-            return None
+            cbs = []
+            rtn = None
         elif isinstance(rects[0], int):
             # drew everything and got back the tiler rect: store it
             self.rect = pygame.Rect(rects)
-            return [rects]
+            cbs = self._draw_cbs.values()
+            rtn = [rects]
         else:
-            return rects[1:]
+            cbs = [v for k, v in self._draw_cbs.iteritems() if k in changed]
+            rtn = rects[1:]
+        # call draw callbacks
+        cbs = list(set([f for f, once in cbs if once])) + \
+              [f for f, once in cbs if not once]
+        for f in cbs:
+            f(screen)
+        return rtn
 
     def point_tile (self, p):
         """Get tile containing given (x, y) point, or None."""
         if self.rect is None or not self.rect.collidepoint(p):
             return None
         result = []
-        for i in xrange(2):
-            pos = int(p[i])
-            n_tiles = self.size[i]
+        for i in (0, 1):
             border = self.tiler.border[i]
+            tile_size = self.tile_size(i)
             gap = self.tiler.gap[i]
-            # take into account 
-            tile_size = (self.rect.size[i] - 2 * border - gap * (n_tiles - 1)) / n_tiles
+            n_tiles = self.size[i]
+            pos = int(p[i])
             pos -= self.rect[i] + border
+            # take gaps between tiles into account
             if pos % (tile_size + gap) >= tile_size:
                 # between tiles/on border
                 return None

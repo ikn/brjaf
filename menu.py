@@ -17,37 +17,31 @@ import conf
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
 
-class Text (object):
-    """A simple widget to display (immutable) text.
+class BaseText (object):
+    """Abstract base class for text widgets.
 
     CONSTRUCTOR
 
-Text(text, special = False[, size])
+BaseText(text, size, rows)
 
 text: the text to display.
-special: whether to display in a different colour.
-size: the maximum size of the text.  This is used to determine the menu size.
+size: the maximum length of the text.  This is used to determine the menu size.
+rows: maximum number of rows of tiles to take up.
 
     METHODS
 
-append
-insert
 set_text
 attach_event
-get_id_offset
 update
-
-For all methods that manipulate the text, the result is truncated to self.size.
 
     ATTRIBUTES
 
 text: the widget's text.
 size: the maximum length of the text.
 current_size: the size of the current text.
-pos: the position of the first character in the grid display, or None if
-     unknown.
-special: whether the text is displayed in a different style; defaults to False.
-         Call update after changing to redraw.
+rows: the maximum number of rows of tiles the text can take up.
+current_rows: the current number of rows of tiles the widget takes up.
+pos: the position of the top-left tile in the grid display, or None if unknown.
 ehs: an event: handlers dict of attached event handlers.
 menu: the Menu instance the widget exists in, or None if unknown.
 puzzle: the Puzzle instance the widget exists in, or None if unknown.
@@ -57,16 +51,17 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
 CHANGE_EVENT: the text changed; called after the change is made.
 
 """
-
-    def __init__ (self, text, special = False, size = None):
+    def __init__ (self, text, size, rows):
         self.text = u''
-        self.size = len(text) if size is None else int(size)
+        self.size = int(size)
+        self.rows = int(rows)
         self.ehs = {}
-        self.special = special
+        self._is_first_append = True
+        self.set_text(text)
+        self._is_first_append = False
         self.pos = None
         self.menu = None
         self.puzzle = None
-        self.append(text, True)
 
     CHANGE_EVENT = 0
 
@@ -76,23 +71,10 @@ CHANGE_EVENT: the text changed; called after the change is made.
 
     __repr__ = __str__
 
-    def append (self, text, is_first_append = False, force_update = False):
-        """Append a string to the end of the text.
-
-Returns whether any characters were truncated.
-
-"""
-        old_text = self.text
-        if not isinstance(text, unicode):
-            text = text.decode('utf-8')
+    def _chars (self, text):
+        """Validify text to display."""
         chars = []
-        truncated = False
-        l = len(self.text)
         for c in text:
-            if l + len(chars) == self.size:
-                # can't add any more
-                truncated = True
-                break
             # limit character range
             o = ord(c)
             if o >= conf.MIN_CHAR_ID and o <= conf.MAX_CHAR_ID:
@@ -100,39 +82,11 @@ Returns whether any characters were truncated.
             else:
                 # replace other characters with spaces
                 chars.append(u' ')
-        self.text += ''.join(chars)
-        self.current_size = len(self.text)
-        if not is_first_append:
-            # update if text changed
-            if force_update or old_text != self.text:
-                self._throw_event(Text.CHANGE_EVENT)
-                self.update()
-            # regenerate menu access keys if first letter changed
-            if (old_text and old_text[0]) != (self.text and self.text[0]):
-                self.menu.generate_access_keys()
-        return not truncated
-
-    def insert (self, index, text):
-        """Insert a string at some index into the text.
-
-insert(index, text)
-
-Returns whether any characters were truncated.
-
-"""
-        end = self.text[index:]
-        self.text = self.text[:index]
-        return self.append(text + end)
+        return ''.join(chars)
 
     def set_text (self, text):
-        """Set the value of the text.
-
-Returns whether any characters were truncated.
-
-"""
-        update = self.text and not text
-        self.text = u''
-        return self.append(text, force_update = update)
+        """Set the value of the text."""
+        raise TypeError('not implemented')
 
     def _throw_event (self, event):
         """Call the handlers attached to the given event ID."""
@@ -156,13 +110,84 @@ args: arguments to pass to the handler; no other arguments are passed.
         except KeyError:
             self.ehs[event] = [data]
 
-    def get_id_offset (self):
-        """Get the number to add to block IDs."""
-        return conf.SPECIAL_CHAR_ID_OFFSET if self.special else 0
-
     def update (self):
         """Make any changes visible."""
         self.menu.refresh_text(widget = self)
+
+class Text (BaseText):
+    """A simple widget to display (immutable) text.
+
+    CONSTRUCTOR
+
+Text(text, special = False[, size])
+
+special: whether to display in a different colour.
+size defaults to initial text length.
+
+    METHODS
+
+append
+insert
+get_id_offset
+
+For all methods that manipulate the text, the result is truncated to self.size.
+
+    ATTRIBUTES
+
+special: whether the text is displayed in a different style; defaults to False.
+         Call update after changing to redraw.
+
+"""
+
+    def __init__ (self, text, special = False, size = None):
+        self.special = special
+        size = len(text) if size is None else size
+        self.current_rows = 1
+        BaseText.__init__(self, text, size, 1)
+
+    def append (self, text, is_first_append = False, force_update = False):
+        """Append a string to the end of the text.
+
+Returns whether any characters were truncated.
+
+"""
+        old_text = self.text
+        if not isinstance(text, unicode):
+            text = text.decode('utf-8')
+        truncated = False
+        self.text += self._chars(text)[:self.size - len(self.text)]
+        self.current_size = len(self.text)
+        if not self._is_first_append:
+            # update if text changed
+            if force_update or old_text != self.text:
+                self._throw_event(BaseText.CHANGE_EVENT)
+                self.update()
+            # regenerate menu access keys if first letter changed
+            if (old_text and old_text[0]) != (self.text and self.text[0]):
+                self.menu.generate_access_keys()
+        return not truncated
+
+    def insert (self, index, text):
+        """Insert a string at some index into the text.
+
+insert(index, text)
+
+Returns whether any characters were truncated.
+
+"""
+        end = self.text[index:]
+        self.text = self.text[:index]
+        return self.append(text + end)
+
+    def set_text (self, text):
+        """Returns whether any characters were truncated."""
+        update = self.text and not text
+        self.text = u''
+        return self.append(text, force_update = update)
+
+    def get_id_offset (self):
+        """Get the number to add to block IDs."""
+        return conf.SPECIAL_CHAR_ID_OFFSET if self.special else 0
 
 
 class Option (Text):
@@ -636,6 +661,68 @@ pad: as given.
         return rtn
 
 
+class LongText (BaseText):
+    """A text for longer strings that can span multiple rows.
+
+    CONSTRUCTOR
+
+LongText(text, size, rows = 1)
+
+    ATTRIBUTES
+
+surface: rendered text.
+
+"""
+
+    def __init__ (self, text, size, rows = 1):
+        BaseText.__init__ (self, text, size, rows)
+        self.set_text(text)
+
+    def __str__ (self):
+        text = self.text.encode('utf-8')
+        return '<{0}: \'{1}\'>'.format(type(self).__name__, text)
+
+    __repr__ = __str__
+
+    def set_text (self, text):
+        old_text = self.text
+        self.text = self._chars(text)
+        if conf.PUZZLE_TEXT_UPPER:
+            self.text = self.text.upper()
+        if self.text != old_text and not self._is_first_append:
+            self._throw_event(BaseText.CHANGE_EVENT)
+            self.update()
+
+    def draw (self, screen):
+        """Draw to the grid."""
+        pzl = self.puzzle
+        # create surface
+        tile_size = (pzl.tile_size(0), pzl.tile_size(1))
+        ID = (str(self), tile_size[1])
+        theme = conf.THEME
+        font = (conf.PUZZLE_FONT[theme], tile_size[1] - 1, False)
+        colour = conf.PUZZLE_TEXT_COLOUR[theme]
+        n = self.size
+        width = n * tile_size[1] + (n - 1) * conf.PUZZLE_LINE_WIDTH[theme]
+        gap = pzl.tiler.gap
+        font_args = (font, self.text, colour, None, width, 0, False, gap[1])
+        surface = self.menu.game.img(ID, font_args, text = True)
+        # get position to draw at
+        tile = self.pos
+        rect = pzl.rect
+        border = pzl.tiler.border
+        pos = []
+        for i in (0, 1):
+            x0 = rect[i] + border[i]
+            x0 += tile[i] * tile_size[i] + (tile[i] - 1) * gap[i]
+            # adjust to look centred-ish
+            sizes = [s[i] for s in pzl.text_adjust]
+            size = max((sizes.count(s), s) for s in sizes)[1]
+            x0 += (tile_size[i] - size) / 2
+            pos.append(x0)
+        screen.blit(surface, pos)
+
+
 class Menu (object):
     """Abstract base class for a menu with navigable pages containing widgets.
 
@@ -751,13 +838,13 @@ _default_selections: (page_ID: (col, row)) dict of initial widgets to select
         """Load the given pages into the menu.
 
 The argument is a list of pages, each a list of columns, each a list of rows.
-Rows are lists of widgets (Text instances) they contain.  If a page has only
-one column, it can just be a list of rows.
+Rows are lists of widgets (Text or LongText instances) they contain.  If a page
+has only one column, it can just be a list of rows.
 
 """
         self.pages = []
         for page in pages:
-            if isinstance(page[0], Text):
+            if isinstance(page[0], (BaseText)):
                 # one column
                 page = [page]
             page = [col for col in page if col]
@@ -771,7 +858,7 @@ one column, it can just be a list of rows.
 
         # get maximum page width and height
         self.w, self.h = (max(self.page_dim(page)[i] for page in self.pages)
-                          for i in xrange(2))
+                          for i in (0, 1))
         # create grid
         self.grid_w = max(self.w, int(ceil(self.h * conf.MAX_RATIO[0])))
         self.grid_h = max(self.h, int(ceil(self.w * conf.MAX_RATIO[1])))
@@ -781,19 +868,19 @@ one column, it can just be a list of rows.
             self.grid_h += 1
         self.grids = {}
 
-    def page_dim (self, page, padding = True):
-        """Get the dimensions of a page, in tiles.
+    def page_dim (self, page, in_tiles = True):
+        """Get the dimensions of a page.
 
-page_dim(page, padding = True) -> (width, height)
+page_dim(page, in_tiles = True) -> (width, height)
 
-page: list of columns, each a list of rows, each a list of widgets.
-padding: whether to include padding around widgets (1 tile between each and
-         around the border).
+page: list of columns, each a list of widgets.
+in_tiles: whether to give page dimensions in tiles (else in widgets).
 
 """
-        if padding:
-            return (sum(max(text.size + 1 for text in c) for c in page) + 1,
-                    2 * max(len(c) for c in page) + 1)
+        if in_tiles:
+            w = sum(max(text.size + 1 for text in c) for c in page) + 1
+            h = max(sum(text.rows + 1 for text in c) for c in page) + 1
+            return (w, h)
         else:
             return (len(page), max(len(c) for c in page))
 
@@ -862,24 +949,29 @@ widget: widget (Text instance) to refresh text for; defaults to all widgets on
                     self.refresh_text(page_ID, widget)
         else:
             # do for given widget
-            (x0, y) = widget.pos
+            is_long = isinstance(widget, LongText)
+            (x0, y0) = widget.pos
             puzzle = self.grids[page_ID]
             # remove letters
-            for x in xrange(x0, widget.size + x0):
-                b = puzzle.grid[x][y][1]
-                if b is not None and b.type > conf.MAX_ID:
-                    puzzle.rm_block(None, x, y)
-                # replace with original random block, if any
-                try:
-                    puzzle.add_block((BoringBlock, self.definition[1][(x, y)]),
-                                     x, y)
-                except KeyError:
-                    pass
-            # add letters back
-            id_offset = widget.get_id_offset()
-            for x, c in enumerate(widget.text):
-                o = ord(c) + id_offset
-                puzzle.add_block((BoringBlock, o), x0 + x, y)
+            for y in xrange(y0, y0 + widget.rows):
+                for x in xrange(x0, x0 + widget.size):
+                    b = puzzle.grid[x][y][1]
+                    if b is not None and (b.type > conf.MAX_ID or is_long):
+                        puzzle.rm_block(None, x, y)
+                    if not is_long:
+                        # replace with original random block, if any
+                        try:
+                            puzzle.add_block((BoringBlock,
+                                            self.definition[1][(x, y)]),
+                                            x, y)
+                        except KeyError:
+                            pass
+            if not is_long:
+                # add letters back
+                id_offset = widget.get_id_offset()
+                for x, c in enumerate(widget.text):
+                    o = ord(c) + id_offset
+                    puzzle.add_block((BoringBlock, o), x0 + x, y)
 
     def generate_access_keys (self):
         """Generate the access keys dict for keyboard control of menus.
@@ -944,18 +1036,25 @@ blocks, surfaces: both ((col, row): ID) dicts for things in the puzzle.
         )
         self.grid = Puzzle(self.game, definition, False, overflow = 'grow')
         self.grids[self.page_ID] = self.grid
-        # texts references to the menu and the puzzle
+        # give texts a position and references to the menu and the puzzle
+        w, h = self.page_dim(self.page)
+        x = (self.grid_w - w) / 2 + 1
+        y0 = (self.grid_h - h) / 2 + 1
         for col in self.page:
+            y = y0
             for text in col:
                 text.menu = self
                 text.puzzle = self.grid
-        w, h = self.page_dim(self.page)
-        x0 = (self.grid_w - w) / 2 + 1
-        y0 = (self.grid_h - h) / 2 + 1
-        for col in self.page:
-            for y, text in enumerate(col):
-                text.pos = (x0, y0 + 2 * y)
-            x0 += max(0, *(text.size + 1 for text in col))
+                text.pos = (x, y)
+                # add draw callbacks for LongText widgets
+                if isinstance(text, LongText):
+                    # get tiles covered
+                    tiles = [[(x + i, y + j) for i in xrange(text.size)] \
+                             for j in xrange(text.rows)]
+                    tiles = reduce(list.__add__, tiles)
+                    self.grid.add_draw_cb(text.draw, True, *tiles)
+                y += text.rows + 1
+            x += max(0, *(text.size + 1 for text in col))
         # add letters to the puzzle
         self.refresh_text()
 

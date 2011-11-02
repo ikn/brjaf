@@ -1,4 +1,3 @@
-import sys
 import os
 from time import time
 from random import choice
@@ -33,11 +32,11 @@ class Fonts (object):
         return self.fonts[font]
 
     def text (self, font, text, colour, shadow = None, width = None, just = 0,
-              minimise = False):
+              minimise = False, line_spacing = 0):
         """Render text from a font.
 
-text(font, text, colour[, shadow][, width], just = 0, minimise = False)
-                                                                     -> surface
+text(font, text, colour[, shadow][, width], just = 0, minimise = False,
+     line_spacing = 0) -> surface
 
 font: (font name, size, is_bold) tuple.
 text: text to render.
@@ -46,7 +45,9 @@ shadow: to draw a drop-shadow: (colour, offset) tuple, where offset is (x, y).
 width: maximum width of returned surface (wrap text).  ValueError is raised if
        any words are too long to fit in this width.
 just: if the text has multiple lines, justify: 0 = left, 1 = centre, 2 = right.
-minimise: if width is set, treat it as a minimum instead of absolute width.
+minimise: if width is set, treat it as a minimum instead of absolute width
+          (that is, shrink the surface after, if possible).
+line_spacing: space between lines, in pixels.
 
 """
         font = tuple(font)
@@ -92,7 +93,9 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
         # create surface
         h = 0
         for line in lines:
-            h += font.size(line)[1]
+            h += font.size(line)[1] + line_spacing
+        # last added gap was after the last line
+        h -= line_spacing
         surface = pygame.Surface((width + offset[0], h + offset[1]))
         surface = surface.convert_alpha()
         surface.fill((0, 0, 0, 0))
@@ -116,7 +119,7 @@ minimise: if width is set, treat it as a minimum instead of absolute width.
                                          h + o[1]))
                     else:
                         surface.blit(s, (o[0], h + o[1]))
-                h += font.size(line)[1]
+                h += font.size(line)[1] + line_spacing
         return surface
 
 
@@ -208,7 +211,7 @@ EventHandler_instance in its event_handler attribute.
             conf.EVENT_ENDMUSIC: self.play_music
         }, [
             (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
-            (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN),
+            (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN)
         ], False, self.quit)
         # store current backend in history, if any
         try:
