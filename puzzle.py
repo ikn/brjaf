@@ -761,7 +761,7 @@ dirty).  Preserves any selection, if possible.
                                      c, colour), text = True)
                 # crop off empty bits
                 source = autocrop(text)
-                # hack
+                # HACK
                 if len(self.text_adjust) < 30 and source:
                     self.text_adjust.append(source[2:])
                 if source: # else blank

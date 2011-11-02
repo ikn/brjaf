@@ -715,7 +715,7 @@ surface: rendered text.
         for i in (0, 1):
             x0 = rect[i] + border[i]
             x0 += tile[i] * tile_size[i] + (tile[i] - 1) * gap[i]
-            # adjust to look centred-ish
+            # adjust to look centred-ish (HACK)
             sizes = [s[i] for s in pzl.text_adjust]
             size = max((sizes.count(s), s) for s in sizes)[1]
             x0 += (tile_size[i] - size) / 2
@@ -1051,7 +1051,7 @@ blocks, surfaces: both ((col, row): ID) dicts for things in the puzzle.
                     # get tiles covered
                     tiles = [[(x + i, y + j) for i in xrange(text.size)] \
                              for j in xrange(text.rows)]
-                    tiles = reduce(list.__add__, tiles)
+                    tiles = sum(tiles, [])
                     self.grid.add_draw_cb(text.draw, True, *tiles)
                 y += text.rows + 1
             x += max(0, *(text.size + 1 for text in col))
@@ -1153,7 +1153,7 @@ element_list: each element is represented by its row i and column j as (i, j).
 """
         pos = [[(i, j) for j in xrange(len(page[i]))]
                for i in xrange(len(page))]
-        elements = reduce(list.__add__, pos)
+        elements = sum(pos, [])
         # sort elements to match selection order
         if order == 0:
             elements.sort(cmp = lambda a, b: cmp((a[1], a[0]), (b[1], b[0])))
