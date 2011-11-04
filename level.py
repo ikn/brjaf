@@ -327,6 +327,13 @@ a bad idea to call this function while solving.
             self._solution_ff = self._parse_soln(solution, 0)
             self._solve_time = self._solution[0][1]
             self._solve_time_ff = self._solution_ff[0][1]
+            # store solve method
+            if self.ID is not None:
+                levels = conf.get('completed_levels', [])
+                if self.ID not in levels:
+                    solved = conf.get('solve_methods', [])
+                    solved.append(False)
+                    conf.set(solve_methods = solved)
             # call this function again to act on the first instruction
             move = self.solve()
         elif i == len(self._solution):
@@ -485,6 +492,10 @@ function returns None.
                         conf.set(completed_levels = levels)
                         self.game.set_backend_attrs(menu.MainMenu,
                                                     're_init', True)
+                        # store solve method
+                        solved = conf.get('solve_methods', [])
+                        solved.append(True)
+                        conf.set(solve_methods = solved)
                 # call win callback
                 if self.win_cb is not None:
                     self.win_cb()

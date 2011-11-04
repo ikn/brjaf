@@ -303,10 +303,11 @@ text: whether the image should be rendered from a font (data is list of args to
             else:
                 img = pygame.image.load(data)
                 self.files[data] = img
-            rtn = img
         # scale
         if size is not None:
             img = pygame.transform.smoothscale(img, size)
+        if not text:
+            rtn = img
         # speed up blitting
         if img.get_alpha() is None:
             img = img.convert()
