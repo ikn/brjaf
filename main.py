@@ -36,7 +36,7 @@ class Fonts (object):
         """Render text from a font.
 
 text(font, text, colour[, shadow][, width], just = 0, minimise = False,
-     line_spacing = 0) -> surface
+     line_spacing = 0) -> (surface, lines)
 
 font: (font name, size, is_bold) tuple.
 text: text to render.
@@ -48,6 +48,9 @@ just: if the text has multiple lines, justify: 0 = left, 1 = centre, 2 = right.
 minimise: if width is set, treat it as a minimum instead of absolute width
           (that is, shrink the surface after, if possible).
 line_spacing: space between lines, in pixels.
+
+surface: pygame.Surface containing the rendered text.
+lines: final number of lines of text.
 
 """
         font = tuple(font)
@@ -105,11 +108,13 @@ line_spacing: space between lines, in pixels.
         if shadow is not None:
             todo.append((shadow_colour, 1))
         todo.append((colour, -1))
+        num_lines = 0
         for colour, mul in todo:
             o = (max(mul * offset[0], 0), max(mul * offset[1], 0))
             h = 0
             for line in lines:
                 if line:
+                    num_lines += 1
                     s = font.render(line, True, colour)
                     if just == 2:
                         surface.blit(s, (width - s.get_width() + o[0],
@@ -120,7 +125,7 @@ line_spacing: space between lines, in pixels.
                     else:
                         surface.blit(s, (o[0], h + o[1]))
                 h += font.size(line)[1] + line_spacing
-        return surface
+        return surface, num_lines
 
 
 class Game (object):
@@ -276,7 +281,7 @@ data: if text is True, a tuple of args to pass to Fonts.text, else a filename
 size: if given, scale the image to this size.  Can be a rect, in which case its
       dimension is used.
 text: whether the image should be rendered from a font (data is list of args to
-      pass to Font.text).
+      pass to Font.text).  If True, returns (img, lines) like Font.text.
 
 """
         if size is not None:
@@ -289,7 +294,8 @@ text: whether the image should be rendered from a font (data is list of args to
             return self.imgs[key]
         # else new: load/render
         if text:
-            img = self.fonts.text(*data)
+            rtn = self.fonts.text(*data)
+            img = rtn[0]
         else:
             # also cache loaded images to reduce file I/O
             if data in self.files:
@@ -297,6 +303,7 @@ text: whether the image should be rendered from a font (data is list of args to
             else:
                 img = pygame.image.load(data)
                 self.files[data] = img
+            rtn = img
         # scale
         if size is not None:
             img = pygame.transform.smoothscale(img, size)
@@ -306,8 +313,8 @@ text: whether the image should be rendered from a font (data is list of args to
         else:
             img = img.convert_alpha()
         # add to cache
-        self.imgs[key] = img
-        return img
+        self.imgs[key] = rtn
+        return rtn
 
     def play_snd (self, ID):
         """Play a sound with the given ID.

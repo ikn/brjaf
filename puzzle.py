@@ -756,7 +756,7 @@ dirty).  Preserves any selection, if possible.
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
                 h = rect[3]
-                text = self.game.img((b.type, h),
+                text, lines = self.game.img((b.type, h),
                                      ((conf.PUZZLE_FONT[conf.THEME], h, False),
                                      c, colour), text = True)
                 # crop off empty bits

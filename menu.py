@@ -700,13 +700,17 @@ surface: rendered text.
         tile_size = (pzl.tile_size(0), pzl.tile_size(1))
         ID = (str(self), tile_size[1])
         theme = conf.THEME
+        # not sure why we need to take off 1, so I guess this is a HACK
         font = (conf.PUZZLE_FONT[theme], tile_size[1] - 1, False)
         colour = conf.PUZZLE_TEXT_COLOUR[theme]
         n = self.size
         width = n * tile_size[1] + (n - 1) * conf.PUZZLE_LINE_WIDTH[theme]
         gap = pzl.tiler.gap
         font_args = (font, self.text, colour, None, width, 0, False, gap[1])
-        surface = self.menu.game.img(ID, font_args, text = True)
+        surface, lines = self.menu.game.img(ID, font_args, text = True)
+        if lines > self.rows:
+            msg = 'text too long: takes up {0} lines; maximum is {1}'
+            raise ValueError(msg.format(lines, self.rows))
         # get position to draw at
         tile = self.pos
         rect = pzl.rect
@@ -1394,6 +1398,7 @@ class MainMenu (Menu):
         theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
             (
+                LongText('not too hard for you to work out...', 15, 2),
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
                 Button('Options', self.set_page, 7)

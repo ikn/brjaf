@@ -607,7 +607,7 @@ pause_menu: as given.
         target_height = h * conf.MSG_MAX_HEIGHT
         while font[1] > 0:
             try:
-                msg = self.game.fonts.text(font, *args)
+                msg, lines = self.game.fonts.text(font, *args)
             except ValueError:
                 pass
             else:
