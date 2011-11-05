@@ -155,6 +155,43 @@ MSG_PADDING_TOP = get('msg_padding_top', .02)
 MSG_PADDING_BOTTOM = get('msg_padding_bottom', .01)
 MSG_MAX_HEIGHT = get('msg_max_height', .2) # proportion of screen height
 
+# help messages
+HELP_MSG_POOLS = get('help_msg_pools', {
+    'default': [
+        'Are you sure you\'ve thought this through?',
+        'Do you really want to stoop this low?',
+        'Wheeeeeeeeeeeee!',
+        'It\'s not that hard, I promise.'
+    ], 'low_time': [
+        'I hope you got here by accident.',
+        'Not going to think about it for a bit first?',
+        'You\'re kidding, right?'
+    ], 'high_autosolve': [
+        'Do you intend to play the game yourself at all?',
+        'Getting lazy again?',
+        'I should start charging for these solutions.',
+        'I knew you\'d be back.',
+        'Hey, you have to do some of the work.'
+    ], 'no_recent_autosolve': [
+        'Phew, I was getting worried you might be getting clever.',
+        'It\'s been a while...'
+    ]
+})
+HELP_MSG_POOL_NAMES = get('help_msg_pool_names',
+    ('default', 'low_time', 'high_autosolve', 'no_recent_autosolve'))
+HELP_MSG_WEIGHTING_FNS = get('help_msg_weighting_fn', {
+    # always 1
+    'default': lambda x: 1,
+    # high towards 0, 1 at 60, 0 past 180
+    'low_time': lambda t: 90 * (1. / t - 1. / 180),
+    # 0 before 1/4, 1 at 1/2
+    'high_autosolve': lambda r: (16. / 3) * max(r, 1. / 4) ** 2 - 1. / 3,
+    # 0 before 5, 1 at 10
+    'no_recent_autosolve': lambda n: (1. / 875) * n ** 3 - 1. / 7
+})
+HELP_MSG_MIN_SOLVED = get('help_msg_min_solved', 5)
+SOLVE_HISTORY_SIZE = get('solve_history_size', 20)
+
 # editor
 EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
 BLANK_LEVEL = get('blank_level', '5 5')

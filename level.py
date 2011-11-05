@@ -1,5 +1,8 @@
 import os
 from math import ceil
+from time import time
+from random import random, choice
+from bisect import bisect
 
 import pygame
 import evthandler as eh
@@ -22,7 +25,6 @@ import conf
 #       "Hey, you have to do some of the work." (used solutions often)
 #       "Wheeeeeeeeeeeee!"
 #       "It's not that hard, I promise."
-#   [probably need some sort of 'long text' element that doesn't have one character per tile]
 # - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
 
 def get_levels (ID = False):
@@ -55,6 +57,43 @@ Takes the LevelBackend instance.
 """
 
     def init (self, level):
+        # choose help message:
+        # get data for weightings
+        time = level.pause_time
+        solved = conf.get('solve_methods')[:conf.SOLVE_HISTORY_SIZE]
+        solved.reverse()
+        num_solved = len(solved)
+        if num_solved < conf.HELP_MSG_MIN_SOLVED:
+            solve_ratio = 0
+        else:
+            player_solved = max(solved.count(True), .1)
+            solve_ratio = float(solved.count(False)) / player_solved
+        try:
+            # number solved by the player since the last autosolve
+            self_solved = solved.index(False)
+        except ValueError:
+            self_solved = num_solved
+        # calculate weightings
+        data = (None, time, solve_ratio, self_solved)
+        pool_names = conf.HELP_MSG_POOL_NAMES
+        fns = conf.HELP_MSG_WEIGHTING_FNS
+        weightings = []
+        for pool, arg in zip(pool_names, data):
+            weightings.append(fns[pool](arg))
+        # choose pool (weighted)
+        cumulative = []
+        last = 0
+        for w in weightings:
+            last += w
+            cumulative.append(last)
+        index = bisect(cumulative, cumulative[-1] * random())
+        index = min(index, len(pool_names) - 1)
+        pool = conf.HELP_MSG_POOLS[pool_names[index]]
+        # choose message from pool (not weighted)
+        help_msg = choice(pool)
+        print help_msg
+
+        # create menu
         if level.solving:
             b = menu.Button('Stop solving', self._quit_then,
                             level.stop_solving)
@@ -66,12 +105,13 @@ Takes the LevelBackend instance.
                 b,
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),(
-                menu.Text('Are you sure?'),
+                menu.LongText(self, help_msg, 14, 3),
                 menu.Button('Keep trying', self.game.quit_backend),
                 menu.Button('Show me how', self._quit_then,
                             level.launch_solver)
             )
         ))
+
 
 class SolnChooser (menu.Menu):
     """Show a menu to choose a solution number."""
@@ -204,6 +244,7 @@ Takes ID and definition arguments as in the constructor.
         self._ff = False
         self.recording = False
         self.frozen = False
+        self.start_time = time()
 
     def move (self, *directions):
         """Apply force to all player blocks in the given directions."""
@@ -592,6 +633,7 @@ pause_menu: as given.
 
     def pause (self, *args):
         """Show the pause menu."""
+        self.pause_time = time() - self.start_time
         if self.pause_menu is not None:
             self.game.start_backend(self.pause_menu, None, self)
 
@@ -601,6 +643,12 @@ pause_menu: as given.
         if self._first:
             self._first = False
             return
+        # resume timer if just unpaused
+        try:
+            self.start_time = time() - self.pause_time
+            del self.pause_time
+        except AttributeError:
+            pass
         Level.update(self, *args, **kw)
 
     def _mk_msg (self, screen):

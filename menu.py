@@ -666,7 +666,9 @@ class LongText (BaseText):
 
     CONSTRUCTOR
 
-LongText(text, size, rows = 1)
+LongText(menu, text, size, rows = 1)
+
+menu: Menu instance.
 
     ATTRIBUTES
 
@@ -674,7 +676,8 @@ surface: rendered text.
 
 """
 
-    def __init__ (self, text, size, rows = 1):
+    def __init__ (self, menu, text, size, rows = 1):
+        self.menu = menu
         BaseText.__init__ (self, text, size, rows)
         self.set_text(text)
 
@@ -684,47 +687,76 @@ surface: rendered text.
 
     __repr__ = __str__
 
+    def _surface (self, pzl = None):
+        """Generate surface for this widget.
+
+_surface([pzl]) -> surface
+
+pzl: Puzzle instance to use.  If not given, use guessed values, just to get the
+     number of rows this widget needs.
+
+surface: the generated surface.
+
+Stores the number of lines of text in current_rows (or, if too large, raises
+ValueError).
+
+"""
+        if pzl is None:
+            tile_h = 100
+            gap = (0, 0)
+        else:
+            tile_h = pzl.tile_size(1)
+            gap = pzl.tiler.gap
+        ID = (str(self), tile_h)
+        theme = conf.THEME
+        # not sure why we need to take off 1, so I guess this is a HACK
+        font = (conf.PUZZLE_FONT[theme], tile_h - 1, False)
+        colour = conf.PUZZLE_TEXT_COLOUR[theme]
+        n = self.size
+        width = n * tile_h + (n - 1) * conf.PUZZLE_LINE_WIDTH[theme]
+        font_args = (font, self.text, colour, None, width, 0, False, gap[1])
+        surface, lines = self.menu.game.img(ID, font_args, text = True)
+        # check and store number of lines used
+        if lines > self.rows:
+            msg = 'text too long: takes up {0} lines; maximum is {1}'
+            raise ValueError(msg.format(lines, self.rows))
+        self.current_rows = lines
+        return surface
+
     def set_text (self, text):
         old_text = self.text
         self.text = self._chars(text)
         if conf.PUZZLE_TEXT_UPPER:
             self.text = self.text.upper()
-        if self.text != old_text and not self._is_first_append:
-            self._throw_event(BaseText.CHANGE_EVENT)
-            self.update()
+        if self.text != old_text:
+            if not self._is_first_append:
+                self._throw_event(BaseText.CHANGE_EVENT)
+                self.update()
+            self._surface()
 
-    def draw (self, screen):
+    def draw (self, screen = None):
         """Draw to the grid."""
-        pzl = self.puzzle
         # create surface
-        tile_size = (pzl.tile_size(0), pzl.tile_size(1))
-        ID = (str(self), tile_size[1])
-        theme = conf.THEME
-        # not sure why we need to take off 1, so I guess this is a HACK
-        font = (conf.PUZZLE_FONT[theme], tile_size[1] - 1, False)
-        colour = conf.PUZZLE_TEXT_COLOUR[theme]
-        n = self.size
-        width = n * tile_size[1] + (n - 1) * conf.PUZZLE_LINE_WIDTH[theme]
-        gap = pzl.tiler.gap
-        font_args = (font, self.text, colour, None, width, 0, False, gap[1])
-        surface, lines = self.menu.game.img(ID, font_args, text = True)
-        if lines > self.rows:
-            msg = 'text too long: takes up {0} lines; maximum is {1}'
-            raise ValueError(msg.format(lines, self.rows))
-        # get position to draw at
-        tile = self.pos
-        rect = pzl.rect
-        border = pzl.tiler.border
-        pos = []
-        for i in (0, 1):
-            x0 = rect[i] + border[i]
-            x0 += tile[i] * tile_size[i] + (tile[i] - 1) * gap[i]
-            # adjust to look centred-ish (HACK)
-            sizes = [s[i] for s in pzl.text_adjust]
-            size = max((sizes.count(s), s) for s in sizes)[1]
-            x0 += (tile_size[i] - size) / 2
-            pos.append(x0)
-        screen.blit(surface, pos)
+        pzl = self.puzzle
+        surface = self._surface(pzl)
+        if screen is not None:
+            # get position to draw at
+            tile = self.pos
+            rect = pzl.rect
+            border = pzl.tiler.border
+            gap = pzl.tiler.gap
+            pos = []
+            for i in (0, 1):
+                tile_size = pzl.tile_size(i)
+                x0 = rect[i] + border[i]
+                x0 += tile[i] * tile_size + (tile[i] - 1) * gap[i]
+                # adjust to look centred-ish (HACK)
+                sizes = [s[i] for s in pzl.text_adjust]
+                size = max((sizes.count(s), s) for s in sizes)[1]
+                x0 += (tile_size - size) / 2
+                pos.append(x0)
+            # draw to screen
+            screen.blit(surface, pos)
 
 
 class Menu (object):
@@ -883,7 +915,7 @@ in_tiles: whether to give page dimensions in tiles (else in widgets).
 """
         if in_tiles:
             w = sum(max(text.size + 1 for text in c) for c in page) + 1
-            h = max(sum(text.rows + 1 for text in c) for c in page) + 1
+            h = max(sum(text.current_rows + 1 for text in c) for c in page) + 1
             return (w, h)
         else:
             return (len(page), max(len(c) for c in page))
@@ -957,7 +989,7 @@ widget: widget (Text instance) to refresh text for; defaults to all widgets on
             (x0, y0) = widget.pos
             puzzle = self.grids[page_ID]
             # remove letters
-            for y in xrange(y0, y0 + widget.rows):
+            for y in xrange(y0, y0 + widget.current_rows):
                 for x in xrange(x0, x0 + widget.size):
                     b = puzzle.grid[x][y][1]
                     if b is not None and (b.type > conf.MAX_ID or is_long):
@@ -1054,10 +1086,11 @@ blocks, surfaces: both ((col, row): ID) dicts for things in the puzzle.
                 if isinstance(text, LongText):
                     # get tiles covered
                     tiles = [[(x + i, y + j) for i in xrange(text.size)] \
-                             for j in xrange(text.rows)]
+                             for j in xrange(text.current_rows)]
                     tiles = sum(tiles, [])
+                    # add draw callback for covered tiles
                     self.grid.add_draw_cb(text.draw, True, *tiles)
-                y += text.rows + 1
+                y += text.current_rows + 1
             x += max(0, *(text.size + 1 for text in col))
         # add letters to the puzzle
         self.refresh_text()
@@ -1398,7 +1431,6 @@ class MainMenu (Menu):
         theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
             (
-                LongText('not too hard for you to work out...', 15, 2),
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
                 Button('Options', self.set_page, 7)
