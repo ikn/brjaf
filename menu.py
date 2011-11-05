@@ -17,6 +17,7 @@ import conf
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
 #       fullscreen option in graphics
+# - need some sort of indicator that a widget is an entry (paler cursor present?)
 
 class BaseText (object):
     """Abstract base class for text widgets.
@@ -363,7 +364,7 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         """Update the cursor position."""
         if self.focused:
             self.cursor = max(0, min(self.cursor, self.current_size))
-            self.puzzle.select(self.pos[0] + self.cursor, self.pos[1])
+            self.puzzle.select((self.pos[0] + self.cursor, self.pos[1]))
         else:
             self.puzzle.deselect()
 

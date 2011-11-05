@@ -10,7 +10,6 @@ import conf
 
 # TODO:
 # - save level message
-# - show selection on both grids, using bolder colour on current one
 # - make selection move with mouse hover
 
 class SolveMenu (menu.Menu):
@@ -300,7 +299,7 @@ state: the current position in the history.
             (conf.KEYS_UP, [(self.move, (1,))]) + pzl_args,
             (conf.KEYS_RIGHT, [(self.move, (2,))]) + pzl_args,
             (conf.KEYS_DOWN, [(self.move, (3,))]) + pzl_args,
-            (conf.KEYS_BACK, self._back_cb, od),
+            (conf.KEYS_BACK, self.menu, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
             (conf.KEYS_INSERT, self._insert_cb, od),
             (conf.KEYS_DEL, self.delete, od),
@@ -320,7 +319,6 @@ state: the current position in the history.
             '\n'.join('{0} 2 {1}'.format(s, i) for i, s in enumerate(surfaces))
         )
         self.selector = Puzzle(game, self._selector_defn)
-        self.selector.old_selected = (0, 0)
 
         self.FRAME = conf.FRAME
         self.load(ID)
@@ -341,7 +339,8 @@ state: the current position in the history.
             self.editor.load(definition)
         else:
             self.editor = Puzzle(self.game, definition)
-        self.editor.select(0, 0)
+        self.editor.select((0, 0))
+        self.selector.select((0, 0), conf.SECONDARY_SEL_COLOUR[conf.THEME])
         self.puzzle = self.editor
         self.editing = True
         self.dirty = True
@@ -377,12 +376,10 @@ state: the current position in the history.
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
         resize = False
-        if self.editing:
-            # can only resize if editing
-            mods = (mods & pygame.KMOD_SHIFT, mods & pygame.KMOD_ALT)
-            shrink = bool(mods[direction <= 1])
-            grow = bool(mods[direction > 1])
-            resize = shrink ^ grow
+        mods = (mods & pygame.KMOD_SHIFT, mods & pygame.KMOD_ALT)
+        shrink = bool(mods[direction <= 1])
+        grow = bool(mods[direction > 1])
+        resize = shrink ^ grow
         if resize:
             # resize puzzle
             self.editor.resize(1 if grow else -1, direction)
@@ -397,8 +394,8 @@ state: the current position in the history.
         if not self.editing:
             return
         # get type and ID of selected tile in selector puzzle
-        col, row = self.selector.old_selected
-        x, y = self.editor.selected
+        col, row = self.selector.selected[0]
+        x, y = self.editor.selected[0]
         is_block = col == 0 and row <= conf.MAX_ID
         if is_block:
             ID = row
@@ -433,7 +430,7 @@ state: the current position in the history.
     def delete (self, *args):
         """Delete a block or surface in the currently selected tile."""
         if self.editing:
-            x, y = self.editor.selected
+            x, y = self.editor.selected[0]
             data = self.editor.grid[x][y]
             snd = True
             # delete block, if any
@@ -465,10 +462,10 @@ state: the current position in the history.
             # get clicked tile
             pos = self.editor.point_tile(evt.pos)
             if pos is not None:
-                # clicked a tile in self.editor: select
+                # clicked a tile in self.editor: switch to and select
                 if not self.editing:
                     self.switch_puzzle()
-                self.editor.select(*pos)
+                self.editor.select(pos)
                 if evt.button == 1:
                     # left-click to insert
                     self.insert()
@@ -482,7 +479,7 @@ state: the current position in the history.
                     # select the tile
                     if self.editing:
                         self.switch_puzzle()
-                    self.selector.select(*pos)
+                    self.selector.select(pos)
 
     def switch_puzzle (self, *args):
         """Switch selected puzzle between editor and block selector."""
@@ -493,25 +490,17 @@ state: the current position in the history.
         else:
             old, new = pzls
         # deselect old and select new
-        old.old_selected = old.selected
-        old.deselect()
-        new.select(*new.old_selected)
+        old.select(old.selected[0], conf.SECONDARY_SEL_COLOUR[conf.THEME])
+        new.select(new.selected[0])
         self.puzzle = new
 
     def reset (self, *args):
         """Confirm resetting the puzzle."""
         self.game.start_backend(Menu, 1, self)
 
-    def menu (self):
+    def menu (self, *args):
         """Show the editor menu."""
         self.game.start_backend(Menu, 0, self)
-
-    def _back_cb (self, *args):
-        """Callback for conf.KEYS_BACK."""
-        if self.editing:
-            self.menu()
-        else:
-            self.switch_puzzle()
 
     def _do_reset (self):
         """Actually reset the puzzle."""

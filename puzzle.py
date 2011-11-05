@@ -465,30 +465,56 @@ dirty).  Preserves any selection, if possible.
         self.grid[x][y][0] = surface
         self.tiler.change((x, y))
 
-    def select (self, x, y):
-        # set selected tile
+    def select (self, pos, colour = None):
+        """Set selected tile.
+
+select(pos[, colour])
+
+pos: (x, y) tile position.
+colour: colour of the selection border; defaults to the current value of
+        conf.SEL_COLOUR for the current theme.
+
+"""
         if self.selected is not None:
             self.deselect()
-        if self.selected != [x, y]:
+        pos = tuple(pos[:2])
+        select = (pos, colour)
+        if self.selected != select:
+            x, y = pos
             self.grid[x][y][2] = True
-            self.selected = [x, y]
-            self.tiler.change(self.selected)
+            self.selected = select
+            self.tiler.change(pos)
 
     def deselect (self):
-        # deselect currently selected tile
+        """Deselect the currently selected tile, if any."""
         if self.selected is not None:
-            x, y = self.selected
-            self.grid[x][y][2] = False
-            self.tiler.change(self.selected)
+            pos, colour = self.selected
+            x, y = pos
+            try:
+                self.grid[x][y][2] = False
+            except IndexError:
+                # doesn't exist to deselect
+                pass
+            else:
+                self.tiler.change(pos)
             self.selected = None
 
     def move_selected (self, direction, amount = 1):
-        # move selection relative to current position
-        selected = list(self.selected)
+        """Move selection relative to the current position.
+
+move_selected(direction, amount = 1)
+
+direction: 0/1/2/3 for L/U/R/D.
+amount: number of tiles to move.
+
+If the destination tile is out-of-bounds, select the nearest in-bounds tile.
+
+"""
+        pos = list(self.selected[0])
         axis = direction % 2
-        selected[axis] += amount * (1 if direction > 1 else -1)
-        selected[axis] %= self.size[axis]
-        self.select(*selected)
+        pos[axis] += amount * (1 if direction > 1 else -1)
+        pos[axis] %= self.size[axis]
+        self.select(pos, self.selected[1])
 
     def _reset_tiler (self):
         self.tiler.reset()
@@ -539,19 +565,16 @@ dirty).  Preserves any selection, if possible.
         self.w, self.h = self.size
         if self.selected is not None:
             # offset self.selected
-            self.selected[0] += di
-            self.selected[1] += dj
-            x, y = self.selected
+            pos = list(self.selected[0])
+            pos[0] += di
+            pos[1] += dj
+            x, y = pos
             # push selection back onto the grid
-            if 0 <= x < self.w and 0 <= y < self.h:
-                selected = list(self.selected)
-            else:
-                selected = self.selected
+            if not (0 <= x < self.w and 0 <= y < self.h):
                 for axis in (0, 1):
                     limit = self.size[axis] - 1
-                    selected[axis] = min(max(selected[axis], 0), limit)
-                self.selected = None
-            self.select(*selected)
+                    pos[axis] = min(max(pos[axis], 0), limit)
+            self.select(pos, self.selected[1])
         self.resize(amount - sign, direction)
         return True
 
@@ -730,7 +753,10 @@ dirty).  Preserves any selection, if possible.
         if selected:
             width = int(rect[2] * conf.SEL_WIDTH[conf.THEME])
             width = max(width, conf.MIN_SEL_WIDTH[conf.THEME])
-            draw_rect(surface, conf.SEL_COLOUR[conf.THEME], rect, width)
+            colour = self.selected[1]
+            if colour is None:
+                colour = conf.SEL_COLOUR[conf.THEME]
+            draw_rect(surface, colour, rect, width)
         # block
         if b is not None:
             if b.type < conf.MIN_CHAR_ID:

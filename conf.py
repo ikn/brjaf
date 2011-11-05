@@ -258,6 +258,9 @@ PUZZLE_LINE_WIDTH = get('puzzle_line_width', {
 SEL_COLOUR = get('sel_colour', {
     'default': (255, 0, 0)
 })
+SECONDARY_SEL_COLOUR = get('secondary_sel_colour', {
+    'default': (255, 150, 150)
+})
 MIN_SEL_WIDTH = get('min_sel_width', {
     'default': 1
 })
