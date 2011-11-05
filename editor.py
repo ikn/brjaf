@@ -10,6 +10,8 @@ import conf
 
 # TODO:
 # - save level message
+# - show selection on both grids, using bolder colour on current one
+# - make selection move with mouse hover
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -174,6 +176,7 @@ Takes the Editor instance.
     def init (self, editor):
         self._editor = editor
         self._default_selections[1] = (0, 2)
+        already_winning = 'The puzzle starts with the player already winning.'
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
@@ -186,13 +189,10 @@ Takes the Editor instance.
                 menu.Button('Yes', self._reset),
                 menu.Button('No', self.back)
             ), (
-                menu.Text('There must be'),
-                menu.Text('at least one'),
-                menu.Text('player block.')
+                menu.LongText(self, 'There must be at least one player block.',
+                              11),
             ), (
-                menu.Text('The puzzle starts'),
-                menu.Text('with the player'),
-                menu.Text('already winning.')
+                menu.LongText(self, already_winning, 13),
             ), (
                 menu.Text('Level saved.'),
                 menu.Button('OK', self.back)

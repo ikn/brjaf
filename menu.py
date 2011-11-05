@@ -16,17 +16,19 @@ import conf
 # - show arrows to sides of Selects if wrap or when not at min/max
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
+#       fullscreen option in graphics
 
 class BaseText (object):
     """Abstract base class for text widgets.
 
     CONSTRUCTOR
 
-BaseText(text, size, rows)
+BaseText(text, size[, rows])
 
 text: the text to display.
 size: the maximum length of the text.  This is used to determine the menu size.
-rows: maximum number of rows of tiles to take up.
+rows: maximum number of rows of tiles to take up; if not given, number of rows
+      is not restricted.
 
     METHODS
 
@@ -51,10 +53,10 @@ puzzle: the Puzzle instance the widget exists in, or None if unknown.
 CHANGE_EVENT: the text changed; called after the change is made.
 
 """
-    def __init__ (self, text, size, rows):
+    def __init__ (self, text, size, rows = None):
         self.text = u''
         self.size = int(size)
-        self.rows = int(rows)
+        self.rows = int(rows) if rows is not None else rows
         self.ehs = {}
         self._is_first_append = True
         self.set_text(text)
@@ -666,7 +668,7 @@ class LongText (BaseText):
 
     CONSTRUCTOR
 
-LongText(menu, text, size, rows = 1)
+LongText(menu, text, size[, rows])
 
 menu: Menu instance.
 
@@ -676,7 +678,7 @@ surface: rendered text.
 
 """
 
-    def __init__ (self, menu, text, size, rows = 1):
+    def __init__ (self, menu, text, size, rows = None):
         self.menu = menu
         BaseText.__init__ (self, text, size, rows)
         self.set_text(text)
@@ -717,7 +719,7 @@ ValueError).
         font_args = (font, self.text, colour, None, width, 0, False, gap[1])
         surface, lines = self.menu.game.img(ID, font_args, text = True)
         # check and store number of lines used
-        if lines > self.rows:
+        if self.rows is not None and lines > self.rows:
             msg = 'text too long: takes up {0} lines; maximum is {1}'
             raise ValueError(msg.format(lines, self.rows))
         self.current_rows = lines
@@ -751,8 +753,14 @@ ValueError).
                 x0 = rect[i] + border[i]
                 x0 += tile[i] * tile_size + (tile[i] - 1) * gap[i]
                 # adjust to look centred-ish (HACK)
-                sizes = [s[i] for s in pzl.text_adjust]
-                size = max((sizes.count(s), s) for s in sizes)[1]
+                pzls =  self.menu.grids.itervalues()
+                sizes = [[s[i] for s in p.text_adjust] for p in pzls]
+                sizes = sum(sizes, [])
+                try:
+                    size = max((sizes.count(s), s) for s in sizes)[1]
+                except ValueError:
+                    # nothing to go off of
+                    size = 0
                 x0 += (tile_size - size) / 2
                 pos.append(x0)
             # draw to screen

@@ -24,6 +24,9 @@ import conf
 # TODO:
 # - document classes
 # - portal blocks
+# - allow set_selected to determine border colour
+# - allow defined direction for a block
+#   - when player tries to move (level.Level.move), make player blocks face that direction
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.

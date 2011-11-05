@@ -12,19 +12,6 @@ from puzzle import Block, Puzzle
 import conf
 
 # TODO:
-# - hint confirmation is something random (have criteria):
-#       "Are you sure you've thought this through?"
-#       "Do you intend to play the game yourself at all?" (used solutions often)
-#       "Getting lazy again?" (used solutions often)
-#       "Phew, I was getting worried you might be getting clever." (used solutions, but not recently)
-#       "Not going to think about it for a bit first?" (haven't spent long on the puzzle)
-#       "I should start charging for these solutions." (used solutions often)
-#       "I knew you'd be back." (used solutions often)
-#       "I hope you got here by accident." (haven't spent long on the puzzle)
-#       "Do you really want to stoop this low?"
-#       "Hey, you have to do some of the work." (used solutions often)
-#       "Wheeeeeeeeeeeee!"
-#       "It's not that hard, I promise."
 # - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
 
 def get_levels (ID = False):
@@ -79,7 +66,7 @@ Takes the LevelBackend instance.
         fns = conf.HELP_MSG_WEIGHTING_FNS
         weightings = []
         for pool, arg in zip(pool_names, data):
-            weightings.append(fns[pool](arg))
+            weightings.append(max(fns[pool](arg), 0))
         # choose pool (weighted)
         cumulative = []
         last = 0
@@ -91,7 +78,6 @@ Takes the LevelBackend instance.
         pool = conf.HELP_MSG_POOLS[pool_names[index]]
         # choose message from pool (not weighted)
         help_msg = choice(pool)
-        print help_msg
 
         # create menu
         if level.solving:
@@ -105,7 +91,7 @@ Takes the LevelBackend instance.
                 b,
                 menu.Button('Quit', self.game.quit_backend, 2)
             ),(
-                menu.LongText(self, help_msg, 14, 3),
+                menu.LongText(self, help_msg, 14),
                 menu.Button('Keep trying', self.game.quit_backend),
                 menu.Button('Show me how', self._quit_then,
                             level.launch_solver)
@@ -541,7 +527,8 @@ function returns None.
                 if self.win_cb is not None:
                     self.win_cb()
                 # play victory sound
-                self.game.play_snd('win')
+                if self.sound:
+                    self.game.play_snd('win')
                 self.won = True
             else:
                 self._winning = True
