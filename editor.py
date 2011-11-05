@@ -10,7 +10,6 @@ import conf
 
 # TODO:
 # - save level message
-# - make selection move with mouse hover
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -281,7 +280,10 @@ state: the current position in the history.
     def __init__ (self, game, event_handler, ID = None):
         self.game = game
         # add event handlers
-        event_handler.add_event_handlers({pygame.MOUSEBUTTONDOWN: self._click})
+        event_handler.add_event_handlers({
+            pygame.MOUSEBUTTONDOWN: self._click,
+            pygame.MOUSEMOTION: lambda e: setattr(self, 'mouse_moved', True)
+        })
         pzl_args = (
             eh.MODE_ONDOWN_REPEAT,
             max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
@@ -347,6 +349,7 @@ state: the current position in the history.
         self.history = []
         self.state = -1
         self.store_state()
+        self.mouse_moved = False
 
     def store_state (self):
         """Store the current state in history."""
@@ -509,8 +512,22 @@ state: the current position in the history.
         self.history = [self.history[0]]
 
     def update (self):
-        """Do nothing (needed by Game)."""
-        pass
+        """Change selection due to mouse motion."""
+        if self.mouse_moved:
+            pos = pygame.mouse.get_pos()
+            # get tile under mouse
+            tile = self.editor.point_tile(pos)
+            if tile is not None:
+                if not self.editing:
+                    self.switch_puzzle()
+                self.editor.select(tile)
+            else:
+                tile = self.selector.point_tile(pos)
+                if tile is not None:
+                    if self.editing:
+                        self.switch_puzzle()
+                    self.selector.select(tile)
+            self.mouse_moved = False
 
     def draw (self, screen):
         """Draw the puzzles."""
