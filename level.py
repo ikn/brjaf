@@ -244,6 +244,7 @@ Takes ID and definition arguments as in the constructor.
         for d in set(directions):
             for player in self.players:
                 player.add_force(d, conf.FORCE_MOVE)
+                player.set_direction(d)
 
     def _move (self, key, event, mods, direction):
         """Key callback to move player."""

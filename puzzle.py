@@ -24,9 +24,10 @@ import conf
 # TODO:
 # - document classes
 # - portal blocks
-# - allow set_selected to determine border colour
-# - allow defined direction for a block
-#   - when player tries to move (level.Level.move), make player blocks face that direction
+# - when we have bouncing blocks wall-to-wall trying to bounce, get infinite loop
+#   - maybe take snapshot of all blocks each time we try to get a working configuration and if doesn't change, break
+#     - do we even get to next time through loop, or do they just keep telling each other to calculate stuff?
+#     - just need dest, or forces too?
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
@@ -97,12 +98,20 @@ def opposite_dir (direction):
 class BoringBlock (object):
     def __init__ (self, type_ID, puzzle, pos):
         self.type = type_ID
+        self.tiler = puzzle.tiler
         self.pos = list(pos)
+        from random import randrange
+        self.dirn = randrange(4)
 
     def __str__ (self):
         return '<block: {0} at {1}>'.format(self.type, self.pos)
 
     __repr__ = __str__
+
+    def set_direction (self, dirn):
+        if dirn != self.dirn:
+            self.dirn = dirn
+            self.tiler.change(self.pos)
 
 
 class Block (BoringBlock):
@@ -475,11 +484,11 @@ colour: colour of the selection border; defaults to the current value of
         conf.SEL_COLOUR for the current theme.
 
 """
-        if self.selected is not None:
-            self.deselect()
         pos = tuple(pos[:2])
         select = (pos, colour)
         if self.selected != select:
+            if self.selected is not None:
+                self.deselect()
             x, y = pos
             self.grid[x][y][2] = True
             self.selected = select
@@ -723,16 +732,34 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
             assert t not in self._draw_cbs
             self._draw_cbs[t] = (f, call_once)
 
-    def _draw_from_img (self, surface, rect, prefix, ID):
+    def _draw_from_img (self, surface, rect, prefix, ID, dirn = None):
         ID = prefix + str(ID)
-        fn = conf.IMG_DIR + conf.THEME + path_sep + ID + '.png'
-        if exists(fn):
+        fn_base = conf.IMG_DIR + conf.THEME + path_sep + ID
+        # if have a direction, look for specially rotated image before fallback
+        suffixes = (None if dirn is None else ('-' + str(dirn)), '')
+        got = False
+        for fallback, suffix in enumerate(suffixes):
+            if suffix is not None:
+                fn = fn_base + suffix + '.png'
+                if exists(fn):
+                    got = True
+                    if not fallback:
+                        ID += suffix
+                        # this is already rotated: no need to rotate in code
+                        dirn = None
+                    break
+        if got:
             # image might be transparent
             if prefix == 's':
                 surface.fill(conf.BG[conf.THEME], rect)
-            surface.blit(self.game.img(ID, fn, rect), rect)
+            img = self.game.img(ID, fn, rect)
+            # rotate if necessary
+            if dirn:
+                img = pygame.transform.rotate(img, -90 * dirn)
+            surface.blit(img, rect)
             return True
-        return False
+        else:
+            return False
 
     def draw_tile (self, surface, rect, i, j):
         # draw a single tile; called by Tiler
@@ -761,7 +788,7 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
         if b is not None:
             if b.type < conf.MIN_CHAR_ID:
                 # blit image if exists, else use colour
-                if not self._draw_from_img(surface, rect, 'b', b.type):
+                if not self._draw_from_img(surface, rect, 'b', b.type, b.dirn):
                     rect = pygame.Rect(rect)
                     p = rect.center
                     r = rect.w / 2

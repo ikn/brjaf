@@ -518,15 +518,16 @@ state: the current position in the history.
             # get tile under mouse
             tile = self.editor.point_tile(pos)
             if tile is not None:
+                # editor: select tile under mouse
                 if not self.editing:
                     self.switch_puzzle()
                 self.editor.select(tile)
             else:
+                # selector: just make sure it's the current puzzle
                 tile = self.selector.point_tile(pos)
                 if tile is not None:
                     if self.editing:
                         self.switch_puzzle()
-                    self.selector.select(tile)
             self.mouse_moved = False
 
     def draw (self, screen):
