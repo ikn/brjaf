@@ -412,7 +412,7 @@ Only one instance of a sound will be played each frame.
         restarting = True
         self.quit()
 
-    def refresh_display (self):
+    def refresh_display (self, *args):
         """Update the display mode from conf, and notify the backend."""
         flags = 0
         if conf.FULLSCREEN:

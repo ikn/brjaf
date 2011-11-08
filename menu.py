@@ -8,16 +8,16 @@ import evthandler as eh
 from puzzle import Puzzle, BoringBlock
 import conf
 
-# TODO:
-# - have Menu.set_arrows(visible, *arrows), each (conf.ARROW_*, (x, y))
+# TODO: (*usability)
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
 #   - change page up/page down action for scrollable pages
-# - show arrows to sides of Selects if wrap or when not at min/max
+#*- show (puzzle) arrows in spaces either side of %x in Selects if wrap or when not at min/max
+#   - force Selects to have a space either side of each %x
+#   - have Menu.set_arrows(visible, *arrows), each (conf.ARROW_*, (x, y))
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
-#       fullscreen option in graphics
-# - need some sort of indicator that a widget is an entry (paler cursor present?)
+#*- need some sort of indicator that a widget is an entry (paler cursor present?)
 
 class BaseText (object):
     """Abstract base class for text widgets.
@@ -148,7 +148,7 @@ special: whether the text is displayed in a different style; defaults to False.
         self.current_rows = 1
         BaseText.__init__(self, text, size, 1)
 
-    def append (self, text, is_first_append = False, force_update = False):
+    def append (self, text, force_update = False):
         """Append a string to the end of the text.
 
 Returns whether any characters were truncated.
@@ -186,7 +186,7 @@ Returns whether any characters were truncated.
         """Returns whether any characters were truncated."""
         update = self.text and not text
         self.text = u''
-        return self.append(text, force_update = update)
+        return self.append(text, update)
 
     def get_id_offset (self):
         """Get the number to add to block IDs."""
@@ -448,7 +448,7 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
         self.wrap = wrap
         max_size = len(text) + (max_value_size - 2) * text.count('%x')
         self.size = max_size
-        Option.__init__(self, self.set_value(value, True), size = max_size)
+        Option.__init__(self, self._set_value(value, True), size = max_size)
 
     ALTER_EVENT = 5
 
@@ -470,6 +470,8 @@ ALTER_EVENT: the value held by this widget was changed.  Callbacks are called
         else:
             self.set_text(text)
         self._throw_event(Select.ALTER_EVENT)
+
+    _set_value = set_value
 
 
 class DiscreteSelect (Select):
@@ -538,8 +540,8 @@ Returns whether the change was successful (can fail if wrapping is disabled).
         return rtn
 
     def set_value (self, value, *args, **kw):
-        if isinstance(value, int):
-            value = self.options[value]
+        self.index = int(value)
+        value = self.options[value]
         return Select.set_value(self, value, *args, **kw)
 
 
@@ -607,7 +609,7 @@ Returns whether the change was successful (can fail if wrapping is disabled).
                     rtn = 2
         if rtn == 1 and value == self.value:
             rtn = 0
-        self.set_value(value)
+        self._set_value(value)
         return rtn
 
 
@@ -633,19 +635,26 @@ pad: as given.
                   pad = False):
         self.dp = max(1, int(dp))
         self.pad = pad
-        # min, max should be ints
+        # min, max, value should be ints
         a = int(round(a * 10 ** self.dp))
-        b = int(round(b * 10 ** self.dp))
+        b = max(int(round(b * 10 ** self.dp)), a)
+        if initial is not None:
+            initial = int(round(initial * 10 ** self.dp))
         # trick RangeSelect by increasing max to take up one more digit, so
         # that the proper max size gets propagated without doing much work here
         c = 10 * max(abs(a * 10) if a < 0 else abs(a), b)
+        if abs(a) < 10 and abs(b) < 10:
+            c *= 10
         # but make sure that initial value is still constrained properly
         if initial is not None:
             initial = min(initial, b)
         RangeSelect.__init__(self, text, a, c, initial, wrap)
         self.max = b
 
-    def set_value (self, value, *args, **kw):
+    def _set_value (self, value, return_only = False):
+        """Same as set_value, but takes integer as stored."""
+        if hasattr(self, 'value') and value == self.value:
+            return value if return_only else None
         actual_value = value
         neg = value < 0
         value = str(abs(value))
@@ -658,10 +667,13 @@ pad: as given.
                 value = ' ' + value
         neg = '-' if neg else ''
         value = neg + value[:-self.dp] + '.' + value[-self.dp:]
-        rtn = RangeSelect.set_value(self, value, *args, **kw)
+        rtn = RangeSelect.set_value(self, value, return_only)
         # value should remain int so RangeSelect.alter works
         self.value = actual_value
         return rtn
+
+    def set_value (self, value, return_only = False):
+        return self._set_value(int(round(value * 10 ** self.dp)), return_only)
 
 
 class LongText (BaseText):
@@ -1475,16 +1487,23 @@ class MainMenu (Menu):
                 ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
-                s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'), 
+                s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
+                Text('Movement:'),
+                s(FloatSelect, g('move_initial_delay'), 'precise %x easy', .1,
+                  .5, 1),
                 Button('Save', self._save, (
                     ((9, 0), 'fps'),
-                    ((9, 1), 'show_msg')
+                    ((9, 1), 'show_msg'),
+                    ((9, 3), 'move_initial_delay')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
+                s(DiscreteSelect, g('fullscreen'), '%x',
+                  ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
                     ((10, 0), ('theme', False), self._refresh_graphics),
+                    ((10, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1628,6 +1647,8 @@ else widget.text.
                 else:
                     val = widget.value
                 real_val = widget.index
+            elif isinstance(widget, FloatSelect):
+                real_val = val = widget.value * 10 ** -widget.dp
             elif isinstance(widget, Select):
                 real_val = val = widget.value
             else:
