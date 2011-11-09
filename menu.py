@@ -295,7 +295,8 @@ FOCUS_EVENT: focus was toggled; called afterwards.
         Button.__init__(self, text, self.toggle_focus, special = special,
                         size = size)
         self.focused = False
-        self._toggle_keys = set(conf.KEYS_NEXT + (pygame.K_ESCAPE,))
+        self._toggle_keys = set(conf.KEYS_NEXT_NONPRINTABLE)
+        self._toggle_keys.add(pygame.K_ESCAPE)
 
     FOCUS_EVENT = 3
 
@@ -1044,10 +1045,11 @@ Options' first letters are used to select them.
                     c = element.text[0]
                     ks = set((c, c.lower(), c.upper()))
                     for k in ks:
-                        try:
-                            self.keys[k].append((i, j))
-                        except KeyError:
-                            self.keys[k] = [(i, j)]
+                        if k not in conf.IGNORED_ACCESS_KEY_CHARS:
+                            try:
+                                self.keys[k].append((i, j))
+                            except KeyError:
+                                self.keys[k] = [(i, j)]
 
     def generate_grid (self):
         """Generate the Puzzle for the current page.
