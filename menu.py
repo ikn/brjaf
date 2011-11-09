@@ -166,7 +166,8 @@ Returns whether any characters were truncated.
                 self._throw_event(BaseText.CHANGE_EVENT)
                 self.update()
             # regenerate menu access keys if first letter changed
-            if (old_text and old_text[0]) != (self.text and self.text[0]):
+            if force_update or \
+               (old_text and old_text[0]) != (self.text and self.text[0]):
                 self.menu.generate_access_keys()
         return not truncated
 
@@ -332,9 +333,10 @@ class TextEntry (Entry):
 
     CONSTRUCTOR
 
-TextEntry(max_size, initial_text = '', allowed = conf.PRINTABLE,
+TextEntry(menu, max_size, initial_text = '', allowed = conf.PRINTABLE,
       special = False)
 
+menu: Menu instance containing this widget.
 max_size: maximum number of characters the entry can hold.
 initial_text: text to start with; gets truncated to max_size.
 allowed: list/string of allowed characters (initial_text is not checked for
@@ -353,8 +355,8 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
 
 """
 
-    def __init__ (self, max_size, initial_text = '', allowed = conf.PRINTABLE,
-                  special = False):
+    def __init__ (self, menu, max_size, initial_text = '',
+                  allowed = conf.PRINTABLE, special = False):
         Entry.__init__(self, initial_text, special, max_size)
         self.cursor = self.current_size
         self.allowed = set(allowed)
@@ -363,11 +365,12 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
 
     def _update_cursor (self):
         """Update the cursor position."""
-        if self.focused:
-            self.cursor = max(0, min(self.cursor, self.current_size))
-            self.puzzle.select((self.pos[0] + self.cursor, self.pos[1]))
-        else:
-            self.puzzle.deselect()
+        # deselect previous
+        self.puzzle.deselect()
+        # select new
+        self.cursor = max(0, min(self.cursor, self.current_size))
+        p = (self.pos[0] + self.cursor, self.pos[1])
+        self.puzzle.select(p, not self.focused)
 
     def toggle_focus (self):
         """Also handle cursor updating."""
@@ -1105,6 +1108,9 @@ blocks, surfaces: both ((col, row): ID) dicts for things in the puzzle.
                 text.menu = self
                 text.puzzle = self.grid
                 text.pos = (x, y)
+                # update selection for TextEntry widgets
+                if isinstance(text, TextEntry):
+                    text._update_cursor()
                 # add draw callbacks for LongText widgets
                 if isinstance(text, LongText):
                     # get tiles covered
@@ -1454,6 +1460,7 @@ class MainMenu (Menu):
         theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
             (
+                TextEntry(self, 5),
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
                 Button('Options', self.set_page, 7)
@@ -1655,7 +1662,9 @@ else widget.text.
                 real_val = val = widget.value
             else:
                 real_val = val = widget.text
-            if widget in self._selects and self._selects[widget][1] == real_val:
+            
+            if widget in self._selects and \
+               self._selects[widget][1] == real_val:
                 # value didn't change: don't save
                 # (do this only for registered Selects since all other widgets
                 #  have static initial values and so this check is easy)

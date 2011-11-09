@@ -340,7 +340,7 @@ class Puzzle (object):
         self.game = game
         self.physics = physics
         self.sound = sound
-        self.selected = None
+        self.selected = {}
         self.rect = None
         self.load(defn, **tiler_kw_args)
 
@@ -423,9 +423,9 @@ dirty).  Preserves any selection, if possible.
         # preserve selection
         sel = self.selected
         self.init()
-        if sel is not None:
+        for pos, colour in sel.iteritems():
             try:
-                self.select(*sel)
+                self.select(pos, colour)
             except IndexError:
                 # now out of range
                 pass
@@ -474,39 +474,49 @@ dirty).  Preserves any selection, if possible.
         self.grid[x][y][0] = surface
         self.tiler.change((x, y))
 
-    def select (self, pos, colour = None):
-        """Set selected tile.
+    def select (self, pos, secondary_colour = False):
+        """Select a tile.
 
-select(pos[, colour])
+select(pos, secondary_colour = False)
 
 pos: (x, y) tile position.
-colour: colour of the selection border; defaults to the current value of
-        conf.SEL_COLOUR for the current theme.
+secondary_colour: whether to use the secondary cursor colour
+                  (conf.SECONDARY_SEL_COLOUR instead of conf.SEL_COLOUR for the
+                  current theme).
 
 """
         pos = tuple(pos[:2])
-        select = (pos, colour)
-        if self.selected != select:
-            if self.selected is not None:
-                self.deselect()
-            x, y = pos
-            self.grid[x][y][2] = True
-            self.selected = select
-            self.tiler.change(pos)
+        try:
+            if self.selected[pos] in self.selected:
+                return
+        except KeyError:
+            pass
+        # either not selected or different colour
+        x, y = pos
+        # let out-of-bounds errors propagate
+        self.grid[x][y][2] = True
+        self.selected[pos] = secondary_colour
+        self.tiler.change(pos)
 
-    def deselect (self):
-        """Deselect the currently selected tile, if any."""
-        if self.selected is not None:
-            pos, colour = self.selected
-            x, y = pos
+    def deselect (self, *tiles):
+        """Deselect the given tiles, if selected.
+
+deselect(*tiles)
+
+tiles: each an (x, y) position; if none are given, deselect every selected
+       tile.
+
+"""
+        for pos in (tiles if tiles else self.selected.keys()):
+            x, y = pos = tuple(pos[:2])
             try:
+                del self.selected[pos]
                 self.grid[x][y][2] = False
-            except IndexError:
-                # doesn't exist to deselect
+            except (KeyError, IndexError):
+                # isn't selected or doesn't exist to deselect
                 pass
             else:
                 self.tiler.change(pos)
-            self.selected = None
 
     def move_selected (self, direction, amount = 1):
         """Move selection relative to the current position.
@@ -519,6 +529,7 @@ amount: number of tiles to move.
 If the destination tile is out-of-bounds, select the nearest in-bounds tile.
 
 """
+        # FIXME
         pos = list(self.selected[0])
         axis = direction % 2
         pos[axis] += amount * (1 if direction > 1 else -1)
@@ -572,9 +583,9 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
             grid.append(col)
         self.grid = grid
         self.w, self.h = self.size
-        if self.selected is not None:
-            # offset self.selected
-            pos = list(self.selected[0])
+        for pos, colour in self.selected.iteritems():
+            # offset selected tiles
+            pos = list(pos)
             pos[0] += di
             pos[1] += dj
             x, y = pos
@@ -583,7 +594,7 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
                 for axis in (0, 1):
                     limit = self.size[axis] - 1
                     pos[axis] = min(max(pos[axis], 0), limit)
-            self.select(pos, self.selected[1])
+            self.select(pos, colour)
         self.resize(amount - sign, direction)
         return True
 
@@ -764,25 +775,28 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
     def draw_tile (self, surface, rect, i, j):
         # draw a single tile; called by Tiler
         s, b, selected = self.grid[i][j]
+        theme = conf.THEME
         # surface
         if s < 0:
             # blit image if exists, else use colour
             if self._draw_from_img(surface, rect, 's', s):
                 colour = ()
             else:
-                colour = conf.SURFACE_COLOURS[conf.THEME][s]
+                colour = conf.SURFACE_COLOURS[theme][s]
         else:
             # goal: use block colour
-            colour = conf.BLOCK_COLOURS[conf.THEME][s]
+            colour = conf.BLOCK_COLOURS[theme][s]
         if colour:
             surface.fill(colour, rect)
         # selection ring
         if selected:
-            width = int(rect[2] * conf.SEL_WIDTH[conf.THEME])
-            width = max(width, conf.MIN_SEL_WIDTH[conf.THEME])
-            colour = self.selected[1]
-            if colour is None:
-                colour = conf.SEL_COLOUR[conf.THEME]
+            width = int(rect[2] * conf.SEL_WIDTH[theme])
+            width = max(width, conf.MIN_SEL_WIDTH[theme])
+            colour = self.selected[(i, j)]
+            if colour:
+                colour = conf.SEL_COLOUR[theme]
+            else:
+                colour = conf.SECONDARY_SEL_COLOUR[theme]
             draw_rect(surface, colour, rect, width)
         # block
         if b is not None:
@@ -793,27 +807,27 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
                     p = rect.center
                     r = rect.w / 2
                     pygame.draw.circle(surface, (0, 0, 0), p, r)
-                    c = conf.BLOCK_COLOURS[conf.THEME][b.type]
+                    c = conf.BLOCK_COLOURS[theme][b.type]
                     pygame.draw.circle(surface, c, p, int(r * .8))
             else:
                 # draw character in tile
                 c = b.type
                 if c < conf.SELECTED_CHAR_ID_OFFSET:
                     # normal
-                    colour = conf.PUZZLE_TEXT_COLOUR[conf.THEME]
+                    colour = conf.PUZZLE_TEXT_COLOUR[theme]
                 elif c < conf.SPECIAL_CHAR_ID_OFFSET:
                     # selected
                     c -= conf.SELECTED_CHAR_ID_OFFSET
-                    colour = conf.PUZZLE_TEXT_SELECTED_COLOUR[conf.THEME]
+                    colour = conf.PUZZLE_TEXT_SELECTED_COLOUR[theme]
                 else:
                     # special
                     c -= conf.SPECIAL_CHAR_ID_OFFSET
-                    colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR[conf.THEME]
+                    colour = conf.PUZZLE_TEXT_SPECIAL_COLOUR[theme]
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
                 h = rect[3]
                 text, lines = self.game.img((b.type, h),
-                                     ((conf.PUZZLE_FONT[conf.THEME], h, False),
+                                     ((conf.PUZZLE_FONT[theme], h, False),
                                      c, colour), text = True)
                 # crop off empty bits
                 source = autocrop(text)
