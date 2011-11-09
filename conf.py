@@ -261,7 +261,7 @@ SEL_COLOUR = get('sel_colour', {
     'default': (255, 0, 0)
 })
 SECONDARY_SEL_COLOUR = get('secondary_sel_colour', {
-    'default': (255, 150, 150)
+    'default': (255, 100, 100)
 })
 MIN_SEL_WIDTH = get('min_sel_width', {
     'default': 1

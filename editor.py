@@ -90,7 +90,7 @@ success_cb_args: arguments to pass to success_cb after the filename.
         # things without errors on Windows
         not_allowed = '/ ' + os.sep
         allowed = set(c for c in conf.PRINTABLE if c not in not_allowed)
-        self._entry = menu.TextEntry(conf.LEVEL_NAME_LENGTH, fn, allowed)
+        self._entry = menu.TextEntry(self, conf.LEVEL_NAME_LENGTH, fn, allowed)
         self.directory = directory
         self.defn = defn
         self._success_cb = success_cb
@@ -341,8 +341,10 @@ state: the current position in the history.
             self.editor.load(definition)
         else:
             self.editor = Puzzle(self.game, definition)
+        self.editor.deselect()
         self.editor.select((0, 0))
-        self.selector.select((0, 0), conf.SECONDARY_SEL_COLOUR[conf.THEME])
+        self.selector.deselect()
+        self.selector.select((0, 0), True)
         self.puzzle = self.editor
         self.editing = True
         self.dirty = True
@@ -397,8 +399,8 @@ state: the current position in the history.
         if not self.editing:
             return
         # get type and ID of selected tile in selector puzzle
-        col, row = self.selector.selected[0]
-        x, y = self.editor.selected[0]
+        col, row = self.selector.selected.keys()[0]
+        x, y = self.editor.selected.keys()[0]
         is_block = col == 0 and row <= conf.MAX_ID
         if is_block:
             ID = row
@@ -433,7 +435,7 @@ state: the current position in the history.
     def delete (self, *args):
         """Delete a block or surface in the currently selected tile."""
         if self.editing:
-            x, y = self.editor.selected[0]
+            x, y = self.editor.selected.keys()[0]
             data = self.editor.grid[x][y]
             snd = True
             # delete block, if any
@@ -468,6 +470,7 @@ state: the current position in the history.
                 # clicked a tile in self.editor: switch to and select
                 if not self.editing:
                     self.switch_puzzle()
+                self.editor.deselect()
                 self.editor.select(pos)
                 if evt.button == 1:
                     # left-click to insert
@@ -482,6 +485,7 @@ state: the current position in the history.
                     # select the tile
                     if self.editing:
                         self.switch_puzzle()
+                    self.selector.deselect()
                     self.selector.select(pos)
 
     def switch_puzzle (self, *args):
@@ -493,8 +497,10 @@ state: the current position in the history.
         else:
             old, new = pzls
         # deselect old and select new
-        old.select(old.selected[0], conf.SECONDARY_SEL_COLOUR[conf.THEME])
-        new.select(new.selected[0])
+        for colour, pzl in enumerate((new, old)):
+            pos = pzl.selected.keys()[0]
+            pzl.deselect()
+            pzl.select(pos, colour)
         self.puzzle = new
 
     def reset (self, *args):
@@ -521,6 +527,7 @@ state: the current position in the history.
                 # editor: select tile under mouse
                 if not self.editing:
                     self.switch_puzzle()
+                self.editor.deselect()
                 self.editor.select(tile)
             else:
                 # selector: just make sure it's the current puzzle

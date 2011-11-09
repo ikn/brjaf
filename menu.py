@@ -1460,7 +1460,6 @@ class MainMenu (Menu):
         theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
             (
-                TextEntry(self, 5),
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
                 Button('Options', self.set_page, 7)

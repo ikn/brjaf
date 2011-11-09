@@ -519,7 +519,7 @@ tiles: each an (x, y) position; if none are given, deselect every selected
                 self.tiler.change(pos)
 
     def move_selected (self, direction, amount = 1):
-        """Move selection relative to the current position.
+        """Move all selections relative to the current position.
 
 move_selected(direction, amount = 1)
 
@@ -529,12 +529,16 @@ amount: number of tiles to move.
 If the destination tile is out-of-bounds, select the nearest in-bounds tile.
 
 """
-        # FIXME
-        pos = list(self.selected[0])
-        axis = direction % 2
-        pos[axis] += amount * (1 if direction > 1 else -1)
-        pos[axis] %= self.size[axis]
-        self.select(pos, self.selected[1])
+        selected = self.selected.items()
+        # deselect all
+        self.deselect()
+        # reselect one at a time
+        for pos, colour in selected:
+            pos = list(pos)
+            axis = direction % 2
+            pos[axis] += amount * (1 if direction > 1 else -1)
+            pos[axis] %= self.size[axis]
+            self.select(pos, colour)
 
     def _reset_tiler (self):
         self.tiler.reset()
@@ -583,7 +587,8 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
             grid.append(col)
         self.grid = grid
         self.w, self.h = self.size
-        for pos, colour in self.selected.iteritems():
+        for pos, colour in self.selected.items():
+            orig_pos = pos
             # offset selected tiles
             pos = list(pos)
             pos[0] += di
@@ -594,6 +599,7 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
                 for axis in (0, 1):
                     limit = self.size[axis] - 1
                     pos[axis] = min(max(pos[axis], 0), limit)
+            self.deselect(orig_pos)
             self.select(pos, colour)
         self.resize(amount - sign, direction)
         return True
@@ -794,9 +800,9 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
             width = max(width, conf.MIN_SEL_WIDTH[theme])
             colour = self.selected[(i, j)]
             if colour:
-                colour = conf.SEL_COLOUR[theme]
-            else:
                 colour = conf.SECONDARY_SEL_COLOUR[theme]
+            else:
+                colour = conf.SEL_COLOUR[theme]
             draw_rect(surface, colour, rect, width)
         # block
         if b is not None:
