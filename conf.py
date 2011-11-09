@@ -276,7 +276,7 @@ BG = get('bg', {
 SURFACE_COLOURS = get('surface_colours', {
     'default': {
         S_BLANK: (255, 255, 255),
-        S_SLIDE: (200, 200, 255),
+        S_SLIDE: (150, 150, 255),
         S_LEFT: (90, 90, 90),
         S_UP: (50, 50, 50),
         S_RIGHT: (130, 130, 130),
@@ -285,11 +285,11 @@ SURFACE_COLOURS = get('surface_colours', {
 })
 BLOCK_COLOURS = get('block_colours', {
     'default': {
-        B_PLAYER: (200, 0, 0),
-        B_IMMOVEABLE: (70, 70, 70),
-        B_STANDARD: (150, 150, 150),
-        B_SLIDE: (150, 150, 255),
-        B_BOUNCE: (100, 255, 100)
+        B_PLAYER: (128, 16, 7),
+        B_IMMOVEABLE: (43, 40, 33),
+        B_STANDARD: (95, 60, 27),
+        B_SLIDE: (209, 209, 255),
+        B_BOUNCE: (126, 176, 38)
     }
 })
 

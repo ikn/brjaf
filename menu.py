@@ -14,10 +14,9 @@ import conf
 #   - change page up/page down action for scrollable pages
 #*- show (puzzle) arrows in spaces either side of %x in Selects if wrap or when not at min/max
 #   - force Selects to have a space either side of each %x
-#   - have Menu.set_arrows(visible, *arrows), each (conf.ARROW_*, (x, y))
+#   - have Menu.add/rm_arrows(*arrows), each (conf.ARROW_*, (x, y))
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
-#*- need some sort of indicator that a widget is an entry (paler cursor present?)
 
 class BaseText (object):
     """Abstract base class for text widgets.
@@ -1497,13 +1496,9 @@ class MainMenu (Menu):
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
-                Text('Movement:'),
-                s(FloatSelect, g('move_initial_delay'), 'precise %x easy', .1,
-                  .5, 1),
                 Button('Save', self._save, (
                     ((9, 0), 'fps'),
-                    ((9, 1), 'show_msg'),
-                    ((9, 3), 'move_initial_delay')
+                    ((9, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
