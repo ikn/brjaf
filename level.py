@@ -13,6 +13,7 @@ import conf
 
 # TODO:
 # - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
+# - high scores for fewest moves for each level (frames with input where at least one player block moves)
 
 def get_levels (ID = False):
     """Get a list of existing levels.

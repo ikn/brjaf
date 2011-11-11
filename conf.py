@@ -96,7 +96,8 @@ KEYS_PAGE_UP = get('keys_page_up', (pg.K_PAGEUP,))
 KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
 
 KEYS_MINIMISE = get('keys_minimise', (pg.K_F10,))
-KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,))
+KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,
+    (pg.K_RETURN, pg.KMOD_ALT, True), (pg.K_KP_ENTER, pg.KMOD_ALT, True)))
 KEYS_BACK = get('keys_back', (pg.K_BACKSPACE, pg.K_ESCAPE))
 KEYS_NEXT = get('keys_next', (pg.K_SPACE, pg.K_RETURN, pg.K_KP_ENTER))
 KEYS_NEXT_NONPRINTABLE = get('keys_next', (pg.K_RETURN, pg.K_KP_ENTER))
