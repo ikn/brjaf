@@ -15,6 +15,7 @@ Axes are:
 
 from os import sep as path_sep
 from os.path import exists
+from random import randrange
 
 import pygame
 from tiler import Tiler, draw_rect
@@ -96,12 +97,13 @@ def opposite_dir (direction):
 
 
 class BoringBlock (object):
-    def __init__ (self, type_ID, puzzle, pos):
+    def __init__ (self, type_ID, puzzle, pos, dirn = None):
         self.type = type_ID
         self.tiler = puzzle.tiler
         self.pos = list(pos)
-        from random import randrange
-        self.dirn = randrange(4)
+        if dirn is None:
+            dirn = randrange(4)
+        self.dirn = dirn
 
     def __str__ (self):
         return '<block: {0} at {1}>'.format(self.type, self.pos)
@@ -115,8 +117,8 @@ class BoringBlock (object):
 
 
 class Block (BoringBlock):
-    def __init__ (self, type_ID, puzzle, pos):
-        BoringBlock.__init__ (self, type_ID, puzzle, pos)
+    def __init__ (self, type_ID, puzzle, pos, dirn = None):
+        BoringBlock.__init__ (self, type_ID, puzzle, pos, dirn)
         self.puzzle = puzzle
         self.reset()
 
@@ -358,31 +360,26 @@ class Puzzle (object):
             except ValueError:
                 return False
 
-    def init (self):
-        self._reset_tiler()
-        lines = self.lines[:]
-        # create grid with default surface
-        self.grid = []
-        for i in xrange(self.w):
-            col = []
-            for j in xrange(self.h):
-                col.append([self.default_s, None, False])
-            self.grid.append(col)
-        # create Block instances and place in grid
-        self.blocks = []
-        line = self._next_ints(lines)
-        while line:
-            type_ID, i, j = line
-            b = (Block if self.physics else BoringBlock)(type_ID, self, [i, j])
-            self.blocks.append(b)
-            self.grid[i][j][1] = b
-            line = self._next_ints(lines)
-        # get non-default surface types
-        line = self._next_ints(lines)
-        while line:
-            ID, i, j = line
-            self.grid[i][j][0] = ID
-            line = self._next_ints(lines)
+    def reset (self, *tiles):
+        if tiles:
+            # reset given tiles
+            tiles = [(x, y) for x, y in tiles]
+        else:
+            # reset all tiles
+            tiles = [[(i, j) for i in xrange(self.w)] for j in xrange(self.h)]
+            tiles = sum(tiles, [])
+        # clear tiles we want to change
+        for x, y in tiles:
+            self.rm_block(None, x, y)
+            self.set_surface(x, y)
+        # add initial blocks and surfaces back
+        cls = Block if self.physics else BoringBlock
+        for type_ID, (x, y), dirn in self._init_blocks:
+            if (x, y) in tiles:
+                self.add_block((cls, type_ID, dirn), x, y)
+        for type_ID, x, y in self._init_surfaces:
+            if (x, y) in tiles:
+                self.set_surface(x, y, type_ID)
 
     def load (self, defn, **tiler_kw_args):
         """Initialise puzzle from a definition.
@@ -392,9 +389,9 @@ dirty).  Preserves any selection, if possible.
 
 """
         self._draw_cbs = {}
-        self.lines = defn.split('\n')
+        lines = defn.split('\n')
         # dimensions in first line
-        first = self._next_ints(self.lines)
+        first = self._next_ints(lines)
         try:
             w, h = first
         except ValueError:
@@ -402,11 +399,31 @@ dirty).  Preserves any selection, if possible.
             w, h, default_s = first
         else:
             default_s = conf.DEFAULT_SURFACE
+        self.w = w
+        self.h = h
+        self.size = (self.w, self.h)
+        self.default_s = default_s
+        # extract blocks from definition
+        bs = []
+        line = self._next_ints(lines)
+        while line:
+            type_ID, i, j = line
+            bs.append((type_ID, (i, j), randrange(4)))
+            line = self._next_ints(lines)
+        self._init_blocks = bs
+        self.blocks = []
+        # extract non-default surface types from definition
+        ss = []
+        line = self._next_ints(lines)
+        while line:
+            ss.append(line)
+            line = self._next_ints(lines)
+        self._init_surfaces = ss
+        # create grid handler if need to
         if hasattr(self, 'tiler'):
             # already initialised: need to resize first
             resized = self.resize_abs(w, h)
         else:
-            # create grid handler
             for key, attr in (('line', 'PUZZLE_LINE_COLOUR'),
                               ('gap', 'PUZZLE_LINE_WIDTH'),
                               ('border', 'PUZZLE_LINE_WIDTH')):
@@ -415,14 +432,16 @@ dirty).  Preserves any selection, if possible.
             self.tiler = Tiler(w, h, self.draw_tile, track_tiles = False,
                                **tiler_kw_args)
             resized = False
-        # initialise
-        self.w = w
-        self.h = h
-        self.size = (self.w, self.h)
-        self.default_s = default_s
+        # create grid with default surface
+        self.grid = []
+        for i in xrange(self.w):
+            col = []
+            for j in xrange(self.h):
+                col.append([self.default_s, None, False])
+            self.grid.append(col)
         # preserve selection
         sel = self.selected
-        self.init()
+        self.reset()
         for pos, colour in sel.iteritems():
             try:
                 self.select(pos, colour)
@@ -432,7 +451,17 @@ dirty).  Preserves any selection, if possible.
         return resized
 
     def add_block (self, block, x, y):
-        # add a block, optionally creating it first
+        """Add a block, optionally creating it first.
+
+add_block(block, x, y)
+
+block: either a BoringBlock instance or a (block_class, *args) tuple, where:
+    block_class: the class to instantiate (BoringBlock or Block).
+    args: arguments to pass to the constructor, excluding puzzle and pos.
+x, y: tile to place the block on.  If given a Block instance, its pos attribute
+      gets set to this value.
+
+"""
         pos = [x, y]
         if isinstance(block, BoringBlock):
             block.pos = pos

@@ -1024,9 +1024,7 @@ widget: widget (Text instance) to refresh text for; defaults to all widgets on
                     if not is_long:
                         # replace with original random block, if any
                         try:
-                            puzzle.add_block((BoringBlock,
-                                            self.definition[1][(x, y)]),
-                                            x, y)
+                            puzzle.reset((x, y))
                         except KeyError:
                             pass
             if not is_long:

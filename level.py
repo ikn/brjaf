@@ -15,6 +15,7 @@ import conf
 # - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
 # - high scores for fewest moves for each level (frames with input where at least one player block moves)
 # - hard to move diagonally
+# - pause menu needs reset option
 
 def get_levels (ID = False):
     """Get a list of existing levels.
@@ -256,7 +257,7 @@ Takes ID and definition arguments as in the constructor.
     def reset (self, *args):
         """Reset the level to its state after the last call to Level.load."""
         if not self.solving:
-            self.puzzle.init()
+            self.puzzle.reset()
             self.players = [b for b in self.puzzle.blocks
                             if b.type == conf.B_PLAYER]
         # restart recording if want to

@@ -13,6 +13,7 @@ import conf
 # - share levels via a code; compress (pylzma.compress(string) or write own) then .encode('base64')
 #   - autocopy to clipboard?
 # - mouse-based way of resizing grid in editor
+# - SolveMenu needs reset option
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
