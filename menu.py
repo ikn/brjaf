@@ -17,6 +17,9 @@ import conf
 #   - have Menu.add/rm_arrows(*arrows), each (conf.ARROW_*, (x, y))
 # - options pages:
 #       delete data: progress, custom levels, solution history, settings (exclude progress, solution history), all
+# - nice help messages option
+#   - 'be nice to me'/'don't sass me'/?
+#   - just ask on first startup?  If not, what's the default?
 
 class BaseText (object):
     """Abstract base class for text widgets.
