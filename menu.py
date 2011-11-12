@@ -372,7 +372,12 @@ CURSOR_EVENT: the cursor changed position; called after the position update.
         # select new
         self.cursor = max(0, min(self.cursor, self.current_size))
         p = (self.pos[0] + self.cursor, self.pos[1])
-        self.puzzle.select(p, not self.focused)
+        focused = self.focused or (self.selected and self.text == '')
+        self.puzzle.select(p, not focused)
+
+    def set_selected (self, *args, **kw):
+        Option.set_selected(self, *args, **kw)
+        self._update_cursor()
 
     def toggle_focus (self):
         """Also handle cursor updating."""
