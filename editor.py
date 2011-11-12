@@ -132,7 +132,7 @@ success_cb_args: arguments to pass to success_cb after the filename.
         # create the file:
         # - don't want to end up destroying parent/current directories
         # - Windows removes trailing spaces/dots
-        if fn in ('.', '..') or (os.name == 'nt' and fn[-1] in (' ', '.')):
+        if fn in ('.', '..') or (os.name == 'nt' and fn[-1] == '.'):
             self.set_page(3)
             return
         # confirm overwrite if exists (should cover case-insensitivity of

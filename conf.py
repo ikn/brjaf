@@ -4,7 +4,23 @@ import string
 
 import pygame as pg
 
-CONF_DIR = os.path.expanduser('~') + os.sep + '.pzl' + os.sep
+# need to take care to get unicode path
+if os.name == 'nt':
+    try:
+        import ctypes
+        n = ctypes.windll.kernel32.GetEnvironmentVariableW(u'APPDATA', None, 0)
+        if n == 0:
+            raise ValueError()
+    except:
+        # fallback (doesn't get unicode string)
+        CONF_DIR = os.environ[u'APPDATA']
+    else:
+        buf = ctypes.create_unicode_buffer(u'\0' * n)
+        ctypes.windll.kernel32.GetEnvironmentVariableW(u'APPDATA', buf, n)
+        CONF_DIR = buf.value
+else:
+    CONF_DIR = os.path.expanduser(u'~')
+CONF_DIR += os.sep + ('' if os.name == 'nt' else '.') + 'pzl' + os.sep
 CONF_FILE = CONF_DIR + 'conf'
 
 # read local conf file into dict
