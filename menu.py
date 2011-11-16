@@ -3,9 +3,10 @@ from math import ceil
 from random import randrange, choice
 
 import pygame
+import clipboard
 import evthandler as eh
 
-from puzzle import Puzzle, BoringBlock
+from puzzle import Puzzle, BoringBlock, compress_lvl
 import conf
 
 # TODO:
@@ -1467,52 +1468,59 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 7)
+                Button('Options', self.set_page, 8)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3),
                 Button('Load draft', self.set_page, 4)
             ), [], [], (
-                Button('Play', w, level.LevelBackend),
-                Button('Edit', w, editor.Editor),
-                Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
-                Button('Rename', self._rename),
-                Button('Duplicate', self._rename, False)
+                (
+                    Button('Play', w, level.LevelBackend),
+                    Button('Edit', w, editor.Editor),
+                    Button('Share', self._share, 7),
+                ), (
+                    Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
+                    Button('Rename', self._rename),
+                    Button('Duplicate', self._rename, False)
+                )
             ), (
                 Button('Edit', w, editor.Editor),
                 Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
                 Button('Rename', self._rename),
                 Button('Duplicate', self._rename, False)
             ), (
-                Button('Sound', self.set_page, 8),
-                Button('Gameplay', self.set_page, 9),
-                Button('Display', self.set_page, 10),
-                #Button('Delete data', self.set_page, 11)
+                Text('Code copied'),
+                Button('Back', self.back)
+            ), (
+                Button('Sound', self.set_page, 9),
+                Button('Gameplay', self.set_page, 10),
+                Button('Display', self.set_page, 11),
+                #Button('Delete data', self.set_page, 12)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((8, 0), 'music_volume', self._update_music_vol),
-                    ((8, 1), 'sound_volume', self._update_snd_vol),
-                    ((8, 2), ('sound_theme', False), self._refresh_sounds)
+                    ((9, 0), 'music_volume', self._update_music_vol),
+                    ((9, 1), 'sound_volume', self._update_snd_vol),
+                    ((9, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
                 Button('Save', self._save, (
-                    ((9, 0), 'fps'),
-                    ((9, 1), 'show_msg')
+                    ((10, 0), 'fps'),
+                    ((10, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 s(DiscreteSelect, g('fullscreen'), '%x',
                   ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
-                    ((10, 0), ('theme', False), self._refresh_graphics),
-                    ((10, 1), 'fullscreen', self.game.refresh_display)
+                    ((11, 0), ('theme', False), self._refresh_graphics),
+                    ((11, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1553,6 +1561,11 @@ class MainMenu (Menu):
                 col %= conf.LEVEL_SELECT_COLS
 
         return Menu.init(self, pages)
+
+    def _share (self, page):
+        data = compress_lvl(self._custom_lvl_ID[1])
+        clipboard.put(data)
+        self.set_page(page)
 
     def _done_rename (self, name, old_name, d, then_del):
         """Cleanup after renaming/duplicating a level."""

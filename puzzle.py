@@ -34,8 +34,11 @@ import conf
 
 byte_chars = [chr(i) for i in xrange(256)]
 
-def compress_defn (defn):
-    """Compress a level definition."""
+def compress_lvl (ID):
+    """Compress a saved custom level."""
+    # load level
+    with open(conf.LEVEL_DIR_CUSTOM + ID) as f:
+        defn = f.read()
     # extract messages/solutions
     markers = ('@', ':')
     defn = [l.strip() for l in defn.splitlines()]
