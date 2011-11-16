@@ -16,9 +16,11 @@ Axes are:
 from os import sep as path_sep
 from os.path import exists
 from random import randrange
+import zlib
 
 import pygame
 from tiler import Tiler, draw_rect
+from stringcompress import compress, encode, printable
 
 import conf
 
@@ -29,6 +31,74 @@ import conf
 #   - maybe take snapshot of all blocks each time we try to get a working configuration and if doesn't change, break
 #     - do we even get to next time through loop, or do they just keep telling each other to calculate stuff?
 #     - just need dest, or forces too?
+
+byte_chars = [chr(i) for i in xrange(256)]
+
+def compress_defn (defn):
+    """Compress a level definition."""
+    # extract messages/solutions
+    markers = ('@', ':')
+    defn = [l.strip() for l in defn.splitlines()]
+    msgs, solns = [c.join(l[1:].strip() for l in defn if l and l[0] == c)
+                   for c in markers]
+    defn = '\n'.join(l for l in defn if (l and l[0] not in markers) or not l)
+    # split into first line/blocks/surfaces
+    defn = [[[int(n) for n in l.strip().split()]
+            for l in section.splitlines()]
+            for section in defn.split('\n\n')]
+    if len(defn) == 2:
+        surfaces = defn[1]
+    else:
+        surfaces = []
+    defn = defn[0]
+    first, blocks = defn[0], defn[1:]
+    # ensure blocks are each 3 numbers: separate out extra data portals have
+    portal_data = []
+    for b in blocks:
+        if len(b) == 5: # will be 3 or 5
+            data = b[3:]
+            # need to modify the list itself
+            b.pop(-1)
+            b.pop(-1)
+            portal_data.append(d)
+    # compress
+    chars = printable
+    sep, chars = chars[0], chars[1:]
+    compressed = []
+    # first line
+    w, h = first[:2]
+    first = ' '.join(str(n) for n in first)
+    compressed.append(compress(first, chars, '05 43617289-'))
+    # numbers
+    if blocks:
+        block_ids, block_data = zip(*((s[:1], s[1:]) for s in blocks))
+    else:
+        block_ids, block_data = [], []
+    if surfaces:
+        surface_ids, surface_data = zip(*((s[:1], s[1:]) for s in surfaces))
+    else:
+        surface_ids, surface_data = [], []
+    l = []
+    for data, min_val in ((block_ids, 0), (surface_ids, conf.MIN_ID),
+                          (portal_data, 0),  (block_data, 0),
+                          (surface_data, 0)):
+        l.append(''.join(chr(n - min_val) for n in sum(list(data), [])))
+    max_v = max(w, h, conf.MAX_ID - conf.MIN_ID) + 1
+    from_chars = [chr(i) for i in xrange(max_v + 1)]
+    compressed.append(compress(chr(max_v).join(l), chars, from_chars))
+    # solutions: best method depends on length
+    soln_chars = ',drlu0<>=1[]23456789:'
+    c1 = compress(solns, chars, soln_chars)
+    k = len(solns) / 2
+    c2 = compress(solns[:k], chars, soln_chars) + sep
+    c2 += compress(solns[k:], chars, soln_chars)
+    z = encode(zlib.compress(solns, 9), byte_chars, chars)
+    d = dict((len(s), (method, s)) for method, s in enumerate((c1, c2, z)))
+    method, s = d[min(d)]
+    compressed.append(encode(str(method), '210', chars) + s)
+    # messages
+    compressed.append(encode(zlib.compress(msgs, 9), byte_chars, chars))
+    return sep.join(compressed)
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.
