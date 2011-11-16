@@ -25,6 +25,7 @@ import conf
 #   - autocopy to clipboard?
 # - mouse-based way of resizing grid in editor (middle click/drag?  scroll wheel?)
 # - SolveMenu needs reset option
+# - undo/redo have blocks rotating
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -120,7 +121,7 @@ success_cb_args: arguments to pass to success_cb after the filename.
                 menu.Button('Cancel', self.game.quit_backend)
             ), (
                 menu.Text('Level name'),
-                menu.Text('is blank.'),
+                menu.Text('is blank'),
                 menu.Button('OK', self.back)
             ), (
                 menu.Text('Overwrite?'),
@@ -131,7 +132,7 @@ success_cb_args: arguments to pass to success_cb after the filename.
                 menu.Text('filename')
             ), (
                 menu.Text('Can\'t write'),
-                menu.Text('to that file.')
+                menu.Text('to that file')
             )
         ))
 
@@ -139,6 +140,8 @@ success_cb_args: arguments to pass to success_cb after the filename.
         """Callback for trying to save using the entered name."""
         d = self.directory
         fn = self._entry.text
+        if conf.PUZZLE_TEXT_UPPER:
+            fn = fn.upper()
         # check for blank filename
         if fn == '':
             self.set_page(1)
@@ -189,7 +192,7 @@ Takes the Editor instance.
     def init (self, editor):
         self._editor = editor
         self._default_selections[1] = (0, 2)
-        already_winning = 'The puzzle starts with the player already winning.'
+        already_winning = 'The puzzle starts with the player already winning'
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
@@ -202,12 +205,12 @@ Takes the Editor instance.
                 menu.Button('Yes', self._reset),
                 menu.Button('No', self.back)
             ), (
-                menu.LongText(self, 'There must be at least one player block.',
+                menu.LongText(self, 'There must be at least one player block',
                               11),
             ), (
                 menu.LongText(self, already_winning, 13),
             ), (
-                menu.Text('Level saved.'),
+                menu.Text('Level saved'),
                 menu.Button('OK', self.back)
             )
         ))
@@ -263,7 +266,7 @@ Takes the Editor instance.
 class Editor (object):
     """A puzzle editor (Game backend).
 
-Takes a (custom) puzzle ID to load, else starts editing a blank puzzle.
+Takes arguments to pass to Editor.load.
 
     METHODS
 
@@ -292,7 +295,7 @@ state: the current position in the history.
 
 """
 
-    def __init__ (self, game, event_handler, ID = None):
+    def __init__ (self, game, event_handler, ID = None, defn = None):
         self.game = game
         # add event handlers
         event_handler.add_event_handlers({
@@ -338,24 +341,33 @@ state: the current position in the history.
         self.selector = Puzzle(game, self._selector_defn)
 
         self.FRAME = conf.FRAME
-        self.load(ID)
+        self.load(ID, defn)
 
-    def load (self, ID = None):
-        """Load a level with the given custom level ID, else a blank level."""
+    def load (self, ID = None, defn = None):
+        """Load a level.
+
+load([ID][, defn])
+
+ID: custom level ID.
+defn: if ID is not given, load a level from this definition; if this is not
+      given, load a blank level.
+
+"""
         if ID is None:
-            # blank grid
-            definition = conf.BLANK_LEVEL
+            if defn is None:
+                # blank grid
+                defn = conf.BLANK_LEVEL
             self.ID = None
         else:
             # get data from file
             d = conf.LEVEL_DIR_DRAFT if ID[0] == 2 else conf.LEVEL_DIR_CUSTOM
             with open(d + ID[1]) as f:
-                definition = f.read()
+                defn = f.read()
             self.ID = ID[1]
         if hasattr(self, 'editor'):
-            self.editor.load(definition)
+            self.editor.load(defn)
         else:
-            self.editor = Puzzle(self.game, definition)
+            self.editor = Puzzle(self.game, defn)
         self.editor.deselect()
         self.editor.select((0, 0))
         self.selector.deselect()

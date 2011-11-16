@@ -1468,11 +1468,12 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 8)
+                Button('Options', self.set_page, 9)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3),
-                Button('Load draft', self.set_page, 4)
+                Button('Load draft', self.set_page, 4),
+                Button('Load from code', self._load_shared)
             ), [], [], (
                 (
                     Button('Play', w, level.LevelBackend),
@@ -1492,9 +1493,12 @@ class MainMenu (Menu):
                 Text('Code copied'),
                 Button('Back', self.back)
             ), (
-                Button('Sound', self.set_page, 9),
-                Button('Gameplay', self.set_page, 10),
-                Button('Display', self.set_page, 11),
+                Text('Invalid code'),
+                Button('Back', self.back)
+            ), (
+                Button('Sound', self.set_page, 10),
+                Button('Gameplay', self.set_page, 11),
+                Button('Display', self.set_page, 12),
                 #Button('Delete data', self.set_page, 12)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
@@ -1502,25 +1506,25 @@ class MainMenu (Menu):
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((9, 0), 'music_volume', self._update_music_vol),
-                    ((9, 1), 'sound_volume', self._update_snd_vol),
-                    ((9, 2), ('sound_theme', False), self._refresh_sounds)
+                    ((10, 0), 'music_volume', self._update_music_vol),
+                    ((10, 1), 'sound_volume', self._update_snd_vol),
+                    ((10, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
                 Button('Save', self._save, (
-                    ((10, 0), 'fps'),
-                    ((10, 1), 'show_msg')
+                    ((11, 0), 'fps'),
+                    ((11, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 s(DiscreteSelect, g('fullscreen'), '%x',
                   ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
-                    ((11, 0), ('theme', False), self._refresh_graphics),
-                    ((11, 1), 'fullscreen', self.game.refresh_display)
+                    ((12, 0), ('theme', False), self._refresh_graphics),
+                    ((12, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1566,6 +1570,17 @@ class MainMenu (Menu):
         data = compress_lvl(self._custom_lvl_ID[1])
         clipboard.put(data)
         self.set_page(page)
+
+    def _load_shared (self):
+        data = clipboard.get()
+        try:
+            pass#defn = decompress_lvl(data)
+        except ValueError:
+            # invalid level
+            self.set_page(9)
+            pass
+        else:
+            self.game.start_backend(editor.Editor, None, data)
 
     def _done_rename (self, name, old_name, d, then_del):
         """Cleanup after renaming/duplicating a level."""

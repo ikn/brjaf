@@ -119,10 +119,12 @@ y: a list of digits in base2 of value equal to x.
     # convert from base 10
     return base_10_to_b(x, base2)
 
-def encode (s, from_chars, to_chars = printable, allow_no_sep = True):
+def encode (s, from_chars = byte_chars, to_chars = printable,
+            allow_no_sep = True):
     """Encode a string from one character set to another.
 
-encode(s, from_chars, to_chars = printable, allow_no_sep = True) -> new_string
+encode(s, from_chars = byte_chars, to_chars = printable, allow_no_sep = True)
+    -> new_string
 
 s: the string to encode.
 from_chars: a list of the characters in s (and possibly more).
@@ -156,10 +158,10 @@ above).  To obtain the original string, use decode.
     else:
         return s
 
-def decode (s, to_chars, from_chars = printable):
+def decode (s, to_chars = byte_chars, from_chars = printable):
     """Decode a string encoded with encode.
 
-decode(s, to_chars, from_chars = printable) -> original_string
+decode(s, to_chars = byte_chars, from_chars = printable) -> original_string
 
 s: the encoded string.
 to_chars: the value used as the from_chars argument to encode.
