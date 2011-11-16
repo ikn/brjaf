@@ -10,9 +10,20 @@ import conf
 
 # TODO:
 # - save level message
-# - share levels via a code; compress (pylzma.compress(string) or write own) then .encode('base64')
+# - share levels via a code
+#   - compress
+#       - first reserve a separator to split the 5 sections
+#       - for first line, blocks:
+#           - add in default surface to first line if none defined
+#           - convert to a string, each number to one char with no separators, via chr(num - conf.MIN_ID) (compare compress/encode w/ chr(conf.MIN_ID..conf.MAX_ID))
+#       - for surfaces: do same as first line/blocks
+#       - for solutions, join via ':'s and use the better of:
+#           - jcompress
+#           - split into 2 and jcompress individually (add this functionality by just putting another sep between)
+#           - zlib > jencode with chars from chr(0..255)
+#       - for messages: join via '#'s and probably just zlib > jencode with chars from chr(0..255)
 #   - autocopy to clipboard?
-# - mouse-based way of resizing grid in editor
+# - mouse-based way of resizing grid in editor (middle click/drag?  scroll wheel?)
 # - SolveMenu needs reset option
 
 class SolveMenu (menu.Menu):

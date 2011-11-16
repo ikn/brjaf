@@ -431,7 +431,7 @@ Only one instance of a sound will be played each frame.
             self.backend.dirty = True
         except AttributeError:
             pass
-        # clear image cache
+        # clear image cache (very unlikely we'll need the same sizes)
         self.imgs = {}
 
     def toggle_fullscreen (self, *args):

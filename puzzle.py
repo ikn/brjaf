@@ -657,8 +657,10 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
         # we only want one, so don't worry about types with the same freqency
         s_count = dict((v, k) for k, v in s_count.iteritems())
         common_s = s_count[max(s_count)]
+        default = conf.DEFAULT_SURFACE
+        common_s = '' if common_s == default else ' ' + str(common_s)
         # compile definition
-        return '{0} {1} {2}{3}{4}\n\n{5}'.format(
+        return '{0} {1}{2}{3}{4}\n\n{5}'.format(
             self.w, self.h, common_s,
             '\n' if bs else '',
             '\n'.join(bs),

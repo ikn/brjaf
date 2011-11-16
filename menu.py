@@ -8,11 +8,11 @@ import evthandler as eh
 from puzzle import Puzzle, BoringBlock
 import conf
 
-# TODO: (*usability)
+# TODO:
 # - scrollable pages - set maximum number of rows and scroll if exceed it
 #   - show arrows in rows above top/below bottom if any up/down there (in far left/right tiles) (use puzzle arrows)
 #   - change page up/page down action for scrollable pages
-#*- show (puzzle) arrows in spaces either side of %x in Selects if wrap or when not at min/max
+# - show (puzzle) arrows in spaces either side of %x in Selects if wrap or when not at min/max
 #   - force Selects to have a space either side of each %x
 #   - have Menu.add/rm_arrows(*arrows), each (conf.ARROW_*, (x, y))
 # - options pages:
