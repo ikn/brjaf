@@ -20,7 +20,7 @@ import zlib
 
 import pygame
 from tiler import Tiler, draw_rect
-from stringcompress import compress, encode, printable
+from stringcompress import compress, decompress, encode, decode, printable
 
 import conf
 
@@ -89,6 +89,10 @@ def compress_lvl (ID):
     max_v = max(w, h, conf.MAX_ID - conf.MIN_ID) + 1
     from_chars = [chr(i) for i in xrange(max_v + 1)]
     compressed.append(compress(chr(max_v).join(l), chars, from_chars))
+    # messages
+    if msgs:
+        msgs = encode(zlib.compress(msgs, 9), byte_chars, chars)
+    compressed.append(msgs)
     # solutions: best method depends on length
     soln_chars = ',drlu0<>=1[]23456789:'
     c1 = compress(solns, chars, soln_chars)
@@ -98,10 +102,71 @@ def compress_lvl (ID):
     z = encode(zlib.compress(solns, 9), byte_chars, chars)
     d = dict((len(s), (method, s)) for method, s in enumerate((c1, c2, z)))
     method, s = d[min(d)]
-    compressed.append(encode(str(method), '210', chars) + s)
-    # messages
-    compressed.append(encode(zlib.compress(msgs, 9), byte_chars, chars))
+    compressed.append(encode(str(int(method == 2)), '10', chars))
+    compressed.append(s)
     return sep.join(compressed)
+
+def decompress_lvl (s):
+    """Decompress a compressed level."""
+    chars = printable
+    sep, chars = chars[0], chars[1:]
+    try:
+        first, data, msgs, method, solns = s.split(sep)
+    except ValueError:
+        # solns_method is first character of solns
+        first, data, msgs, method, solns1, solns2 = s.split(sep)
+    # first line
+    first = decompress(first, chars, '05 43617289-')
+    w, h = [int(x) for x in first.split(' ')][:2]
+    # numbers
+    max_v = max(w, h, conf.MAX_ID - conf.MIN_ID) + 1
+    to_chars = [chr(i) for i in xrange(max_v + 1)]
+    block_ids, surface_ids, portal_data, block_data, surface_data = [
+        [ord(i) for i in section]
+        for section in decompress(data, chars, to_chars).split(chr(max_v))
+    ]
+    blocks = []
+    for i in xrange(len(block_ids)):
+        blocks.append([block_ids[i]] + block_data[2 * i:2 * i + 2])
+    surfaces = []
+    m = conf.MIN_ID
+    for i in xrange(len(surface_ids)):
+        surfaces.append([surface_ids[i] + m] + surface_data[2 * i:2 * i + 2])
+    # restore portal block data to every other portal block
+    k = 0
+    for i, (ID, x, y) in enumerate(blocks):
+        if ID == conf.B_PORTAL:
+            if k == 0:
+                blocks[i] = [ID, x, y] + portal_data.pop(0)
+            k = (k + 1) % 2
+    # messages
+    if msgs:
+        msgs = zlib.decompress(decode(msgs, byte_chars, chars)).split('@')
+    # solutions
+    method = int(decode(method, '10', chars))
+    soln_chars = ',drlu0<>=1[]23456789:'
+    try:
+        # try method with two strings
+        solns1 = decompress(solns1, chars, soln_chars)
+    except NameError:
+        # used a different method
+        if method:
+            solns = zlib.decompress(decode(solns, byte_chars, chars))
+        else:
+            solns = decompress(solns, chars, soln_chars)
+    else:
+        solns2 = decompress(solns2, chars, soln_chars)
+        solns = solns1 + solns2
+    solns = solns.split(':')
+    # create definition
+    defn = [first]
+    defn.append('\n\n'.join('\n'.join(' '.join(str(n) for n in l)
+                            for l in data) for data in (blocks, surfaces)))
+    for c, data in (('@', msgs), (':', solns)):
+        data = '\n'.join(c + ' ' + datum for datum in data if datum)
+        if data:
+            defn.append(data)
+    return '\n'.join(defn)
 
 def autocrop (s):
     """Return the smallest rect containing all non-transparent pixels.

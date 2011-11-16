@@ -6,7 +6,7 @@ import pygame
 import clipboard
 import evthandler as eh
 
-from puzzle import Puzzle, BoringBlock, compress_lvl
+from puzzle import Puzzle, BoringBlock, compress_lvl, decompress_lvl
 import conf
 
 # TODO:
@@ -1473,7 +1473,7 @@ class MainMenu (Menu):
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3),
                 Button('Load draft', self.set_page, 4),
-                Button('Load from code', self._load_shared)
+                Button('Load from code', self._load_shared, 8)
             ), [], [], (
                 (
                     Button('Play', w, level.LevelBackend),
@@ -1571,16 +1571,16 @@ class MainMenu (Menu):
         clipboard.put(data)
         self.set_page(page)
 
-    def _load_shared (self):
+    def _load_shared (self, page):
         data = clipboard.get()
         try:
-            pass#defn = decompress_lvl(data)
-        except ValueError:
+            defn = decompress_lvl(data)
+        except:
             # invalid level
-            self.set_page(9)
+            self.set_page(page)
             pass
         else:
-            self.game.start_backend(editor.Editor, None, data)
+            self.game.start_backend(editor.Editor, None, defn)
 
     def _done_rename (self, name, old_name, d, then_del):
         """Cleanup after renaming/duplicating a level."""
