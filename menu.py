@@ -1468,12 +1468,12 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 9)
+                Button('Options', self.set_page, 10)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3),
                 Button('Load draft', self.set_page, 4),
-                Button('Load from code', self._load_shared, 8)
+                Button('From code', self.set_page, 8)
             ), [], [], (
                 (
                     Button('Play', w, level.LevelBackend),
@@ -1493,38 +1493,42 @@ class MainMenu (Menu):
                 Text('Code copied'),
                 Button('Back', self.back)
             ), (
+                Text('Copy the'),
+                Text('code first'),
+                Button('Done', self._load_shared, 9)
+            ), (
                 Text('Invalid code'),
                 Button('Back', self.back)
             ), (
-                Button('Sound', self.set_page, 10),
-                Button('Gameplay', self.set_page, 11),
-                Button('Display', self.set_page, 12),
-                #Button('Delete data', self.set_page, 12)
+                Button('Sound', self.set_page, 11),
+                Button('Gameplay', self.set_page, 12),
+                Button('Display', self.set_page, 13),
+                #Button('Delete data', self.set_page, 14)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((10, 0), 'music_volume', self._update_music_vol),
-                    ((10, 1), 'sound_volume', self._update_snd_vol),
-                    ((10, 2), ('sound_theme', False), self._refresh_sounds)
+                    ((11, 0), 'music_volume', self._update_music_vol),
+                    ((11, 1), 'sound_volume', self._update_snd_vol),
+                    ((11, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
                 Button('Save', self._save, (
-                    ((11, 0), 'fps'),
-                    ((11, 1), 'show_msg')
+                    ((12, 0), 'fps'),
+                    ((12, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 s(DiscreteSelect, g('fullscreen'), '%x',
                   ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
-                    ((12, 0), ('theme', False), self._refresh_graphics),
-                    ((12, 1), 'fullscreen', self.game.refresh_display)
+                    ((13, 0), ('theme', False), self._refresh_graphics),
+                    ((13, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1572,14 +1576,23 @@ class MainMenu (Menu):
         self.set_page(page)
 
     def _load_shared (self, page):
-        data = clipboard.get()
+        code = clipboard.get()
+        # try to be clever: any whitespace is not part of the code; if there is
+        # any, the code is most likely the longest string with no whitespace
+        l = code.split()
+        code = ''
+        for s in l:
+            if len(s) > len(code):
+                code = s
+        # try to load the level
         try:
-            defn = decompress_lvl(data)
+            defn = decompress_lvl(code)
         except:
             # invalid level
             self.set_page(page)
             pass
         else:
+            self.back()
             self.game.start_backend(editor.Editor, None, defn)
 
     def _done_rename (self, name, old_name, d, then_del):
