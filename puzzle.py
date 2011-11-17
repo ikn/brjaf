@@ -235,13 +235,14 @@ def opposite_dir (direction):
 
 
 class BoringBlock (object):
-    def __init__ (self, type_ID, puzzle, pos, dirn = None):
+    def __init__ (self, type_ID, puzzle, pos, dirn = None, portal_type = None):
         self.type = type_ID
         self.tiler = puzzle.tiler
         self.pos = list(pos)
         if dirn is None:
             dirn = randrange(4)
         self.dirn = dirn
+        self.portal_type = None
 
     def __str__ (self):
         return '<block: {0} at {1}>'.format(self.type, self.pos)
@@ -537,9 +538,15 @@ dirty).  Preserves any selection, if possible.
             w, h, default_s = first
         else:
             default_s = conf.DEFAULT_SURFACE
-        self.w = w
-        self.h = h
-        self.size = (self.w, self.h)
+        if hasattr(self, 'tiler'):
+            # already initialised: need to resize first
+            horiz = self.resize(w - self.w, 2) is not False
+            vert = self.resize(h - self.h, 3) is not False
+            resized = horiz or vert
+        else:
+            self.w = w
+            self.h = h
+            self.size = (self.w, self.h)
         self.default_s = default_s
         # extract blocks from definition
         bs = []
@@ -558,10 +565,7 @@ dirty).  Preserves any selection, if possible.
             line = self._next_ints(lines)
         self._init_surfaces = ss
         # create grid handler if need to
-        if hasattr(self, 'tiler'):
-            # already initialised: need to resize first
-            resized = self.resize_abs(w, h)
-        else:
+        if not hasattr(self, 'tiler'):
             for key, attr in (('line', 'PUZZLE_LINE_COLOUR'),
                               ('gap', 'PUZZLE_LINE_WIDTH'),
                               ('border', 'PUZZLE_LINE_WIDTH')):
@@ -627,7 +631,10 @@ x, y: tile to place the block on.  If given a Block instance, its pos attribute
             self.grid[x][y][1] = None
             self.blocks.remove(block)
             self.tiler.change((x, y))
-        # else passed nothing or tile has no block
+            return block
+        else:
+            # passed nothing or tile has no block
+            return None
 
     def mv_block (self, block, x, y):
         # move a block
@@ -638,8 +645,13 @@ x, y: tile to place the block on.  If given a Block instance, its pos attribute
         # set the surface at a tile
         if surface is None:
             surface = self.default_s
-        self.grid[x][y][0] = surface
-        self.tiler.change((x, y))
+        old_s = self.grid[x][y][0]
+        if old_s != surface:
+            self.grid[x][y][0] = surface
+            self.tiler.change((x, y))
+            return old_s
+        else:
+            return None
 
     def select (self, pos, secondary_colour = False):
         """Select a tile.
@@ -719,6 +731,20 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
         return tile_size / n_tiles
 
     def resize (self, amount, direction):
+        """Resize the puzzle.
+
+resize(amount, direction) -> lost
+
+amount: the number of tiles to resize by, negative to shrink, 1 to grow the
+        puzzle.
+direction: the direction the 'moved' edge should move in.
+
+lost: list of blocks and surfaces lost because of removed tiles, each in the
+      form (block_or_surface_ID, x, y).  If the resize could not be done
+      amount is 0 or we would end up with 0 rows or columns), this is False
+      instead.
+
+"""
         if amount == 0:
             return False
         # resize one tile at a time
@@ -738,6 +764,19 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
         self.tiler.w = w
         self.tiler.h = h
         self._reset_tiler()
+        # remove any blocks/surfaces in the lost region
+        lost = []
+        if sign == -1:
+            x0, x1, y0, y1 = ((w, w + 1, 0, h), (0, w, h, h + 1), (0, 1, 0, h),
+                              (0, w, 0, 1))[direction]
+            for x in xrange(x0, x1):
+                for y in xrange(y0, y1):
+                    b = self.rm_block(None, x, y)
+                    if b is not None:
+                        lost.append((b, x, y))
+                    s = self.set_surface(x, y)
+                    if s is not None:
+                        lost.append((s, x, y))
         # create new grid
         grid = []
         di, dj = offset
@@ -768,11 +807,10 @@ If the destination tile is out-of-bounds, select the nearest in-bounds tile.
                     pos[axis] = min(max(pos[axis], 0), limit)
             self.deselect(orig_pos)
             self.select(pos, colour)
-        self.resize(amount - sign, direction)
-        return True
-
-    def resize_abs (self, w, h):
-        return self.resize(w - self.w, 2) or  self.resize(h - self.h, 3)
+        inner_lost = self.resize(amount - sign, direction)
+        if inner_lost is not False:
+            lost += inner_lost
+        return lost
 
     def definition (self):
         """Return a definition string for the puzzle's current state."""

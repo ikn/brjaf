@@ -376,6 +376,8 @@ defn: if ID is not given, load a level from this definition; if this is not
         self.editing = True
         self.dirty = True
         self.history = []
+        self.initial_defn = defn
+        self.changes = []
         self.state = -1
         self.store_state()
         self.mouse_moved = False
@@ -398,13 +400,6 @@ defn: if ID is not given, load a level from this definition; if this is not
         else:
             self.state += 1
 
-    def load_state (self, state):
-        """Load a previous state from history."""
-        self.state = state
-        # Puzzle.load returns whether it was resized
-        if self.editor.load(self.history[state]):
-            self.dirty = True
-
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
         resize = False
@@ -414,8 +409,11 @@ defn: if ID is not given, load a level from this definition; if this is not
         resize = shrink ^ grow
         if resize:
             # resize puzzle
-            self.editor.resize(1 if grow else -1, direction)
+            lost = self.editor.resize(1 if grow else -1, direction)
             self.dirty = True
+            if lost is False:
+                lost = []
+            self.changes.append(('resize', grow, direction, lost))
             self.store_state()
         else:
             # move selection
@@ -450,6 +448,7 @@ defn: if ID is not given, load a level from this definition; if this is not
             if current[0] != ID:
                 self.editor.set_surface(x, y, ID)
                 self.game.play_snd('place_surface')
+        self.changes.append(('insert', is_block, ID, x, y))
         self.store_state()
 
     def _insert_cb (self, *args):
@@ -467,11 +466,14 @@ defn: if ID is not given, load a level from this definition; if this is not
             snd = True
             # delete block, if any
             if data[1] is not None:
-                self.editor.rm_block(None, x, y)
+                b = self.editor.rm_block(None, x, y)
+                self.changes.append(('delete', True, b.type, x, y, b.dirn,
+                                     b.portal_type))
                 self.store_state()
             # set surface to blank if not already
             elif data[0] != conf.S_BLANK:
-                self.editor.set_surface(x, y, conf.S_BLANK)
+                s = self.editor.set_surface(x, y, conf.S_BLANK)
+                self.changes.append(('delete', False, s, x, y))
                 self.store_state()
             else:
                 snd = False
@@ -481,12 +483,19 @@ defn: if ID is not given, load a level from this definition; if this is not
     def undo (self, *args):
         """Undo changes to the puzzle."""
         if self.state > 0:
-            self.load_state(self.state - 1)
+            self.state -= 1
+            print self.changes[self.state]
+            # Puzzle.load returns whether it was resized
+            if self.editor.load(self.history[self.state]):
+                self.dirty = True
 
     def redo (self, *args):
         """Redo undone changes."""
         if self.state < len(self.history) - 1:
-            self.load_state(self.state + 1)
+            self.state += 1
+            print self.changes[self.state]
+            if self.editor.load(self.history[self.state]):
+                self.dirty = True
 
     def _click (self, evt):
         """Handle mouse clicks."""
@@ -541,8 +550,12 @@ defn: if ID is not given, load a level from this definition; if this is not
     def _do_reset (self):
         """Actually reset the puzzle."""
         # just reset to original state - to whatever was loaded, if anything
-        self.load_state(0)
+        self.state = 0
+        # Puzzle.load returns whether it was resized
+        if self.editor.load(self.initial_defn):
+            self.dirty = True
         self.history = [self.history[0]]
+        self.changes = []
 
     def update (self):
         """Change selection due to mouse motion."""
