@@ -97,7 +97,7 @@ MIN_RES_W = get('min_res_w', (320, 240))
 RESIZABLE = get('resizable', True)
 FULLSCREEN = get('fullscreen', False)
 WINDOW_ICON = get('window_icon', None)
-WINDOW_TITLE = get('window_title', 'Puzzle game thing')
+WINDOW_TITLE = get('window_title', 'Brain requirement just a formality')
 MAX_RATIO = get('max_ratio', (3, 2))
 
 # input
@@ -109,6 +109,10 @@ KEYS_HOME = get('keys_home', (pg.K_HOME,))
 KEYS_END = get('keys_end', (pg.K_END,))
 KEYS_PAGE_UP = get('keys_page_up', (pg.K_PAGEUP,))
 KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
+KEYS_MOVE_LEFT = get('keys_move_left', KEYS_LEFT + (pg.K_a,))
+KEYS_MOVE_UP = get('keys_move_up', KEYS_UP + (pg.K_w, pg.K_COMMA))
+KEYS_MOVE_RIGHT = get('keys_move_right', KEYS_RIGHT + (pg.K_d, pg.K_e))
+KEYS_MOVE_DOWN = get('keys_move_down', KEYS_DOWN + (pg.K_s, pg.K_o))
 
 KEYS_MINIMISE = get('keys_minimise', (pg.K_F10,))
 KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,

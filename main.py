@@ -4,6 +4,7 @@ from random import choice
 
 import pygame
 from pygame.time import wait
+pygame.mixer.pre_init(buffer = 1024)
 pygame.init()
 if os.name == 'nt':
     # for Windows freeze support
@@ -27,8 +28,8 @@ class Fonts (object):
         font = tuple(font)
         if force_reload or font not in self.fonts:
             fn, size, bold = font
-            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + os.sep + fn,
-                                                int(size), bold = bold)
+            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + fn, int(size),
+                                                bold = bold)
         return self.fonts[font]
 
     def text (self, font, text, colour, shadow = None, width = None, just = 0,
@@ -270,52 +271,58 @@ inherit: also apply to all classes that inherit from the given class.
             if isinstance(backend, cls) if inherit else (backend == cls):
                 setattr(backend, attr, val)
 
-    def img (self, ID, data, size = None, text = False):
+    def img (self, data, size = None):
         """Load or render an image, or retrieve it from cache.
 
-img(ID, data[, size], text = False) -> surface
+img(data[, size], text = False) -> surface
 
-ID: a string identifier unique to the expected result, ignoring size.
-data: if text is True, a tuple of args to pass to Fonts.text, else a filename
+data: if rendering text, a tuple of args to pass to Fonts.text, else a filename
       to load.
 size: if given, scale the image to this size.  Can be a rect, in which case its
-      dimension is used.
-text: whether the image should be rendered from a font (data is list of args to
-      pass to Font.text).  If True, returns (img, lines) like Font.text.
+      dimension is used.  Ignored if text == True.
 
 """
+        text = not isinstance(data, basestring)
+        if text:
+            data = tuple(tuple(x) if isinstance(x, list) else x for x in data)
         if size is not None:
             if len(size) == 4:
                 # rect
                 size = size[2:]
             size = tuple(size)
-        key = (ID, size)
+        key = (data, size)
         if key in self.imgs:
             return self.imgs[key]
+        got_size = size is not None and size != 1 and not text
         # else new: load/render
         if text:
-            rtn = self.fonts.text(*data)
-            img = rtn[0]
+            img, lines = self.fonts.text(*data)
+            img = img.convert_alpha()
         else:
             # also cache loaded images to reduce file I/O
             if data in self.files:
                 img = self.files[data]
             else:
                 img = pygame.image.load(data)
+                # convert first if won't resize, as it'll come from here
+                if not got_size:
+                    if img.get_alpha() is None and img.get_colorkey() is None:
+                        img = img.convert()
+                    else:
+                        img = img.convert_alpha()
                 self.files[data] = img
         # scale
-        if size is not None:
+        if got_size:
             img = pygame.transform.smoothscale(img, size)
-        if not text:
-            rtn = img
-        # speed up blitting
-        if img.get_alpha() is None:
-            img = img.convert()
         else:
-            img = img.convert_alpha()
-        # add to cache
-        self.imgs[key] = rtn
-        return rtn
+            # speed up blitting (if not resized, this is already done)
+            if img.get_alpha() is None and img.get_colorkey() is None:
+                img = img.convert()
+            else:
+                img = img.convert_alpha()
+            # add to cache (if not resized, this is in the file cache)
+            self.imgs[key] = (img, lines) if text else img
+        return (img, lines) if text else img
 
     def play_snd (self, ID):
         """Play a sound with the given ID.
@@ -382,7 +389,7 @@ Only one instance of a sound will be played each frame.
         """Run the backend's draw method and update the screen."""
         draw = self.backend.draw(self.screen)
         if draw is True:
-            pygame.display.update()
+            pygame.display.flip()
         elif draw:
             pygame.display.update(draw)
 
@@ -403,8 +410,7 @@ Only one instance of a sound will be played each frame.
             self._draw()
             # wait
             t1 = time()
-            wait(int(1000 * (self.backend.FRAME - t1 + t0)))
-            t0 += self.backend.FRAME
+            t0 = t1 + wait(int(1000 * (self.backend.FRAME - t1 + t0))) / 1000.
 
     def restart (self, *args):
         """Restart the game."""

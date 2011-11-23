@@ -182,10 +182,10 @@ sound: as given.
             move = lambda d: [(self._move, (d,)), self._step_solution]
             freeze = lambda k, e, m: self.set_frozen()
             event_handler.add_key_handlers([
-                (conf.KEYS_LEFT, [(self._move, (0,))]) + args,
-                (conf.KEYS_UP, [(self._move, (1,))]) + args,
-                (conf.KEYS_RIGHT, move(2)) + args,
-                (conf.KEYS_DOWN, move(3)) + args,
+                (conf.KEYS_MOVE_LEFT, [(self._move, (0,))]) + args,
+                (conf.KEYS_MOVE_UP, [(self._move, (1,))]) + args,
+                (conf.KEYS_MOVE_RIGHT, move(2)) + args,
+                (conf.KEYS_MOVE_DOWN, move(3)) + args,
                 (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN),
                 (conf.KEYS_TAB, self._fast_forward, eh.MODE_HELD),
                 (conf.KEYS_NEXT, freeze, eh.MODE_ONDOWN),

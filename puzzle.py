@@ -976,7 +976,7 @@ lost: list of blocks and surfaces lost because of removed tiles, each in the
             # image might be transparent
             if prefix == 's':
                 surface.fill(conf.BG[conf.THEME], rect)
-            img = self.game.img(ID, fn, rect)
+            img = self.game.img(fn, rect)
             # rotate if necessary
             if dirn:
                 img = pygame.transform.rotate(img, -90 * dirn)
@@ -1039,9 +1039,8 @@ lost: list of blocks and surfaces lost because of removed tiles, each in the
                 # render character
                 c = chr(c).upper() if conf.PUZZLE_TEXT_UPPER else chr(c)
                 h = rect[3]
-                text, lines = self.game.img((b.type, h),
-                                     ((conf.PUZZLE_FONT[theme], h, False),
-                                     c, colour), text = True)
+                font = (conf.PUZZLE_FONT[theme], h, False)
+                text, lines = self.game.img((font, c, colour))
                 # crop off empty bits
                 source = autocrop(text)
                 # HACK

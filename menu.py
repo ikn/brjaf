@@ -734,7 +734,6 @@ ValueError).
         else:
             tile_h = pzl.tile_size(1)
             gap = pzl.tiler.gap
-        ID = (str(self), tile_h)
         theme = conf.THEME
         # not sure why we need to take off 1, so I guess this is a HACK
         font = (conf.PUZZLE_FONT[theme], tile_h - 1, False)
@@ -742,7 +741,7 @@ ValueError).
         n = self.size
         width = n * tile_h + (n - 1) * conf.PUZZLE_LINE_WIDTH[theme]
         font_args = (font, self.text, colour, None, width, 0, False, gap[1])
-        surface, lines = self.menu.game.img(ID, font_args, text = True)
+        surface, lines = self.menu.game.img(font_args)
         # check and store number of lines used
         if self.rows is not None and lines > self.rows:
             msg = 'text too long: takes up {0} lines; maximum is {1}'
