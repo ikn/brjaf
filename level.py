@@ -159,10 +159,15 @@ ID: level ID; None if this is a custom level or a definition was given instead.
 puzzle: puzzle.Puzzle instance.
 players: player blocks in the puzzle.
 msg: puzzle message.
+won: whether the level has been won.
 solving: whether the puzzle is currently being solved.
 solving_index: the current step in the solution being used to solve the puzzle.
+solutions: a list of solutions to the level.
 recording: whether input is currently being recorded.
 frozen: whether the solution being played back is paused.
+start_time: time the level started; this is altered when unpaused to give the
+            proper amount of time the level has been running, not its actual
+            start time.
 win_cb: as given.
 sound: as given.
 
@@ -223,7 +228,7 @@ Takes ID and definition arguments as in the constructor.
                     # won't start with the other one if it starts with this one
                     continue
         self.msg = msgs[0] if msgs and conf.SHOW_MSG else None
-        self._solutions = solns
+        self.solutions = solns
 
         self._moved = []
         self._winning = False
@@ -263,6 +268,8 @@ Takes ID and definition arguments as in the constructor.
         # restart recording if want to
         if self.recording and self._blank_on_reset:
             self.start_recording()
+        self._winning = False
+        self.won = False
 
     def _fast_forward (self, key, event, mods):
         """Key callback to fast-forward solving this frame."""
@@ -275,7 +282,7 @@ Takes ID and definition arguments as in the constructor.
 
     def _parse_soln (self, ID, speed = conf.SOLVE_SPEED):
         """Parse a solution string and return the result."""
-        soln = self._solutions[ID]
+        soln = self.solutions[ID]
         parsed = []
         for i, s in enumerate(soln.split(',')):
             s = s.strip()
@@ -369,6 +376,7 @@ a bad idea to call this function while solving.
             move = self.solve()
         elif i == len(self._solution):
             # finished: just wait until the level ends
+            self.stop_solving()
             move = []
         else:
             # continuing
@@ -476,7 +484,11 @@ function returns None.
         return result[:-1]
 
     def update (self):
-        """Update puzzle and check win conditions."""
+        """Update puzzle and check win conditions.
+
+Returns whether anything changed.
+
+"""
         if not self.frozen or self._next_step:
             # fast-forward by increasing FPS
             if self.solving and self._ff == 2:
@@ -493,7 +505,7 @@ function returns None.
             if self.recording:
                 self._recording_frame += 1
             # step puzzle forwards
-            self.puzzle.step()
+            rtn = self.puzzle.step()
             self._next_step = False
             # reset list of moves made this frame
             self._moved = []
@@ -534,10 +546,9 @@ function returns None.
                 if self.sound:
                     self.game.play_snd('win')
                 self.won = True
-            else:
-                self._winning = True
         else:
             self._winning = False
+        return rtn
 
 
 class LevelBackend (Level):
@@ -556,6 +567,7 @@ win_cb).
 
     METHODS
 
+launch_solver
 pause
 mk_msg
 draw
@@ -594,7 +606,7 @@ pause_menu: as given.
 
     def launch_solver (self):
         """If more than one solution exists, ask which to use, then run it."""
-        n = len(self._solutions)
+        n = len(self.solutions)
         if n > 1:
             # show menu giving choice of solutions
             self.game.start_backend(SolnChooser, None, self.solve, n)
@@ -633,14 +645,14 @@ pause_menu: as given.
         # first, so the initial level state can be seen)
         if self._first:
             self._first = False
-            return
+            return False
         # resume timer if just unpaused
         try:
             self.start_time = time() - self.pause_time
             del self.pause_time
         except AttributeError:
             pass
-        Level.update(self, *args, **kw)
+        return Level.update(self, *args, **kw)
 
     def _mk_msg (self, screen):
         """Draw message to screen."""

@@ -37,7 +37,8 @@ byte_chars = [chr(i) for i in xrange(256)]
 def compress_lvl (ID):
     """Compress a saved custom level."""
     # load level
-    with open(conf.LEVEL_DIR_CUSTOM + ID) as f:
+    d = conf.LEVEL_DIR_DRAFT if ID[0] == 2 else conf.LEVEL_DIR_CUSTOM
+    with open(d + ID[1]) as f:
         defn = f.read()
     # extract messages/solutions
     markers = ('@', ':')
@@ -834,10 +835,9 @@ lost: list of blocks and surfaces lost because of removed tiles, each in the
         s_count = dict((v, k) for k, v in s_count.iteritems())
         common_s = s_count[max(s_count)]
         default = conf.DEFAULT_SURFACE
-        common_s = '' if common_s == default else ' ' + str(common_s)
         # compile definition
         return '{0} {1}{2}{3}{4}\n\n{5}'.format(
-            self.w, self.h, common_s,
+            self.w, self.h, '' if common_s == default else ' ' + str(common_s),
             '\n' if bs else '',
             '\n'.join(bs),
             # don't need individual tiles for most common surface
@@ -950,6 +950,7 @@ lost: list of blocks and surfaces lost because of removed tiles, each in the
             b.reset(b in retain_forces)
         if conf.DEBUG:
             print 'end step'
+        return bool(change)
 
     def add_draw_cb (self, f, call_once = False, *tiles):
         for t in tiles:

@@ -1467,7 +1467,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 10)
+                Button('Options', self.set_page, 12)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3),
@@ -1477,57 +1477,70 @@ class MainMenu (Menu):
                 (
                     Button('Play', w, level.LevelBackend),
                     Button('Edit', w, editor.Editor),
-                    Button('Share', self._share, 7),
+                    Button('Share', self._share, 7)
                 ), (
                     Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
                     Button('Rename', self._rename),
                     Button('Duplicate', self._rename, False)
                 )
             ), (
-                Button('Edit', w, editor.Editor),
-                Button('Delete', w, editor.DeleteMenu, 1, None, self.back),
-                Button('Rename', self._rename),
-                Button('Duplicate', self._rename, False)
+                (
+                    Button('Edit', w, editor.Editor),
+                    Button('Share', self._share, 7),
+                    Button('Delete', w, editor.DeleteMenu, 1, None, self.back)
+                ), (
+                    Button('Rename', self._rename),
+                    Button('Duplicate', self._rename, False)
+                )
             ), (
                 Text('Code copied'),
                 Button('Back', self.back)
             ), (
                 Text('Copy the'),
                 Text('code first'),
-                Button('Done', self._load_shared, 9)
+                Button('Play', self._load_shared, 9, 'play'),
+                Button('Edit', self._load_shared, 9, 'edit'),
+                Button('Save', self._load_shared, 9, 'save')
             ), (
                 Text('Invalid code'),
                 Button('Back', self.back)
             ), (
-                Button('Sound', self.set_page, 11),
-                Button('Gameplay', self.set_page, 12),
-                Button('Display', self.set_page, 13),
-                #Button('Delete data', self.set_page, 14)
+                Text('No solution:'),
+                Text('saving as draft'),
+                Button('OK', self._continue_save_shared)
+            ), (
+                Text('Saved'),
+                Button('Back', self.back)
+            ), (
+                Button('Sound', self.set_page, 13),
+                Button('Gameplay', self.set_page, 14),
+                Button('Display', self.set_page, 15),
+                #Button('Delete data', self.set_page, 16)
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((11, 0), 'music_volume', self._update_music_vol),
-                    ((11, 1), 'sound_volume', self._update_snd_vol),
-                    ((11, 2), ('sound_theme', False), self._refresh_sounds)
+                    ((13, 0), 'music_volume', self._update_music_vol),
+                    ((13, 1), 'sound_volume', self._update_snd_vol),
+                    ((13, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
                 Button('Save', self._save, (
-                    ((12, 0), 'fps'),
-                    ((12, 1), 'show_msg')
+                    ((14, 0), 'fps'),
+                    ((14, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 s(DiscreteSelect, g('fullscreen'), '%x',
                   ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
-                    ((13, 0), ('theme', False), self._refresh_graphics),
-                    ((13, 1), 'fullscreen', self.game.refresh_display)
+                    ((15, 0), ('theme', False), self._refresh_graphics),
+                    ((15, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1551,7 +1564,8 @@ class MainMenu (Menu):
             for lvl in lvls:
                 ID = (custom, lvl)
                 if custom:
-                    b = Button(lvl, self._custom_lvl_cb, ID)
+                    p = 6 if ID[0] == 2 else 5
+                    b = Button(lvl, self._custom_lvl_cb, ID, p)
                 else:
                     # highlight completed levels
                     b = Button(lvl, self.game.start_backend,
@@ -1570,11 +1584,29 @@ class MainMenu (Menu):
         return Menu.init(self, pages)
 
     def _share (self, page):
-        data = compress_lvl(self._custom_lvl_ID[1])
+        """Copy compressed level data to the clipboard."""
+        data = compress_lvl(self._custom_lvl_ID)
         clipboard.put(data)
         self.set_page(page)
 
-    def _load_shared (self, page):
+    def _save_shared_success (self, name, page):
+        """Callback for successfully saving a level loaded from a code."""
+        self.set_page(page)
+        # refresh entries
+        self.re_init = True
+
+    def _continue_save_shared (self):
+        """Continuation of saving a level loaded from a code."""
+        draft, defn, page = self._save_shared_data
+        if draft:
+            self.back()
+        del self._save_shared_data
+        d = conf.LEVEL_DIR_DRAFT if draft else conf.LEVEL_DIR_CUSTOM
+        self.game.start_backend(editor.SaveMenu, None, d, defn, '',
+                                self._save_shared_success, page)
+
+    def _load_shared (self, page, action):
+        """Load a level from compressed data in the clipboard."""
         code = clipboard.get()
         # try to be clever: any whitespace is not part of the code; if there is
         # any, the code is most likely the longest string with no whitespace
@@ -1592,7 +1624,46 @@ class MainMenu (Menu):
             pass
         else:
             self.back()
-            self.game.start_backend(editor.Editor, None, defn)
+            if action == 'play':
+                self.game.start_backend(level.LevelBackend, None, defn)
+            elif action == 'edit':
+                self.game.start_backend(editor.Editor, None, defn)
+            else: # save
+                draft = True
+                if level.defn_wins(defn):
+                    self._save_shared_data = (True, defn, page + 2)
+                    self.set_page(page + 1)
+                    return
+                # run the autosolver on the level for each solution
+                # if any fail, remove them; if none succeed, save as draft
+                lvl = level.Level(definition = defn, sound = False)
+                rm = []
+                for i in xrange(len(lvl.solutions)):
+                    lvl.solve(i)
+                    while lvl.solving:
+                        lvl.update()
+                    while lvl.update():
+                        pass
+                    if lvl.won:
+                        draft = False
+                    else:
+                        # bad solution
+                        rm.append(i)
+                    lvl.reset()
+                if rm:
+                    for i in rm:
+                        lvl.solutions.pop(i)
+                    defn = lvl.puzzle.definition()
+                    if lvl.msg is not None:
+                        defn += '\n@ ' + lvl.msg
+                    if lvl.solutions:
+                        defn += '\n' + '\n'.join(': ' + soln for soln in
+                                                 lvl.solutions)
+                self._save_shared_data = (draft, defn, page + 2)
+                if draft:
+                    self.set_page(page + 1)
+                else:
+                    self._continue_save_shared()
 
     def _done_rename (self, name, old_name, d, then_del):
         """Cleanup after renaming/duplicating a level."""
@@ -1638,10 +1709,10 @@ class MainMenu (Menu):
         self.game.files = {}
         self.game.imgs = {}
 
-    def _custom_lvl_cb (self, ID):
+    def _custom_lvl_cb (self, ID, page):
         """Set up page shown on selecting a custom level."""
         self._custom_lvl_ID = ID
-        self.set_page(6 if ID[0] == 2 else 5)
+        self.set_page(page)
 
     def _with_custom_lvl (self, obj, ID_pos = 0, *args):
         """Start backend with self._custom_lvl_ID."""

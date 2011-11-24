@@ -10,19 +10,6 @@ import conf
 
 # TODO:
 # - save level message
-# - share levels via a code
-#   - compress
-#       - first reserve a separator to split the 5 sections
-#       - for first line, blocks:
-#           - add in default surface to first line if none defined
-#           - convert to a string, each number to one char with no separators, via chr(num - conf.MIN_ID) (compare compress/encode w/ chr(conf.MIN_ID..conf.MAX_ID))
-#       - for surfaces: do same as first line/blocks
-#       - for solutions, join via ':'s and use the better of:
-#           - jcompress
-#           - split into 2 and jcompress individually (add this functionality by just putting another sep between)
-#           - zlib > jencode with chars from chr(0..255)
-#       - for messages: join via '#'s and probably just zlib > jencode with chars from chr(0..255)
-#   - autocopy to clipboard?
 # - mouse-based way of resizing grid in editor (middle click/drag?  scroll wheel?)
 # - SolveMenu needs reset option
 # - undo/redo have blocks rotating
@@ -122,7 +109,7 @@ success_cb_args: arguments to pass to success_cb after the filename.
             ), (
                 menu.Text('Level name'),
                 menu.Text('is blank'),
-                menu.Button('OK', self.back)
+                menu.Button('Back', self.back)
             ), (
                 menu.Text('Overwrite?'),
                 menu.Button('Yes', self._save, True),
@@ -193,6 +180,7 @@ Takes the Editor instance.
         self._editor = editor
         self._default_selections[1] = (0, 2)
         already_winning = 'The puzzle starts with the player already winning'
+        no_player = 'There must be at least one player block'
         menu.Menu.init(self, (
             (
                 menu.Button('Continue', self.game.quit_backend),
@@ -205,10 +193,11 @@ Takes the Editor instance.
                 menu.Button('Yes', self._reset),
                 menu.Button('No', self.back)
             ), (
-                menu.LongText(self, 'There must be at least one player block',
-                              11),
+                menu.LongText(self, no_player, 11),
+                menu.Button('Back', self.back)
             ), (
                 menu.LongText(self, already_winning, 13),
+                menu.Button('Back', self.back)
             ), (
                 menu.Text('Level saved'),
                 menu.Button('OK', self.back)
