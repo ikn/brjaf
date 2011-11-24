@@ -271,6 +271,14 @@ inherit: also apply to all classes that inherit from the given class.
             if isinstance(backend, cls) if inherit else (backend == cls):
                 setattr(backend, attr, val)
 
+    def convert_img (self, img):
+        """Convert an image for blitting."""
+        if img.get_alpha() is None and img.get_colorkey() is None:
+            img = img.convert()
+        else:
+            img = img.convert_alpha()
+        return img
+
     def img (self, data, size = None):
         """Load or render an image, or retrieve it from cache.
 
@@ -278,18 +286,22 @@ img(data[, size], text = False) -> surface
 
 data: if rendering text, a tuple of args to pass to Fonts.text, else a filename
       to load.
-size: if given, scale the image to this size.  Can be a rect, in which case its
-      dimension is used.  Ignored if text == True.
+size: scale the image.  Can be an (x, y) size, a rect (in which case its
+      dimension is used), or a number to scale by.  Ignored if rendering text.
 
 """
         text = not isinstance(data, basestring)
         if text:
             data = tuple(tuple(x) if isinstance(x, list) else x for x in data)
         if size is not None:
-            if len(size) == 4:
-                # rect
-                size = size[2:]
-            size = tuple(size)
+            try:
+                if len(size) == 4:
+                    # rect
+                    size = size[2:]
+                size = tuple(size)
+            except TypeError:
+                # number
+                pass
         key = (data, size)
         if key in self.imgs:
             return self.imgs[key]
@@ -306,23 +318,22 @@ size: if given, scale the image to this size.  Can be a rect, in which case its
                 img = pygame.image.load(data)
                 # convert first if won't resize, as it'll come from here
                 if not got_size:
-                    if img.get_alpha() is None and img.get_colorkey() is None:
-                        img = img.convert()
-                    else:
-                        img = img.convert_alpha()
+                    img = self.convert_img(img)
                 self.files[data] = img
         # scale
         if got_size:
+            if not isinstance(size, tuple):
+                current_size = img.get_size()
+                size = (size * current_size[0], size * current_size[1])
             img = pygame.transform.smoothscale(img, size)
         else:
             # speed up blitting (if not resized, this is already done)
-            if img.get_alpha() is None and img.get_colorkey() is None:
-                img = img.convert()
-            else:
-                img = img.convert_alpha()
+            img = self.convert_img(img)
+        result = (img, lines) if text else img
+        if not got_size:
             # add to cache (if not resized, this is in the file cache)
-            self.imgs[key] = (img, lines) if text else img
-        return (img, lines) if text else img
+            self.imgs[key] = result
+        return result
 
     def play_snd (self, ID):
         """Play a sound with the given ID.
