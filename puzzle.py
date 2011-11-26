@@ -257,8 +257,8 @@ class BoringBlock (object):
 
 
 class Block (BoringBlock):
-    def __init__ (self, type_ID, puzzle, pos, dirn = None):
-        BoringBlock.__init__ (self, type_ID, puzzle, pos, dirn)
+    def __init__ (self, type_ID, puzzle, *args, **kw):
+        BoringBlock.__init__ (self, type_ID, puzzle, *args, **kw)
         self.puzzle = puzzle
         self.reset()
 
@@ -566,7 +566,9 @@ dirty).  Preserves any selection, if possible.
             line = self._next_ints(lines)
         self._init_surfaces = ss
         # create grid handler if need to
-        if not hasattr(self, 'tiler'):
+        if hasattr(self, 'tiler'):
+            self.tiler.reset()
+        else:
             for key, attr in (('line', 'PUZZLE_LINE_COLOUR'),
                               ('gap', 'PUZZLE_LINE_WIDTH'),
                               ('border', 'PUZZLE_LINE_WIDTH')):
@@ -596,13 +598,15 @@ dirty).  Preserves any selection, if possible.
     def add_block (self, block, x, y):
         """Add a block, optionally creating it first.
 
-add_block(block, x, y)
+add_block(block, x, y) -> new_block
 
 block: either a BoringBlock instance or a (block_class, *args) tuple, where:
     block_class: the class to instantiate (BoringBlock or Block).
     args: arguments to pass to the constructor, excluding puzzle and pos.
 x, y: tile to place the block on.  If given a Block instance, its pos attribute
       gets set to this value.
+
+new_block: the added block.
 
 """
         pos = [x, y]
@@ -619,6 +623,7 @@ x, y: tile to place the block on.  If given a Block instance, its pos attribute
         self.grid[x][y][1] = block
         self.blocks.append(block)
         self.tiler.change((x, y))
+        return block
 
     def rm_block (self, block = None, x = None, y = None):
         # remove a block

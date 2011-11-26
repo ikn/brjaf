@@ -223,7 +223,7 @@ Takes the Editor instance.
         """Callback for 'save' option."""
         e = self._editor
         # try to save the current puzzle
-        defn = e.history[e.state]
+        defn = e.definition()
         if not draft:
             # check if there's a player block
             if not any(b.type == conf.B_PLAYER for b in e.editor.blocks):
@@ -260,7 +260,7 @@ Takes arguments to pass to Editor.load.
     METHODS
 
 load
-store_state
+change
 move
 switch_puzzle
 insert
@@ -279,8 +279,8 @@ selector: puzzle used to select blocks/surfaces to add.
 editor: the puzzle being edited.
 puzzle: the current visible puzzle (editor or selector).
 editing: whether the current puzzle is editor.
-history: a list of past puzzle definitions.
-state: the current position in the history.
+changes: a list of changes that have been made to the puzzle.
+state: the current position in the changes list.
 
 """
 
@@ -364,30 +364,23 @@ defn: if ID is not given, load a level from this definition; if this is not
         self.puzzle = self.editor
         self.editing = True
         self.dirty = True
-        self.history = []
         self.initial_defn = defn
         self.changes = []
-        self.state = -1
-        self.store_state()
+        self.state = 0
         self.mouse_moved = False
 
-    def store_state (self):
-        """Store the current state in history."""
-        defn = self.editor.definition()
-        # if nothing changed, return
-        try:
-            if self.history[self.state] == defn:
-                return
-        except IndexError:
-            pass
+    def change (self, *data):
+        """Make a change to the puzzle; takes data to store in self.changes."""
+        cs = self.changes
         # purge 'future' states
-        self.history = self.history[:self.state + 1]
-        self.history.append(defn)
+        cs = cs[:self.state]
+        cs.append(data)
         # purge oldest state if need to (don't need to increment state, then)
-        if len(self.history) > conf.UNDO_LEVELS > 0:
-            self.history.pop(0)
+        if len(cs) > conf.UNDO_LEVELS > 0:
+            cs.pop(0)
         else:
             self.state += 1
+        self.changes = cs
 
     def move (self, key, event, mods, direction):
         """Callback for arrow keys."""
@@ -398,12 +391,15 @@ defn: if ID is not given, load a level from this definition; if this is not
         resize = shrink ^ grow
         if resize:
             # resize puzzle
+            w, h = self.editor.size
             lost = self.editor.resize(1 if grow else -1, direction)
             self.dirty = True
             if lost is False:
                 lost = []
-            self.changes.append(('resize', grow, direction, lost))
-            self.store_state()
+            # might not have changed
+            new_w, new_h = self.editor.size
+            if w != new_w or h != new_h:
+                self.change('resize', grow, direction, lost)
         else:
             # move selection
             self.puzzle.move_selected(direction)
@@ -431,14 +427,16 @@ defn: if ID is not given, load a level from this definition; if this is not
         current = self.editor.grid[x][y]
         if is_block:
             if current[1] is None or current[1].type != ID:
-                self.editor.add_block((BoringBlock, ID), x, y)
+                old_b = current[1]
+                b = self.editor.add_block((BoringBlock, ID), x, y)
                 self.game.play_snd('place_block')
+                self.change('set_block', old_b, b, x, y)
         else:
             if current[0] != ID:
+                old_ID = current[0]
                 self.editor.set_surface(x, y, ID)
                 self.game.play_snd('place_surface')
-        self.changes.append(('insert', is_block, ID, x, y))
-        self.store_state()
+                self.change('set_surface', old_ID, ID, x, y)
 
     def _insert_cb (self, *args):
         """Callback for conf.KEYS_INSERT."""
@@ -456,34 +454,72 @@ defn: if ID is not given, load a level from this definition; if this is not
             # delete block, if any
             if data[1] is not None:
                 b = self.editor.rm_block(None, x, y)
-                self.changes.append(('delete', True, b.type, x, y, b.dirn,
-                                     b.portal_type))
-                self.store_state()
+                self.change('set_block', b, None, x, y)
             # set surface to blank if not already
             elif data[0] != conf.S_BLANK:
                 s = self.editor.set_surface(x, y, conf.S_BLANK)
-                self.changes.append(('delete', False, s, x, y))
-                self.store_state()
+                self.change('set_surface', s, conf.S_BLANK, x, y)
             else:
                 snd = False
             if snd:
                 self.game.play_snd('delete')
 
+    def set_block (self, b, x, y):
+        """Add or remove a block to or from the puzzle.
+
+set_block(b, x, y)
+
+b: BoringBlock instance, or None to remove.
+x, y: tile position.
+
+"""
+        if b is None:
+            self.editor.rm_block(None, x, y)
+        else:
+            self.editor.add_block(b, x, y)
+
     def undo (self, *args):
         """Undo changes to the puzzle."""
         if self.state > 0:
             self.state -= 1
-            print self.changes[self.state]
-            # Puzzle.load returns whether it was resized
-            if self.editor.load(self.history[self.state]):
+            # get change data
+            data = self.changes[self.state]
+            c, data = data[0], data[1:]
+            # make the change to the puzzle
+            if c == 'set_block':
+                old_b, new_b, x, y = data
+                self.set_block(old_b, x, y)
+            elif c == 'set_surface':
+                old, new, x, y = data
+                self.editor.set_surface(x, y, old)
+            elif c == 'resize':
+                grow, direction, lost = data
+                self.editor.resize(-1 if grow else 1, (direction - 2) % 4)
+                # restore stuff that was lost in the resize
+                for obj, x, y in lost:
+                    if isinstance(obj, int):
+                        self.editor.set_surface(x, y, obj)
+                    else:
+                        self.set_block(obj, x, y)
                 self.dirty = True
 
     def redo (self, *args):
         """Redo undone changes."""
-        if self.state < len(self.history) - 1:
+        if self.state < len(self.changes):
+            # get change data
+            data = self.changes[self.state]
+            c, data = data[0], data[1:]
             self.state += 1
-            print self.changes[self.state]
-            if self.editor.load(self.history[self.state]):
+            # make the change to the puzzle
+            if c == 'set_block':
+                old_b, new_b, x, y = data
+                self.set_block(new_b, x, y)
+            elif c == 'set_surface':
+                old, new, x, y = data
+                self.editor.set_surface(x, y, new)
+            elif c == 'resize':
+                grow, direction, lost = data
+                self.editor.resize(1 if grow else -1, direction)
                 self.dirty = True
 
     def _click (self, evt):
@@ -543,7 +579,6 @@ defn: if ID is not given, load a level from this definition; if this is not
         # Puzzle.load returns whether it was resized
         if self.editor.load(self.initial_defn):
             self.dirty = True
-        self.history = [self.history[0]]
         self.changes = []
 
     def update (self):
