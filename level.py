@@ -15,7 +15,6 @@ import conf
 # - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
 # - high scores for fewest moves for each level (frames with input where at least one player block moves)
 # - hard to move diagonally
-# - pause menu needs reset option
 
 def get_levels (ID = False):
     """Get a list of existing levels.
@@ -84,22 +83,25 @@ Takes the LevelBackend instance.
 
         # create menu
         if level.solving:
-            b = menu.Button('Stop solving', self._quit_then,
-                            level.stop_solving)
+            bs = (menu.Button('Stop solving', self._quit_then,
+                              level.stop_solving),)
         else:
-            b = menu.Button('Help', self.set_page, 1)
+            bs = (menu.Button('Help', self.set_page, 1),
+                  menu.Button('Reset', self._reset, level))
         menu.Menu.init(self, (
-            (
-                menu.Button('Continue', self.game.quit_backend),
-                b,
-                menu.Button('Quit', self.game.quit_backend, 2)
-            ),(
+            (menu.Button('Continue', self.game.quit_backend),) + bs + \
+            (menu.Button('Quit', self.game.quit_backend, 2),), (
                 menu.LongText(self, help_msg, 14),
                 menu.Button('Keep trying', self.game.quit_backend),
                 menu.Button('Show me how', self._quit_then,
                             level.launch_solver)
             )
         ))
+
+    def _reset (self, level):
+        """Reset callback."""
+        level.reset()
+        self.game.quit_backend()
 
 
 class SolnChooser (menu.Menu):

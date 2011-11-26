@@ -11,8 +11,6 @@ import conf
 # TODO:
 # - save level message
 # - mouse-based way of resizing grid in editor (middle click/drag?  scroll wheel?)
-# - SolveMenu needs reset option
-# - undo/redo have blocks rotating
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -24,8 +22,14 @@ Takes the Level backend instance.
     def init (self, level):
         menu.Menu.init(self, ((
             menu.Button('Continue', self.game.quit_backend),
+            menu.Button('Reset', self._reset, level),
             menu.Button('Quit', self.game.quit_backend, 2)
         ),))
+
+    def _reset (self, level):
+        """Reset callback."""
+        level.reset()
+        self.game.quit_backend()
 
 class DeleteMenu (menu.Menu):
     """Menu for deleting custom level saves.
@@ -179,6 +183,10 @@ Takes the Editor instance.
     def init (self, editor):
         self._editor = editor
         self._default_selections[1] = (0, 2)
+        if editor.state > 0:
+            reset_data = (self.set_page, 1)
+        else:
+            reset_data = (self.game.quit_backend,)
         already_winning = 'The puzzle starts with the player already winning'
         no_player = 'There must be at least one player block'
         menu.Menu.init(self, (
@@ -186,7 +194,7 @@ Takes the Editor instance.
                 menu.Button('Continue', self.game.quit_backend),
                 menu.Button('Save', self._save),
                 menu.Button('Save draft', self._save, True),
-                menu.Button('Reset', self.set_page, 1),
+                menu.Button('Reset', *reset_data),
                 menu.Button('Quit', self.game.quit_backend, 2)
             ), (
                 menu.Text('Reset?'),
@@ -223,7 +231,7 @@ Takes the Editor instance.
         """Callback for 'save' option."""
         e = self._editor
         # try to save the current puzzle
-        defn = e.definition()
+        defn = e.editor.definition()
         if not draft:
             # check if there's a player block
             if not any(b.type == conf.B_PLAYER for b in e.editor.blocks):
@@ -364,7 +372,6 @@ defn: if ID is not given, load a level from this definition; if this is not
         self.puzzle = self.editor
         self.editing = True
         self.dirty = True
-        self.initial_defn = defn
         self.changes = []
         self.state = 0
         self.mouse_moved = False
@@ -566,7 +573,9 @@ x, y: tile position.
 
     def reset (self, *args):
         """Confirm resetting the puzzle."""
-        self.game.start_backend(Menu, 1, self)
+        if self.state > 0:
+            self.game.start_backend(Menu, 1, self)
+        # else nothing to reset
 
     def menu (self, *args):
         """Show the editor menu."""
@@ -575,11 +584,8 @@ x, y: tile position.
     def _do_reset (self):
         """Actually reset the puzzle."""
         # just reset to original state - to whatever was loaded, if anything
-        self.state = 0
-        # Puzzle.load returns whether it was resized
-        if self.editor.load(self.initial_defn):
-            self.dirty = True
-        self.changes = []
+        while self.state > 0:
+            self.undo()
 
     def update (self):
         """Change selection due to mouse motion."""
