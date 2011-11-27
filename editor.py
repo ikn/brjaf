@@ -10,7 +10,8 @@ import conf
 
 # TODO:
 # - save level message
-# - mouse-based way of resizing grid in editor (middle click/drag?  scroll wheel?)
+# - mouse resize: change cursor while resizing to indicate allowed resize
+#   directions (pygame.mouse.set_cursor)
 
 class SolveMenu (menu.Menu):
     """The pause menu for solving a created level.
@@ -269,14 +270,16 @@ Takes arguments to pass to Editor.load.
 
 load
 change
-move
-switch_puzzle
+resize
 insert
 delete
+set_block
 undo
 redo
-menu
+click_tile
+switch_puzzle
 reset
+menu
 
     ATTRIBUTES
 
@@ -297,6 +300,7 @@ state: the current position in the changes list.
         # add event handlers
         event_handler.add_event_handlers({
             pygame.MOUSEBUTTONDOWN: self._click,
+            pygame.MOUSEBUTTONUP: self._unclick,
             pygame.MOUSEMOTION: lambda e: setattr(self, 'mouse_moved', True)
         })
         pzl_args = (
@@ -312,10 +316,10 @@ state: the current position in the changes list.
         od = eh.MODE_ONDOWN
         held = eh.MODE_HELD
         event_handler.add_key_handlers([
-            (conf.KEYS_LEFT, [(self.move, (0,))]) + pzl_args,
-            (conf.KEYS_UP, [(self.move, (1,))]) + pzl_args,
-            (conf.KEYS_RIGHT, [(self.move, (2,))]) + pzl_args,
-            (conf.KEYS_DOWN, [(self.move, (3,))]) + pzl_args,
+            (conf.KEYS_LEFT, [(self._move, (0,))]) + pzl_args,
+            (conf.KEYS_UP, [(self._move, (1,))]) + pzl_args,
+            (conf.KEYS_RIGHT, [(self._move, (2,))]) + pzl_args,
+            (conf.KEYS_DOWN, [(self._move, (3,))]) + pzl_args,
             (conf.KEYS_BACK, self.menu, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
             (conf.KEYS_INSERT, self._insert_cb, od),
@@ -375,6 +379,7 @@ defn: if ID is not given, load a level from this definition; if this is not
         self.changes = []
         self.state = 0
         self.mouse_moved = False
+        self.resizing = False
 
     def change (self, *data):
         """Make a change to the puzzle; takes data to store in self.changes."""
@@ -389,7 +394,15 @@ defn: if ID is not given, load a level from this definition; if this is not
             self.state += 1
         self.changes = cs
 
-    def move (self, key, event, mods, direction):
+    def resize (self, amount, dirn):
+        """Like Editor.editor.resize, but do some wrapper stuff."""
+        lost = self.editor.resize(amount, dirn)
+        # might not have changed
+        if lost is not False:
+            self.dirty = True
+            self.change('resize', amount, dirn, lost)
+
+    def _move (self, key, event, mods, direction):
         """Callback for arrow keys."""
         resize = False
         mods = (mods & pygame.KMOD_SHIFT, mods & pygame.KMOD_ALT)
@@ -397,16 +410,9 @@ defn: if ID is not given, load a level from this definition; if this is not
         grow = bool(mods[direction > 1])
         resize = shrink ^ grow
         if resize:
-            # resize puzzle
-            w, h = self.editor.size
-            lost = self.editor.resize(1 if grow else -1, direction)
-            self.dirty = True
-            if lost is False:
-                lost = []
-            # might not have changed
-            new_w, new_h = self.editor.size
-            if w != new_w or h != new_h:
-                self.change('resize', grow, direction, lost)
+            # things could get messy if we're already mouse-resizing
+            if not self.resizing:
+                self.resize(1 if grow else -1, direction)
         else:
             # move selection
             self.puzzle.move_selected(direction)
@@ -500,8 +506,8 @@ x, y: tile position.
                 old, new, x, y = data
                 self.editor.set_surface(x, y, old)
             elif c == 'resize':
-                grow, direction, lost = data
-                self.editor.resize(-1 if grow else 1, (direction - 2) % 4)
+                amount, direction, lost = data
+                self.editor.resize(-amount, (direction - 2) % 4)
                 # restore stuff that was lost in the resize
                 for obj, x, y in lost:
                     if isinstance(obj, int):
@@ -525,36 +531,68 @@ x, y: tile position.
                 old, new, x, y = data
                 self.editor.set_surface(x, y, new)
             elif c == 'resize':
-                grow, direction, lost = data
-                self.editor.resize(1 if grow else -1, direction)
+                amount, direction, lost = data
+                self.editor.resize(amount, direction)
                 self.dirty = True
+
+    def click_tile (self, insert, pos):
+        """Insert or delete a block or surface at the given position.
+
+click_tile(insert, pos)
+
+insert: whether to insert the current block or surface (else delete).
+pos: on-screen position to try to perform the action at.
+
+"""
+        # get clicked tile
+        p = self.editor.point_tile(pos)
+        if p:
+            # clicked a tile in self.editor: switch to and select
+            if not self.editing:
+                self.switch_puzzle()
+            self.editor.deselect()
+            self.editor.select(p)
+            (self.insert if insert else self.delete)()
+        else:
+            p = self.selector.point_tile(pos)
+            if p:
+                # clicked a tile in self.selector: switch to selector, then
+                # select the tile
+                if self.editing:
+                    self.switch_puzzle()
+                self.selector.deselect()
+                self.selector.select(p)
 
     def _click (self, evt):
         """Handle mouse clicks."""
-        if evt.button in (1, 3):
-            # get clicked tile
-            pos = self.editor.point_tile(evt.pos)
-            if pos is not None:
-                # clicked a tile in self.editor: switch to and select
-                if not self.editing:
-                    self.switch_puzzle()
-                self.editor.deselect()
-                self.editor.select(pos)
-                if evt.button == 1:
-                    # left-click to insert
-                    self.insert()
+        button = evt.button
+        pos = evt.pos
+        if button in (1, 3):
+            # left-click to insert, right-click to delete
+            self.click_tile(button == 1, pos)
+        elif button == 2:
+            rel_pos = self.editor.point_pos(pos)
+            # make sure we're clicking in the grid
+            if rel_pos is None:
+                return
+            self._resize_sides = []
+            # exclude a zone in the middle
+            b = conf.RESIZE_DEAD_ZONE_BOUNDARY
+            for i in (0, 1):
+                if b < rel_pos[i] < 1 - b:
+                    self._resize_sides.append(None)
                 else:
-                    # right-click to delete
-                    self.delete()
-            else:
-                pos = self.selector.point_tile(evt.pos)
-                if pos is not None:
-                    # clicked a tile in self.selector: switch to selector, then
-                    # select the tile
-                    if self.editing:
-                        self.switch_puzzle()
-                    self.selector.deselect()
-                    self.selector.select(pos)
+                    # the axes we can resize on depends on where we start from
+                    self._resize_sides.append(1 if rel_pos[i] > .5 else -1)
+            if self._resize_sides == [None, None]:
+                return
+            self.resizing = list(pos)
+
+    def _unclick (self, evt):
+        """Handle mouse click release."""
+        if evt.button == 2 and self.resizing:
+            self.resizing = False
+            del self._resize_sides
 
     def switch_puzzle (self, *args):
         """Switch selected puzzle between editor and block selector."""
@@ -588,23 +626,43 @@ x, y: tile position.
             self.undo()
 
     def update (self):
-        """Change selection due to mouse motion."""
+        """Handle mouse movement."""
         if self.mouse_moved:
             pos = pygame.mouse.get_pos()
-            # get tile under mouse
-            tile = self.editor.point_tile(pos)
-            if tile is not None:
-                # editor: select tile under mouse
-                if not self.editing:
-                    self.switch_puzzle()
-                self.editor.deselect()
-                self.editor.select(tile)
+            if self.resizing:
+                # change puzzle size if middle-click-dragging
+                old_pos = self.resizing
+                for i in (0, 1):
+                    side = self._resize_sides[i]
+                    if side is None:
+                        # can't resize on this axis
+                        continue
+                    diff = pos[i] - old_pos[i]
+                    threshold = min(conf.RESIZE_LENGTH * self.game.res[0],
+                                    self.editor.tile_size(i))
+                    while abs(diff) >= threshold:
+                        # resize
+                        sign = 1 if diff > 0 else -1
+                        self.resize(sign * side, i + 2 * (sign == 1))
+                        # prepare for resizing again
+                        old_pos[i] += sign * threshold
+                        diff -= sign * threshold
             else:
-                # selector: just make sure it's the current puzzle
-                tile = self.selector.point_tile(pos)
-                if tile is not None:
-                    if self.editing:
+                # change selection based on mouse position
+                # get tile under mouse
+                tile = self.editor.point_tile(pos)
+                if tile:
+                    # editor: select tile under mouse
+                    if not self.editing:
                         self.switch_puzzle()
+                    self.editor.deselect()
+                    self.editor.select(tile)
+                else:
+                    # selector: just make sure it's the current puzzle
+                    tile = self.selector.point_tile(pos)
+                    if tile:
+                        if self.editing:
+                            self.switch_puzzle()
             self.mouse_moved = False
 
     def draw (self, screen):

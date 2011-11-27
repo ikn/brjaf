@@ -218,6 +218,8 @@ SOLVE_HISTORY_SIZE = get('solve_history_size', 20)
 EDITOR_WIDTH = get('editor_width', .7) # proportion of screen width
 BLANK_LEVEL = get('blank_level', '5 5')
 UNDO_LEVELS = get('undo_levels', 0)
+RESIZE_DEAD_ZONE_BOUNDARY = get('resize_dead_zone_boundary', .4)
+RESIZE_LENGTH = get('resize_speed', .07)
 LEVEL_NAME_LENGTH = get('level_name_length', 6)
 
 # IDs

@@ -1092,9 +1092,27 @@ lost: list of blocks and surfaces lost because of removed tiles, each in the
             f(screen)
         return rtn
 
+    def point_in_grid (self, p):
+        """Check whether an on-screen point is in the grid."""
+        return self.rect is not None and self.rect.collidepoint(p)
+
+    def point_pos (self, p):
+        """Get a point's position as a floating-point 'tile' co-ordinate.
+
+Returns None if the point is outside the grid.
+
+"""
+        r = self.rect
+        return [float(p[i] - r[i]) / r[2 + i] for i in (0, 1)]
+
     def point_tile (self, p):
-        """Get tile containing given (x, y) point, or None."""
-        if self.rect is None or not self.rect.collidepoint(p):
+        """Get tile containing given (x, y) point.
+
+Returns (x, y) tile position, or False if the point is in the grid but not in a
+tile, or None if the point is outside the grid.
+
+"""
+        if not self.point_in_grid(p):
             return None
         result = []
         for i in (0, 1):
@@ -1107,11 +1125,11 @@ lost: list of blocks and surfaces lost because of removed tiles, each in the
             # take gaps between tiles into account
             if pos % (tile_size + gap) >= tile_size:
                 # between tiles/on border
-                return None
+                return False
             tile = pos / (tile_size + gap)
             if 0 <= tile < n_tiles:
                 result.append(tile)
             else:
                 # on border
-                return None
+                return False
         return result
