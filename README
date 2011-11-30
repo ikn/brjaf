@@ -1,0 +1,89 @@
+'Brain requirement is just a formality' is a tile-based puzzle game about
+moving blocks to their goals.
+
+    DEPENDENCIES
+
+Python (2.6 or later 2.x)
+Pygame (1.8 or later, probably; tested with 1.9.1)
+evthandler, tiler - my Python modules, accessible from the main site
+
+    RUNNING
+
+./configure
+./run
+
+Should work wherever Pygame does.  Creates ~/.brjaf/ for config stuff.
+
+    GAMEPLAY
+
+Levels starting with '?' are not in order and use concepts not yet introduced,
+but I've included them anyway.
+
+When editing, there are two grids: the one on the left is the puzzle you're
+creating, and the one on the right is used to select the surface/block to place
+in the puzzle.
+
+    CONTROLS
+
+Global:
+ - F10: minimise
+ - F11/alt+enter: toggle fullscreen
+
+Menu:
+ - arrow keys: change selection; left/right change selector options
+ - alt + left/right: change number selectors more quickly
+ - ctrl + left/right: select first/last selector option
+ - enter, space: click a button; select/deselect a text entry
+ - escape, backspace: go back; quit; deselect a text entry
+ - press the first character of an option to select it (and click it if it's
+   the only one starting with that character)
+
+Puzzle:
+ - WASD, arrow keys: move; right steps forwards through moves when auto-solving
+                     is paused (see below)
+ - ctrl + arrow keys: move, but only when you're holding at least two
+                      directions (diagonal movement can be hard otherwise)
+ - QEZX: move diagonally; both this and WASD are nice in Dvorak if you select
+         it in the options menu
+ - R: reset
+ - tab, F8, slash, backslash (hold): fast-forward auto-solving; hold ctrl for
+                                     even faster fast-forward
+ - enter, space: pause/unpause auto-solving
+ - escape, backspace: pause
+
+Editor:
+ - WASD, arrow keys: move selection (either grid)
+ - shift/alt + arrow keys: resize grid
+ - escape, backspace: pause; if the second grid is selected, switch to the main
+                      grid
+ - tab, F8, slash, backslash: switch the selection to the other grid
+ - enter, space, i, insert: insert a block into the current tile in the main
+                            grid
+ - delete, d: remove any block/surface (block only if both are present) from
+              the current tile in the main grid
+ - U, ctrl + Z: undo
+ - ctrl + R, ctrl + shift + Z, ctrl + Y: redo
+ - R: reset the puzzle to the original state (blank if new, or what was loaded)
+      (cannot be undone)
+
+Editor mouse control:
+ - left-click selects the grid/tile under the pointer, if any
+ - right-click deletes the block/surface under the pointer (block first, like
+   with the keyboard)
+ - middle-click-drag resizes the grid
+
+    KNOWN ISSUES
+
+ - the keyboard layout setting requires a restart to take effect.
+ - going to fullscreen then back to windowed ends up with a maximised window on
+   Linux.
+ - on Windows, the mouse cursor might not move smoothly.  (XP?  Old graphics
+   cards?)
+ - on Windows, mouse control might be entirely broken (same again).
+
+    LICENSING
+
+Source code is available under the Expat (MIT) license (included).
+
+Images are available under the Creative Commons CC0 license:
+    https://creativecommons.org/publicdomain/zero/1.0/
