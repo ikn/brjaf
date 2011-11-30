@@ -19,8 +19,8 @@ from random import randrange
 import zlib
 
 import pygame
-from tiler import Tiler, draw_rect
-from stringcompress import compress, decompress, encode, decode, printable
+from ext.tiler import Tiler, draw_rect
+from ext.stringcompress import compress, decompress, encode, decode, printable
 
 import conf
 

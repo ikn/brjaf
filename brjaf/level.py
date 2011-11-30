@@ -5,7 +5,7 @@ from random import random, choice
 from bisect import bisect
 
 import pygame
-import evthandler as eh
+from ext import evthandler as eh
 
 import menu
 from puzzle import Block, Puzzle

@@ -3,8 +3,8 @@ from math import ceil
 from random import randrange, choice
 
 import pygame
-import clipboard
-import evthandler as eh
+from ext import clipboard
+from ext import evthandler as eh
 
 from puzzle import Puzzle, BoringBlock, compress_lvl, decompress_lvl
 import conf
@@ -21,6 +21,7 @@ import conf
 # - nice help messages option
 #   - 'be nice to me'/'don't sass me'/?
 #   - just ask on first startup?  If not, what's the default?
+# - make keyboard layout setting take immediate effect
 
 class BaseText (object):
     """Abstract base class for text widgets.
@@ -1512,35 +1513,42 @@ class MainMenu (Menu):
                 Text('Saved'),
                 Button('Back', self.back)
             ), (
-                Button('Sound', self.set_page, 13),
-                Button('Gameplay', self.set_page, 14),
-                Button('Display', self.set_page, 15),
-                #Button('Delete data', self.set_page, 16)
+                Button('Gameplay', self.set_page, 13),
+                Button('Controls', self.set_page, 14),
+                Button('Sound', self.set_page, 15),
+                Button('Display', self.set_page, 16),
+                #Button('Delete data', self.set_page, 17)
+            ), (
+                s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
+                s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
+                  True),
+                Button('Save', self._save, (
+                    ((13, 0), 'fps'),
+                    ((13, 1), 'show_msg')
+                ))
+            ), (
+                s(DiscreteSelect, g('show_msg'), '%x', conf.KB_LAYOUTS,
+                  True),
+                Button('Save', self._save, (
+                    ((14, 0), 'kb_layout'),
+                ))
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
                 s(RangeSelect, g('sound_volume'), 'Sound: %x', 0, 100),
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((13, 0), 'music_volume', self._update_music_vol),
-                    ((13, 1), 'sound_volume', self._update_snd_vol),
-                    ((13, 2), ('sound_theme', False), self._refresh_sounds)
-                ))
-            ), (
-                s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
-                s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
-                  True),
-                Button('Save', self._save, (
-                    ((14, 0), 'fps'),
-                    ((14, 1), 'show_msg')
+                    ((15, 0), 'music_volume', self._update_music_vol),
+                    ((15, 1), 'sound_volume', self._update_snd_vol),
+                    ((15, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 s(DiscreteSelect, g('fullscreen'), '%x',
                   ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
-                    ((15, 0), ('theme', False), self._refresh_graphics),
-                    ((15, 1), 'fullscreen', self.game.refresh_display)
+                    ((16, 0), ('theme', False), self._refresh_graphics),
+                    ((16, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1773,7 +1781,6 @@ else widget.text.
                 real_val = val = widget.value
             else:
                 real_val = val = widget.text
-            
             if widget in self._selects and \
                self._selects[widget][1] == real_val:
                 # value didn't change: don't save

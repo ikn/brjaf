@@ -11,11 +11,11 @@ pygame.init()
 if os.name == 'nt':
     # for Windows freeze support
     import pygame._view
-import evthandler as eh
+from brjaf.ext import evthandler as eh
 
-from menu import MainMenu
-from level import LevelBackend
-import conf
+from brjaf.menu import MainMenu
+from brjaf.level import LevelBackend
+from brjaf import conf
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""

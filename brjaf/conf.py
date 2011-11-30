@@ -4,8 +4,6 @@ import string
 
 import pygame as pg
 
-# TODO: keyboard layout option
-
 # need to take care to get unicode path
 if os.name == 'nt':
     try:
@@ -22,7 +20,7 @@ if os.name == 'nt':
         CONF_DIR = buf.value
 else:
     CONF_DIR = os.path.expanduser(u'~')
-CONF_DIR += os.sep + ('' if os.name == 'nt' else '.') + 'pzl' + os.sep
+CONF_DIR += os.sep + ('' if os.name == 'nt' else '.') + 'brjaf' + os.sep
 CONF_FILE = CONF_DIR + 'conf'
 
 # read local conf file into dict
@@ -112,25 +110,24 @@ KEYS_END = get('keys_end', (pg.K_END,))
 KEYS_PAGE_UP = get('keys_page_up', (pg.K_PAGEUP,))
 KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
 KEYS_MULTI = get('keys_multi', pg.KMOD_CTRL)
+# l/u/r/d/ul/ur/dr/dl
+KEYS_MOVE = get('keys_move', {
+    'qwerty': (pg.K_a, pg.K_w, pg.K_d, pg.K_s, pg.K_q, pg.K_e, pg.K_x, pg.K_z),
+    'dvorak': (pg.K_a, pg.K_COMMA, pg.K_e, pg.K_o, (pg.K_SLASH, pg.K_QUOTE),
+               pg.K_PERIOD, pg.K_q, pg.K_SEMICOLON)
+})
+KB_LAYOUTS = KEYS_MOVE.keys()
 KB_LAYOUT = get('kb_layout', 'qwerty')
-if KB_LAYOUT == 'qwerty':
-    KEYS_MOVE_LEFT = get('keys_move_left', KEYS_LEFT + (pg.K_a,))
-    KEYS_MOVE_UP = get('keys_move_up', KEYS_UP + (pg.K_w,))
-    KEYS_MOVE_RIGHT = get('keys_move_right', KEYS_RIGHT + (pg.K_d,))
-    KEYS_MOVE_DOWN = get('keys_move_down', KEYS_DOWN + (pg.K_s,))
-    KEYS_MOVE_UPLEFT = get('keys_move_upleft', (pg.K_q,))
-    KEYS_MOVE_UPRIGHT = get('keys_move_upright', (pg.K_e,))
-    KEYS_MOVE_DOWNRIGHT = get('keys_move_downright', (pg.K_x,))
-    KEYS_MOVE_DOWNLEFT = get('keys_move_downleft', (pg.K_z,))
-elif KB_LAYOUT == 'dvorak':
-    KEYS_MOVE_LEFT = get('keys_move_left', KEYS_LEFT + (pg.K_a,))
-    KEYS_MOVE_UP = get('keys_move_up', KEYS_UP + (pg.K_COMMA,))
-    KEYS_MOVE_RIGHT = get('keys_move_right', KEYS_RIGHT + (pg.K_e,))
-    KEYS_MOVE_DOWN = get('keys_move_down', KEYS_DOWN + (pg.K_o,))
-    KEYS_MOVE_UPLEFT = get('keys_move_upleft', (pg.K_SLASH, pg.K_QUOTE))
-    KEYS_MOVE_UPRIGHT = get('keys_move_upright', (pg.K_PERIOD,))
-    KEYS_MOVE_DOWNRIGHT = get('keys_move_downright', (pg.K_q,))
-    KEYS_MOVE_DOWNLEFT = get('keys_move_downleft', (pg.K_SEMICOLON,))
+ks = [(k,) if isinstance(k, int) else k for k in KEYS_MOVE[KB_LAYOUT]]
+KEYS_MOVE_LEFT = KEYS_LEFT + ks[0]
+KEYS_MOVE_UP = KEYS_UP + ks[1]
+KEYS_MOVE_RIGHT = KEYS_RIGHT + ks[2]
+KEYS_MOVE_DOWN = KEYS_DOWN + ks[3]
+KEYS_MOVE_UPLEFT = ks[4]
+KEYS_MOVE_UPRIGHT = ks[5]
+KEYS_MOVE_DOWNRIGHT = ks[6]
+KEYS_MOVE_DOWNLEFT = ks[7]
+del ks
 
 KEYS_MINIMISE = get('keys_minimise', (pg.K_F10,))
 KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,
@@ -239,7 +236,7 @@ UNDO_LEVELS = get('undo_levels', 0)
 RESIZE_DEAD_ZONE_BOUNDARY = get('resize_dead_zone_boundary', .4)
 RESIZE_LENGTH = get('resize_speed', .07)
 LEVEL_NAME_LENGTH = get('level_name_length', 6)
-EDITOR_ARROW_PADDING = get('editor_arrow_padding', .1)
+EDITOR_ARROW_PADDING = get('editor_arrow_padding', .03) # eats into editor
 
 # IDs
 MIN_ID = -6

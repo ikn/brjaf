@@ -1,7 +1,7 @@
 import os
 
 import pygame
-import evthandler as eh
+from ext import evthandler as eh
 
 import menu
 from puzzle import Puzzle, BoringBlock
@@ -316,10 +316,10 @@ state: the current position in the changes list.
         od = eh.MODE_ONDOWN
         held = eh.MODE_HELD
         event_handler.add_key_handlers([
-            (conf.KEYS_LEFT, [(self._move, (0,))]) + pzl_args,
-            (conf.KEYS_UP, [(self._move, (1,))]) + pzl_args,
-            (conf.KEYS_RIGHT, [(self._move, (2,))]) + pzl_args,
-            (conf.KEYS_DOWN, [(self._move, (3,))]) + pzl_args,
+            (conf.KEYS_MOVE_LEFT, [(self._move, (0,))]) + pzl_args,
+            (conf.KEYS_MOVE_UP, [(self._move, (1,))]) + pzl_args,
+            (conf.KEYS_MOVE_RIGHT, [(self._move, (2,))]) + pzl_args,
+            (conf.KEYS_MOVE_DOWN, [(self._move, (3,))]) + pzl_args,
             (conf.KEYS_BACK, self.menu, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
             (conf.KEYS_INSERT, self._insert_cb, od),
@@ -667,22 +667,23 @@ pos: on-screen position to try to perform the action at.
 
     def draw (self, screen):
         """Draw the puzzles."""
-        if self.dirty:
-            screen.fill(conf.BG[conf.THEME])
-        # get puzzle sizes
         w, h = screen.get_size()
         w1 = int(conf.EDITOR_WIDTH * w)
         w2 = w - w1
-        t = self.selector.tiler
-        if w1 != t.offset[0]:
-            # screen size changed: need to change selector offset; no need to
-            # draw over area, as Game will have set self.dirty = True
-            t.offset = [w1, 0]
-            t.reset()
+        pad = int(conf.EDITOR_ARROW_PADDING * w)
+        if self.dirty:
+            screen.fill(conf.BG[conf.THEME])
+            # get puzzle sizes
+            e = self.editor.tiler
+            s = self.selector.tiler
+            if w1 != s.offset[0]:
+                # screen size changed: need to change puzzle positions
+                #e.offset = (pad, pad)
+                s.offset = (w1, 0)
+                s.reset()
         # draw puzzles
-        print w1, h, w2, h
-        # HOW DO WE KNOW where to draw?
         drawn1 = self.editor.draw(screen, self.dirty, (w1, h))
+                                  #(w1 - 2 * pad, h - 2 * pad))
         drawn2 = self.selector.draw(screen, self.dirty, (w2, h))
         # and return the sum list of rects to draw in
         drawn = []
