@@ -186,13 +186,17 @@ sound: as given.
                 max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
                 max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
             )
-            move = lambda d: [(self._move, (d,)), self._step_solution]
+            move = lambda *ds: [(self._move, ds), self._step_solution]
             freeze = lambda k, e, m: self.set_frozen()
             event_handler.add_key_handlers([
-                (conf.KEYS_MOVE_LEFT, [(self._move, (0,))]) + args,
-                (conf.KEYS_MOVE_UP, [(self._move, (1,))]) + args,
+                (conf.KEYS_MOVE_LEFT, move(0)) + args,
+                (conf.KEYS_MOVE_UP, move(1)) + args,
                 (conf.KEYS_MOVE_RIGHT, move(2)) + args,
                 (conf.KEYS_MOVE_DOWN, move(3)) + args,
+                (conf.KEYS_MOVE_UPLEFT, move(0, 1)) + args,
+                (conf.KEYS_MOVE_UPRIGHT, move(1, 2)) + args,
+                (conf.KEYS_MOVE_DOWNRIGHT, move(2, 3)) + args,
+                (conf.KEYS_MOVE_DOWNLEFT, move(3, 0)) + args,
                 (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN),
                 (conf.KEYS_TAB, self._fast_forward, eh.MODE_HELD),
                 (conf.KEYS_NEXT, freeze, eh.MODE_ONDOWN),
@@ -233,6 +237,7 @@ Takes ID and definition arguments as in the constructor.
         self.solutions = solns
 
         self._moved = []
+        self._stored_moves = []
         self._winning = False
         self.won = False
         self.solving = False
@@ -242,8 +247,17 @@ Takes ID and definition arguments as in the constructor.
         self.frozen = False
         self.start_time = time()
 
-    def move (self, *directions):
+    def move (self, multi, *directions):
         """Apply force to all player blocks in the given directions."""
+        if len(directions) <= 1 and multi:
+            if self._stored_moves is True:
+                pass
+            elif self._stored_moves:
+                directions += (self._stored_moves[0],)
+                self._stored_moves = True
+            else:
+                self._stored_moves.append(directions[0])
+                return
         # only make the move if haven't done already this frame
         directions = [d for d in directions if d not in self._moved]
         if not directions:
@@ -256,10 +270,11 @@ Takes ID and definition arguments as in the constructor.
                 player.add_force(d, conf.FORCE_MOVE)
                 player.set_direction(d)
 
-    def _move (self, key, event, mods, direction):
+    def _move (self, key, event, mods, *directions):
         """Key callback to move player."""
         if not self.solving:
-            self.move(direction)
+            for d in directions:
+                self.move(mods & conf.KEYS_MULTI, d)
 
     def reset (self, *args):
         """Reset the level to its state after the last call to Level.load."""
@@ -511,6 +526,7 @@ Returns whether anything changed.
             self._next_step = False
             # reset list of moves made this frame
             self._moved = []
+            self._stored_moves = []
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:
