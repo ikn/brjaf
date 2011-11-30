@@ -4,6 +4,8 @@ import string
 
 import pygame as pg
 
+# TODO: keyboard layout option
+
 # need to take care to get unicode path
 if os.name == 'nt':
     try:
@@ -110,8 +112,8 @@ KEYS_END = get('keys_end', (pg.K_END,))
 KEYS_PAGE_UP = get('keys_page_up', (pg.K_PAGEUP,))
 KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
 KEYS_MULTI = get('keys_multi', pg.KMOD_CTRL)
-QWERTY = False
-if QWERTY:
+KB_LAYOUT = get('kb_layout', 'qwerty')
+if KB_LAYOUT == 'qwerty':
     KEYS_MOVE_LEFT = get('keys_move_left', KEYS_LEFT + (pg.K_a,))
     KEYS_MOVE_UP = get('keys_move_up', KEYS_UP + (pg.K_w,))
     KEYS_MOVE_RIGHT = get('keys_move_right', KEYS_RIGHT + (pg.K_d,))
@@ -120,7 +122,7 @@ if QWERTY:
     KEYS_MOVE_UPRIGHT = get('keys_move_upright', (pg.K_e,))
     KEYS_MOVE_DOWNRIGHT = get('keys_move_downright', (pg.K_x,))
     KEYS_MOVE_DOWNLEFT = get('keys_move_downleft', (pg.K_z,))
-else:
+elif KB_LAYOUT == 'dvorak':
     KEYS_MOVE_LEFT = get('keys_move_left', KEYS_LEFT + (pg.K_a,))
     KEYS_MOVE_UP = get('keys_move_up', KEYS_UP + (pg.K_COMMA,))
     KEYS_MOVE_RIGHT = get('keys_move_right', KEYS_RIGHT + (pg.K_e,))
@@ -237,6 +239,7 @@ UNDO_LEVELS = get('undo_levels', 0)
 RESIZE_DEAD_ZONE_BOUNDARY = get('resize_dead_zone_boundary', .4)
 RESIZE_LENGTH = get('resize_speed', .07)
 LEVEL_NAME_LENGTH = get('level_name_length', 6)
+EDITOR_ARROW_PADDING = get('editor_arrow_padding', .1)
 
 # IDs
 MIN_ID = -6

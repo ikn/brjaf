@@ -680,6 +680,8 @@ pos: on-screen position to try to perform the action at.
             t.offset = [w1, 0]
             t.reset()
         # draw puzzles
+        print w1, h, w2, h
+        # HOW DO WE KNOW where to draw?
         drawn1 = self.editor.draw(screen, self.dirty, (w1, h))
         drawn2 = self.selector.draw(screen, self.dirty, (w2, h))
         # and return the sum list of rects to draw in

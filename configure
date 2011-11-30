@@ -1,0 +1,9 @@
+#! /bin/bash
+
+p=`type -p python2`
+if [ -n "$p" ]; then
+    # don't overwrite the file we're reading from...
+    sed "s:^#\!.*python$:#\! $p:" < run > .run.tmp
+    mv -f .run.tmp run
+    chmod +x run
+fi
