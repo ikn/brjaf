@@ -53,7 +53,7 @@ Takes the LevelBackend instance.
         # choose help message:
         # get data for weightings
         time = level.pause_time
-        solved = conf.get('solve_methods')[:conf.SOLVE_HISTORY_SIZE]
+        solved = conf.get('solve_methods', [])[:conf.SOLVE_HISTORY_SIZE]
         solved.reverse()
         num_solved = len(solved)
         if num_solved < conf.HELP_MSG_MIN_SOLVED:
