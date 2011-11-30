@@ -24,8 +24,12 @@ Takes a boolean determining whether to load custom levels.
 """
     d = (conf.LEVEL_DIR_MAIN, conf.LEVEL_DIR_CUSTOM, conf.LEVEL_DIR_DRAFT)[ID]
     try:
+        es = (OSError, WindowsError)
+    except NameError:
+        es = OSError
+    try:
         fs = os.listdir(d)
-    except (OSError, WindowsError):
+    except es:
         return []
     return sorted(f for f in fs if os.path.isfile(d + f))
 

@@ -4,6 +4,8 @@ import string
 
 import pygame as pg
 
+# TODO: per-theme icon (store in theme dir and change on theme change)
+
 # need to take care to get unicode path
 if os.name == 'nt':
     try:
@@ -96,7 +98,7 @@ RES_W = get('res_w', (720, 480))
 MIN_RES_W = get('min_res_w', (320, 240))
 RESIZABLE = get('resizable', True)
 FULLSCREEN = get('fullscreen', False)
-WINDOW_ICON = get('window_icon', None)
+WINDOW_ICON = get('window_icon', IMG_DIR + 'icon.png')
 WINDOW_TITLE = get('window_title', 'Brain requirement just a formality')
 MAX_RATIO = get('max_ratio', (3, 2))
 
