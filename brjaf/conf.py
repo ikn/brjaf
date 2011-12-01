@@ -13,8 +13,6 @@ import string
 
 import pygame as pg
 
-# TODO: per-theme icon (store in theme dir and change on theme change)
-
 # need to take care to get unicode path
 if os.name == 'nt':
     try:
@@ -107,7 +105,7 @@ RES_W = get('res_w', (720, 480))
 MIN_RES_W = get('min_res_w', (320, 240))
 RESIZABLE = get('resizable', True)
 FULLSCREEN = get('fullscreen', False)
-WINDOW_ICON = get('window_icon', IMG_DIR + 'icon.png')
+WINDOW_ICON = get('window_icon', 'icon.png')
 WINDOW_TITLE = get('window_title', 'Brain requirement just a formality')
 MAX_RATIO = get('max_ratio', (3, 2))
 
@@ -123,12 +121,12 @@ KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
 KEYS_SOLN_NEXT = get('keys_soln_next', KEYS_RIGHT)
 # movement keys: l/u/r/d/ul/ur/dr/dl
 KEYS_MOVE = get('keys_move', {
-    'qwerty': (pg.K_a, pg.K_w, pg.K_d, pg.K_s, pg.K_q, pg.K_e, pg.K_x, pg.K_z),
-    'dvorak': (pg.K_a, pg.K_COMMA, pg.K_e, pg.K_o, (pg.K_SLASH, pg.K_QUOTE),
+    'QWERTY': (pg.K_a, pg.K_w, pg.K_d, pg.K_s, pg.K_q, pg.K_e, pg.K_x, pg.K_z),
+    'Dvorak': (pg.K_a, pg.K_COMMA, pg.K_e, pg.K_o, (pg.K_SLASH, pg.K_QUOTE),
                pg.K_PERIOD, pg.K_q, pg.K_SEMICOLON)
 })
 KB_LAYOUTS = KEYS_MOVE.keys()
-KB_LAYOUT = get('kb_layout', 'qwerty')
+KB_LAYOUT = get('kb_layout', 'QWERTY')
 ks = []
 def ks (i, extra = ()):
     rtn = {}
@@ -282,7 +280,8 @@ WALL = 99
 
 # appearance
 THEMES = ('default',)
-THEME = get('theme', 'default')
+DEFAULT_THEME = get('default_theme', 'default')
+THEME = get('theme', DEFAULT_THEME)
 # menu
 RAND_B_RATIO = get('rand_b_ratio', {
     'default': .1

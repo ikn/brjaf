@@ -1726,6 +1726,7 @@ class MainMenu (Menu):
         self.re_init = True
         self.game.files = {}
         self.game.imgs = {}
+        self.game.set_icon()
 
     def _custom_lvl_cb (self, ID, page):
         """Set up page shown on selecting a custom level."""
