@@ -15,6 +15,7 @@ import conf
 # - solving frame reverse (implement undo/redo in Puzzle and use here and in editor)
 # - high scores for fewest moves for each level (frames with input where at least one player block moves)
 # - hard to move diagonally
+# - fix the fact that autosolving doesn't wait until the level's won before resetting
 
 def get_levels (ID = False):
     """Get a list of existing levels.
@@ -253,7 +254,7 @@ Takes ID and definition arguments as in the constructor.
 
     def move (self, multi, *directions):
         """Apply force to all player blocks in the given directions."""
-        if len(directions) <= 1 and multi:
+        if len(directions) == 1 and multi:
             if self._stored_moves is True:
                 pass
             elif self._stored_moves:
@@ -404,7 +405,7 @@ a bad idea to call this function while solving.
             if i % 2:
                 # make a move
                 move = self._solution[i]
-                self.move(*move)
+                self.move(False, *move)
                 i += 1
                 if i < len(self._solution):
                     self._solve_time = self._solution[i][1]
@@ -425,7 +426,7 @@ a bad idea to call this function while solving.
                     held = self._solution[self.solving_index][0]
                     if held:
                         # want to send some input every frame for this delay
-                        self.move(*held)
+                        self.move(False, *held)
                         move = held
                     else:
                         move = []
