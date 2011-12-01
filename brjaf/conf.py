@@ -120,8 +120,8 @@ KEYS_HOME = get('keys_home', (pg.K_HOME,))
 KEYS_END = get('keys_end', (pg.K_END,))
 KEYS_PAGE_UP = get('keys_page_up', (pg.K_PAGEUP,))
 KEYS_PAGE_DOWN = get('keys_page_down', (pg.K_PAGEDOWN,))
-KEYS_MULTI = get('keys_multi', pg.KMOD_CTRL)
-# l/u/r/d/ul/ur/dr/dl
+KEYS_SOLN_NEXT = get('keys_soln_next', KEYS_RIGHT)
+# movement keys: l/u/r/d/ul/ur/dr/dl
 KEYS_MOVE = get('keys_move', {
     'qwerty': (pg.K_a, pg.K_w, pg.K_d, pg.K_s, pg.K_q, pg.K_e, pg.K_x, pg.K_z),
     'dvorak': (pg.K_a, pg.K_COMMA, pg.K_e, pg.K_o, (pg.K_SLASH, pg.K_QUOTE),
@@ -129,16 +129,23 @@ KEYS_MOVE = get('keys_move', {
 })
 KB_LAYOUTS = KEYS_MOVE.keys()
 KB_LAYOUT = get('kb_layout', 'qwerty')
-ks = [(k,) if isinstance(k, int) else k for k in KEYS_MOVE[KB_LAYOUT]]
-KEYS_MOVE_LEFT = KEYS_LEFT + ks[0]
-KEYS_MOVE_UP = KEYS_UP + ks[1]
-KEYS_MOVE_RIGHT = KEYS_RIGHT + ks[2]
-KEYS_MOVE_DOWN = KEYS_DOWN + ks[3]
-KEYS_MOVE_UPLEFT = ks[4]
-KEYS_MOVE_UPRIGHT = ks[5]
-KEYS_MOVE_DOWNRIGHT = ks[6]
-KEYS_MOVE_DOWNLEFT = ks[7]
+ks = []
+def ks (i, extra = ()):
+    rtn = {}
+    for layout in KB_LAYOUTS:
+        k = KEYS_MOVE[layout][i]
+        rtn[layout] = ((k,) if isinstance(k, int) else k) + extra
+    return rtn
+KEYS_MOVE_LEFT = ks(0, KEYS_LEFT)
+KEYS_MOVE_UP = ks(1, KEYS_UP)
+KEYS_MOVE_RIGHT = ks(2, KEYS_RIGHT)
+KEYS_MOVE_DOWN = ks(3, KEYS_DOWN)
+KEYS_MOVE_UPLEFT = ks(4)
+KEYS_MOVE_UPRIGHT = ks(5)
+KEYS_MOVE_DOWNRIGHT = ks(6)
+KEYS_MOVE_DOWNLEFT = ks(7)
 del ks
+KEYS_MULTI = get('keys_multi', pg.KMOD_CTRL)
 
 KEYS_MINIMISE = get('keys_minimise', (pg.K_F10,))
 KEYS_FULLSCREEN = get('keys_fullscreen', (pg.K_F11,

@@ -200,17 +200,19 @@ sound: as given.
                 max(int(conf.MOVE_INITIAL_DELAY * conf.FPS), 1),
                 max(int(conf.MOVE_REPEAT_DELAY * conf.FPS), 1)
             )
-            move = lambda *ds: [(self._move, ds), self._step_solution]
+            move = lambda *ds: [(self._move, ds)]
             freeze = lambda k, e, m: self.set_frozen()
+            l = conf.KB_LAYOUT
             event_handler.add_key_handlers([
-                (conf.KEYS_MOVE_LEFT, move(0)) + args,
-                (conf.KEYS_MOVE_UP, move(1)) + args,
-                (conf.KEYS_MOVE_RIGHT, move(2)) + args,
-                (conf.KEYS_MOVE_DOWN, move(3)) + args,
-                (conf.KEYS_MOVE_UPLEFT, move(0, 1)) + args,
-                (conf.KEYS_MOVE_UPRIGHT, move(1, 2)) + args,
-                (conf.KEYS_MOVE_DOWNRIGHT, move(2, 3)) + args,
-                (conf.KEYS_MOVE_DOWNLEFT, move(3, 0)) + args,
+                (conf.KEYS_MOVE_LEFT[l], move(0)) + args,
+                (conf.KEYS_MOVE_UP[l], move(1)) + args,
+                (conf.KEYS_MOVE_RIGHT[l], move(2)) + args,
+                (conf.KEYS_MOVE_DOWN[l], move(3)) + args,
+                (conf.KEYS_MOVE_UPLEFT[l], move(0, 1)) + args,
+                (conf.KEYS_MOVE_UPRIGHT[l], move(1, 2)) + args,
+                (conf.KEYS_MOVE_DOWNRIGHT[l], move(2, 3)) + args,
+                (conf.KEYS_MOVE_DOWNLEFT[l], move(3, 0)) + args,
+                (conf.KEYS_SOLN_NEXT, self._step_solution) + args,
                 (conf.KEYS_RESET, self.reset, eh.MODE_ONDOWN),
                 (conf.KEYS_TAB, self._fast_forward, eh.MODE_HELD),
                 (conf.KEYS_NEXT, freeze, eh.MODE_ONDOWN),
@@ -539,6 +541,8 @@ Returns whether anything changed.
             # reset list of moves made this frame
             self._moved = []
             self._stored_moves = []
+        else:
+            rtn = False
         # check for surfaces with their corresponding Block types on them
         win = True
         for col in self.puzzle.grid:
@@ -554,11 +558,8 @@ Returns whether anything changed.
                 self._winning = True
             # else if this is the first frame since we've won,
             elif not self.won:
-                # clean up solution stuff in case this is to be reused
-                if self.solving:
-                    self.stop_solving()
                 # save to disk
-                elif self.ID is not None:
+                if not self.solving and self.ID is not None:
                     levels = conf.get('completed_levels', [])
                     if self.ID not in levels:
                         levels.append(self.ID)
@@ -660,6 +661,8 @@ pause_menu: as given.
 
     def stop_solving (self, *args, **kw):
         Level.stop_solving(self, *args, **kw)
+        # reset
+        self.reset()
         # restore message
         self.msg = self._msg
         self.msg_dirty = True

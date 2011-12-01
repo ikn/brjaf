@@ -324,11 +324,12 @@ state: the current position in the changes list.
         )
         od = eh.MODE_ONDOWN
         held = eh.MODE_HELD
+        l = conf.KB_LAYOUT
         event_handler.add_key_handlers([
-            (conf.KEYS_MOVE_LEFT, [(self._move, (0,))]) + pzl_args,
-            (conf.KEYS_MOVE_UP, [(self._move, (1,))]) + pzl_args,
-            (conf.KEYS_MOVE_RIGHT, [(self._move, (2,))]) + pzl_args,
-            (conf.KEYS_MOVE_DOWN, [(self._move, (3,))]) + pzl_args,
+            (conf.KEYS_MOVE_LEFT[l], [(self._move, (0,))]) + pzl_args,
+            (conf.KEYS_MOVE_UP[l], [(self._move, (1,))]) + pzl_args,
+            (conf.KEYS_MOVE_RIGHT[l], [(self._move, (2,))]) + pzl_args,
+            (conf.KEYS_MOVE_DOWN[l], [(self._move, (3,))]) + pzl_args,
             (conf.KEYS_BACK, self.menu, od),
             (conf.KEYS_TAB, self.switch_puzzle, od),
             (conf.KEYS_INSERT, self._insert_cb, od),

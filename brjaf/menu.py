@@ -30,7 +30,6 @@ import conf
 # - nice help messages option
 #   - 'be nice to me'/'don't sass me'/?
 #   - just ask on first startup?  If not, what's the default?
-# - make keyboard layout setting take immediate effect
 
 class BaseText (object):
     """Abstract base class for text widgets.
@@ -1471,6 +1470,7 @@ class MainMenu (Menu):
         s = self._new_select
         g = lambda i: (conf.get, (i,))
         w = self._with_custom_lvl
+        kb_layout_index = lambda: conf.KB_LAYOUTS.index(conf.KB_LAYOUT)
         snd_theme_index = lambda: conf.SOUND_THEMES.index(conf.SOUND_THEME)
         theme_index = lambda: conf.THEMES.index(conf.THEME)
         pages = (
@@ -1536,10 +1536,10 @@ class MainMenu (Menu):
                     ((13, 1), 'show_msg')
                 ))
             ), (
-                s(DiscreteSelect, g('show_msg'), '%x', conf.KB_LAYOUTS,
+                s(DiscreteSelect, kb_layout_index, '%x', conf.KB_LAYOUTS,
                   True),
                 Button('Save', self._save, (
-                    ((14, 0), 'kb_layout'),
+                    ((14, 0), ('kb_layout', False)),
                 ))
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
