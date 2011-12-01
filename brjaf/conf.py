@@ -355,8 +355,15 @@ BLOCK_COLOURS = get('block_colours', {
 MUSIC_VOLUME = get('music_volume', 50)
 EVENT_ENDMUSIC = pg.USEREVENT
 SOUND_VOLUME = get('sound_volume', 50)
-SOUND_THEMES = sorted(set(os.listdir(SOUND_DIR) + os.listdir(MUSIC_DIR)))
-SOUND_THEMES.append('none')
+SOUND_THEMES = set()
+for d in (SOUND_DIR, MUSIC_DIR):
+    try:
+        SOUND_THEMES = SOUND_THEMES.union(os.listdir(d))
+    except OSError:
+        # directory doesn't exist
+        pass
+SOUND_THEMES.add('none')
+SOUND_THEMES = sorted(SOUND_THEMES)
 SOUND_THEME = get('sound_theme', 'default')
 
 
