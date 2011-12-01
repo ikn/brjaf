@@ -1659,14 +1659,15 @@ class MainMenu (Menu):
                     lvl.solve(i)
                     while lvl.solving:
                         lvl.update()
-                    while lvl.update():
-                        pass
+                    n = conf.POST_SOLVE_WAIT
+                    while n and lvl.update():
+                        n -= 1
                     if lvl.won:
                         draft = False
                     else:
                         # bad solution
                         rm.append(i)
-                    lvl.reset()
+                    lvl.load(definition = defn)
                 if rm:
                     for i in rm:
                         lvl.solutions.pop(i)

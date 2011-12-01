@@ -182,6 +182,7 @@ SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)
 SPECIAL_CHAR_ID_OFFSET = get('special_char_id_offset', 512)
 DEFAULT_SELECT_ORDER = 0 # 0 for rows take precedence, 1 for columns
 LEVEL_SELECT_COLS = get('level_select_cols', 5)
+POST_SOLVE_WAIT = get('post_solve_wait', 1000)
 NUM_UNCOMPLETED_LEVELS = get('num_uncompleted_levels', 5)
 # (small, mid, large, very large)
 # < 1 means fraction of total number of options, >= 1 means absolute value
@@ -193,7 +194,6 @@ FORCE_MOVE = get('force_move', 2)
 FORCE_ARROW = FORCE_MOVE # some puzzles are impossible/too easy if different
 SOLVE_SPEED = get('solve_speed', 5) # delay between moves in frames
 FF_SPEEDUP = get('ff_speedup', 4)
-RESET_ON_STOP_SOLVING = get('reset_on_stop_solving', True)
 SOLN_DIRS = get('soln_dirs', 'lurd')
 SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
 
