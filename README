@@ -83,7 +83,11 @@ Editor mouse control:
 
     LICENSING
 
-Source code is available under the Expat (MIT) license (included).
+Source code is available under the GNU General Public License, version 3
+(included in the LICENSE file).
+
+The external code brjaf/ext/clipboard.py is available under a different
+(compatible) license, included in the file.
 
 Images are available under the Creative Commons CC0 license:
     https://creativecommons.org/publicdomain/zero/1.0/
