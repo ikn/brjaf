@@ -5,7 +5,7 @@ moving blocks to their goals.
 
 Python (2.6 or later 2.x)
 Pygame (1.8 or later, probably; tested with 1.9.1)
-evthandler, tiler - my Python modules, accessible from the main site
+xclip (not required for Windows or Mac)
 
     RUNNING
 

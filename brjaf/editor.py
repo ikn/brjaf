@@ -9,7 +9,7 @@ import level
 import conf
 
 # TODO:
-# - save level message
+# - save level message (don't allow @)
 # - mouse resize: change cursor while resizing to indicate allowed resize
 #   directions (pygame.mouse.set_cursor)
 

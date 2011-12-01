@@ -161,10 +161,12 @@ MENU_REPEAT_DELAY = get('menu_repeat_delay', .15)
 
 # menu
 PUZZLE_TEXT_UPPER = get('puzzle_text_upper', True)
-PRINTABLE = set(c for c in string.printable if c not in string.whitespace)
-PRINTABLE.add(' ')
-IGNORED_ACCESS_KEY_CHARS = get('ignored_access_key_chars', ' ')
+PRINTABLE_L = [c for c in string.printable if c not in string.whitespace]
+PRINTABLE_L.append(' ')
+PRINTABLE = get('printable_l', PRINTABLE_L)
+PRINTABLE = set(PRINTABLE_L)
 PRINTABLE = get('printable', PRINTABLE)
+IGNORED_ACCESS_KEY_CHARS = get('ignored_access_key_chars', ' ')
 MIN_CHAR_ID = get('min_char_id', 32)
 MAX_CHAR_ID = get('max_char_id', 255)
 SELECTED_CHAR_ID_OFFSET = get('selected_char_id_offset', 256)

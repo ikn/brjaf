@@ -91,9 +91,7 @@ def compress_lvl (ID):
     from_chars = [chr(i) for i in xrange(max_v + 1)]
     compressed.append(compress(chr(max_v).join(l), chars, from_chars))
     # messages
-    if msgs:
-        msgs = encode(zlib.compress(msgs, 9), byte_chars, chars)
-    compressed.append(msgs)
+    compressed.append(compress(msgs, chars, conf.PRINTABLE_L))
     # solutions: best method depends on length
     soln_chars = ',drlu0<>=1[]23456789:'
     c1 = compress(solns, chars, soln_chars)
@@ -142,7 +140,9 @@ def decompress_lvl (s):
             k = (k + 1) % 2
     # messages
     if msgs:
-        msgs = zlib.decompress(decode(msgs, byte_chars, chars)).split('@')
+        msgs = decompress(msgs, chars, conf.PRINTABLE_L).split('@')
+    else:
+        msgs = []
     # solutions
     method = int(decode(method, '10', chars))
     soln_chars = ',drlu0<>=1[]23456789:'
