@@ -314,6 +314,9 @@ PUZZLE_LINE_COLOUR = get('puzzle_line_colour', {
 PUZZLE_LINE_WIDTH = get('puzzle_line_width', {
     'default': 1
 })
+PUZZLE_BORDER_WIDTH = get('puzzle_border_width', {
+    'default': 1
+})
 # selection
 SEL_COLOUR = get('sel_colour', {
     'default': (255, 0, 0)

@@ -1270,18 +1270,20 @@ element_list: each element is represented by its row i and column j as (i, j).
             self.game.play_snd('move_selection')
         self.set_selected(sel)
 
-    def move_selection (self, direction, axis = 1, source = None):
+    def move_selection (self, direction, axis = 1, source = None, amount = 1):
         """Change the currently selected option.
 
-move_selection(direction, axis = 1[, source])
+move_selection(direction, axis = 1[, source], amount = 1)
 
 direction: 1 to move right/down, -1 to move up/left.
 axis: 0 for horizontal, 1 for vertical.
 source: list of (x, y) tuples indicating an element's (col, row) position for
         elements to select from; defaults to all elements on the page.
+amount: number of times to move.
 
 """
-        self._move_selection(None, None, None, direction, axis, source)
+        for i in xrange(amount):
+            self._move_selection(None, None, None, direction, axis, source)
 
     def alter (self, key, event, mods, direction, amount):
         """Alter the currently selected Select widget (key callback.)"""
@@ -1390,6 +1392,10 @@ to start with).
             self.init()
             self.set_page(ID)
             self.set_selected(selected)
+            if self._then_click_next:
+                self.move_selection(1, 0, None, self._then_click_next)
+                self.select()
+                self._then_click_next = False
 
     def draw (self, screen):
         """Draw the menu."""
@@ -1572,6 +1578,7 @@ class MainMenu (Menu):
                 continue
             if not custom:
                 completed = conf.get('completed_levels', [])
+                uncompleted = [l for l in lvls if l not in completed]
                 uncompleted_to_show = conf.NUM_UNCOMPLETED_LEVELS
             # create columns
             col = 0
@@ -1585,9 +1592,17 @@ class MainMenu (Menu):
                     b = Button(lvl, self._custom_lvl_cb, ID, p)
                 else:
                     # highlight completed levels
+                    win_cb = self.game.quit_backend
+                    if not lvl in completed:
+                        i = uncompleted.index(lvl)
+                        successors = uncompleted[i + 1:] + uncompleted[:i]
+                        if successors:
+                            n = lvls.index(successors[0]) - lvls.index(lvl)
+                            n %= len(lvls)
+                            win_cb = (self._won_level, n)
                     b = Button(lvl, self.game.start_backend,
-                               level.LevelBackend, ID,
-                               special = lvl in completed)
+                               level.LevelBackend, ID, None, level.PauseMenu,
+                               win_cb, special = lvl in completed)
                 page[col].append(b)
                 if not custom and lvl not in completed:
                     # only show a few unfinished levels
@@ -1599,6 +1614,11 @@ class MainMenu (Menu):
                 col %= conf.LEVEL_SELECT_COLS
 
         return Menu.init(self, pages)
+
+    def _won_level (self, num_to_move):
+        """Callback for winning an uncompleted level."""
+        self._then_click_next = num_to_move
+        self.game.quit_backend()
 
     def _share (self, page):
         """Copy compressed level data to the clipboard."""

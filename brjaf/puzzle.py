@@ -579,7 +579,7 @@ dirty).  Preserves any selection, if possible.
         else:
             for key, attr in (('line', 'PUZZLE_LINE_COLOUR'),
                               ('gap', 'PUZZLE_LINE_WIDTH'),
-                              ('border', 'PUZZLE_LINE_WIDTH')):
+                              ('border', 'PUZZLE_BORDER_WIDTH')):
                 if key not in tiler_kw_args:
                     tiler_kw_args[key] = getattr(conf, attr)[conf.THEME]
             self.tiler = Tiler(w, h, self.draw_tile, track_tiles = False,

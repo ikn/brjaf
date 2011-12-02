@@ -151,7 +151,8 @@ event_handler: evthandler.EventHandler instance to use for keybindings.  If not
                given, the level cannot be controlled by the keyboard.
 ID: level ID to load in the form (is_custom, level_ID).
 definition: a level definition to use; see the puzzle module for details.
-win_cb: function to call when the player wins.
+win_cb: function to call when the player wins, or (function, *args) to pass
+        some arguments to the function.
 sound: whether to play sounds.
 
 One of ID and definition is required.
@@ -220,7 +221,10 @@ sound: as given.
             ])
         self.sound = sound
         self.load(ID, definition)
-        self.win_cb = win_cb
+        if hasattr(win_cb, '__call__'):
+            self.win_cb = (win_cb,)
+        else:
+            self.win_cb = win_cb
 
     def load (self, ID = None, definition = None):
         """Load a level.
@@ -572,7 +576,7 @@ Returns whether anything changed.
                         conf.set(solve_methods = solved)
                 # call win callback
                 if self.win_cb is not None:
-                    self.win_cb()
+                    self.win_cb[0](*self.win_cb[1:])
                 # play victory sound
                 if self.sound:
                     self.game.play_snd('win')
