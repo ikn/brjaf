@@ -378,7 +378,7 @@ Takes ID and definition arguments as in the constructor.
             parsed.append(s)
         return parsed
 
-    def solve (self, solution = 0):
+    def solve (self, solution = 0, stop_on_finish = True):
         """Solve the puzzle.
 
 Takes the solution number to use (its index in the list of solutions ordered as
@@ -402,6 +402,7 @@ a bad idea to call this function while solving.
             self._solution_ff = self._parse_soln(solution, 0)
             self._solve_time = self._solution[0][1]
             self._solve_time_ff = self._solution_ff[0][1]
+            self._finished_solving = False
             # store solve method
             if self.ID is not None:
                 levels = conf.get('completed_levels', [])
@@ -413,7 +414,9 @@ a bad idea to call this function while solving.
             move = self.solve()
         elif i == len(self._solution):
             # finished: just wait until the level ends
-            self.stop_solving()
+            self._finished_solving = True
+            if stop_on_finish:
+                self.stop_solving()
             move = []
         else:
             # continuing
@@ -460,11 +463,12 @@ a bad idea to call this function while solving.
 
     def stop_solving (self):
         """Stop solving the puzzle."""
-        self.solving = False
-        self.solving_index = None
-        self.frozen = False
-        del self._solution, self._solution_ff, self._solve_time, \
-            self._solve_time_ff, self._next_step
+        if self.solving:
+            self.solving = False
+            self.solving_index = None
+            self.frozen = False
+            del self._solution, self._solution_ff, self._solve_time, \
+                self._solve_time_ff, self._next_step, self._finished_solving
 
     def _record (self, directions):
         """Add input to the current recording."""
@@ -562,25 +566,33 @@ Returns whether anything changed.
                 self._winning = True
             # else if this is the first frame since we've won,
             elif not self.won:
-                # save to disk
-                if not self.solving and self.ID is not None:
-                    levels = conf.get('completed_levels', [])
-                    if self.ID not in levels:
-                        levels.append(self.ID)
-                        conf.set(completed_levels = levels)
-                        self.game.set_backend_attrs(menu.MainMenu,
-                                                    're_init', True)
-                        # store solve method
-                        solved = conf.get('solve_methods', [])
-                        solved.append(True)
-                        conf.set(solve_methods = solved)
-                # call win callback
-                if self.win_cb is not None:
-                    self.win_cb[0](*self.win_cb[1:])
-                # play victory sound
-                if self.sound:
-                    self.game.play_snd('win')
-                self.won = True
+                # stop solving
+                if self.solving:
+                    if self._finished_solving:
+                        self.stop_solving()
+                        win = self._winning
+                    else:
+                        win = False
+                if win:
+                    # save to disk
+                    if not self.solving and self.ID is not None:
+                        levels = conf.get('completed_levels', [])
+                        if self.ID not in levels:
+                            levels.append(self.ID)
+                            conf.set(completed_levels = levels)
+                            self.game.set_backend_attrs(menu.MainMenu,
+                                                        're_init', True)
+                            # store solve method
+                            solved = conf.get('solve_methods', [])
+                            solved.append(True)
+                            conf.set(solve_methods = solved)
+                    # call win callback
+                    if self.win_cb is not None:
+                        self.win_cb[0](*self.win_cb[1:])
+                    # play victory sound
+                    if self.sound:
+                        self.game.play_snd('win')
+                    self.won = True
         else:
             self._winning = False
         return rtn
@@ -650,10 +662,16 @@ pause_menu: as given.
             self.solve()
 
     def solve (self, *args, **kw):
-        if self.solving_index is None:
+        start = self.solving_index is None
+        if start:
             # starting solving: store old message
             self._msg = self.msg
+        kw['stop_on_finish'] = False
         move = Level.solve(self, *args, **kw)
+        if start:
+            # add a wait to the end of the solution
+            self._solution.append(((), conf.END_SOLVE_DELAY))
+            self._solution_ff.append(((), 0))
         if move:
             # show directions pressed in message
             self.msg = ''.join(conf.SOLN_DIRS_SHOWN[x] for x in move)
@@ -665,6 +683,8 @@ pause_menu: as given.
 
     def stop_solving (self, *args, **kw):
         Level.stop_solving(self, *args, **kw)
+        # reset
+        self.reset()
         # restore message
         self.msg = self._msg
         self.msg_dirty = True

@@ -198,6 +198,7 @@ MIN_SELECT_STEP = get('min_select_step', (1, 1, .01, 5))
 FORCE_MOVE = get('force_move', 2)
 FORCE_ARROW = FORCE_MOVE # some puzzles are impossible/too easy if different
 SOLVE_SPEED = get('solve_speed', 5) # delay between moves in frames
+END_SOLVE_DELAY = get('end_solve_delay', 10)
 FF_SPEEDUP = get('ff_speedup', 4)
 SOLN_DIRS = get('soln_dirs', 'lurd')
 SOLN_DIRS_SHOWN = get('soln_dirs_shown', SOLN_DIRS.upper())
