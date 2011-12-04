@@ -1483,7 +1483,7 @@ class MainMenu (Menu):
             (
                 Button('Play', self.set_page, 1),
                 Button('Custom', self.set_page, 2),
-                Button('Options', self.set_page, 12)
+                Button('Options', self.set_page, 13)
             ), [], (
                 Button('New', self.game.start_backend, editor.Editor),
                 Button('Load', self.set_page, 3),
@@ -1510,7 +1510,7 @@ class MainMenu (Menu):
                 )
             ), (
                 Text('Code copied'),
-                Button('Back', self.back)
+                Button('OK', self.back)
             ), (
                 Text('Copy the'),
                 Text('code first'),
@@ -1522,30 +1522,34 @@ class MainMenu (Menu):
                 Button('Back', self.back)
             ), (
                 Text('No solution:'),
+                Text('can\'t play'),
+                Button('Back', self.back)
+            ), (
+                Text('No solution:'),
                 Text('saving as draft'),
                 Button('OK', self._continue_save_shared)
             ), (
                 Text('Saved'),
-                Button('Back', self.back)
+                Button('OK', self.back)
             ), (
-                Button('Gameplay', self.set_page, 13),
-                Button('Controls', self.set_page, 14),
-                Button('Sound', self.set_page, 15),
-                Button('Display', self.set_page, 16),
-                #Button('Delete data', self.set_page, 17)
+                Button('Gameplay', self.set_page, 14),
+                Button('Controls', self.set_page, 15),
+                Button('Sound', self.set_page, 16),
+                Button('Display', self.set_page, 17),
+                #Button('Delete data', self.set_page, 18)
             ), (
                 s(RangeSelect, g('fps'), 'Speed: %x', 1, 50),
                 s(DiscreteSelect, g('show_msg'), 'Message: %x', ('off', 'on'),
                   True),
                 Button('Save', self._save, (
-                    ((13, 0), 'fps'),
-                    ((13, 1), 'show_msg')
+                    ((14, 0), 'fps'),
+                    ((14, 1), 'show_msg')
                 ))
             ), (
                 s(DiscreteSelect, kb_layout_index, '%x', conf.KB_LAYOUTS,
                   True),
                 Button('Save', self._save, (
-                    ((14, 0), ('kb_layout', False)),
+                    ((15, 0), ('kb_layout', False)),
                 ))
             ), (
                 s(RangeSelect, g('music_volume'), 'Music: %x', 0, 100),
@@ -1553,17 +1557,17 @@ class MainMenu (Menu):
                 s(DiscreteSelect, snd_theme_index, 'Theme: %x',
                   conf.SOUND_THEMES, True),
                 Button('Save', self._save, (
-                    ((15, 0), 'music_volume', self._update_music_vol),
-                    ((15, 1), 'sound_volume', self._update_snd_vol),
-                    ((15, 2), ('sound_theme', False), self._refresh_sounds)
+                    ((16, 0), 'music_volume', self._update_music_vol),
+                    ((16, 1), 'sound_volume', self._update_snd_vol),
+                    ((16, 2), ('sound_theme', False), self._refresh_sounds)
                 ))
             ), (
                 s(DiscreteSelect, theme_index, 'Theme: %x', conf.THEMES, True),
                 s(DiscreteSelect, g('fullscreen'), '%x',
                   ('Windowed', 'Fullscreen'), True),
                 Button('Save', self._save, (
-                    ((16, 0), ('theme', False), self._refresh_graphics),
-                    ((16, 1), 'fullscreen', self.game.refresh_display)
+                    ((17, 0), ('theme', False), self._refresh_graphics),
+                    ((17, 1), 'fullscreen', self.game.refresh_display)
                 ))
             )
         )
@@ -1661,16 +1665,13 @@ class MainMenu (Menu):
             pass
         else:
             self.back()
-            if action == 'play':
-                self.game.start_backend(level.LevelBackend, None, defn)
-            elif action == 'edit':
-                self.game.start_backend(editor.Editor, None, defn)
-            else: # save
+            # get rid of broken solutions
+            draft = True
+            if level.defn_wins(defn):
+                # starts winning, so no solutions are real solutions
                 draft = True
-                if level.defn_wins(defn):
-                    self._save_shared_data = (True, defn, page + 2)
-                    self.set_page(page + 1)
-                    return
+                rm = range(len(lvl.solutions))
+            else:
                 # run the autosolver on the level for each solution
                 # if any fail, remove them; if none succeed, save as draft
                 lvl = level.Level(definition = defn, sound = False)
@@ -1688,18 +1689,26 @@ class MainMenu (Menu):
                         # bad solution
                         rm.append(i)
                     lvl.load(definition = defn)
-                if rm:
-                    for i in rm:
-                        lvl.solutions.pop(i)
-                    defn = lvl.puzzle.definition()
-                    if lvl.msg is not None:
-                        defn += '\n@ ' + lvl.msg
-                    if lvl.solutions:
-                        defn += '\n' + '\n'.join(': ' + soln for soln in
-                                                 lvl.solutions)
-                self._save_shared_data = (draft, defn, page + 2)
+            if rm:
+                for i in rm:
+                    lvl.solutions.pop(i)
+                defn = lvl.puzzle.definition()
+                if lvl.msg is not None:
+                    defn += '\n@ ' + lvl.msg
+                if lvl.solutions:
+                    defn += '\n' + '\n'.join(': ' + soln for soln in
+                                                lvl.solutions)
+            if action == 'play':
                 if draft:
                     self.set_page(page + 1)
+                else:
+                    self.game.start_backend(level.LevelBackend, None, defn)
+            elif action == 'edit':
+                self.game.start_backend(editor.Editor, None, defn)
+            else: # save
+                self._save_shared_data = (draft, defn, page + 3)
+                if draft:
+                    self.set_page(page + 2)
                 else:
                     self._continue_save_shared()
 

@@ -665,8 +665,6 @@ pause_menu: as given.
 
     def stop_solving (self, *args, **kw):
         Level.stop_solving(self, *args, **kw)
-        # reset
-        self.reset()
         # restore message
         self.msg = self._msg
         self.msg_dirty = True
