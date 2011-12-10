@@ -1,5 +1,14 @@
 #! /usr/bin/python
 
+"""Brain Requirement Just A Formality.  Copyright 2011 by J.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+"""
+
 import os
 from time import time
 from random import choice
@@ -16,6 +25,8 @@ from brjaf.ext import evthandler as eh
 from brjaf.menu import MainMenu
 from brjaf.level import LevelBackend
 from brjaf import conf
+
+ir = lambda x: int(round(x))
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
@@ -292,6 +303,8 @@ data: if rendering text, a tuple of args to pass to Fonts.text, else a filename
       to load.
 size: scale the image.  Can be an (x, y) size, a rect (in which case its
       dimension is used), or a number to scale by.  Ignored if rendering text.
+      If (x, y), either x or y can be None to scale to the other with aspect
+      ratio preserved.
 
 """
         text = not isinstance(data, basestring)
@@ -302,10 +315,11 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
                 if len(size) == 4:
                     # rect
                     size = size[2:]
-                size = tuple(size)
             except TypeError:
                 # number
                 pass
+            else:
+                size = tuple(size)
         key = (data, size)
         if key in self.imgs:
             return self.imgs[key]
@@ -320,15 +334,21 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
                 img = self.files[data]
             else:
                 img = pygame.image.load(data)
-                # convert first if won't resize, as it'll come from here
-                if not got_size:
-                    img = self.convert_img(img)
+                # convert first
+                img = self.convert_img(img)
                 self.files[data] = img
         # scale
         if got_size:
+            current_size = img.get_size()
             if not isinstance(size, tuple):
-                current_size = img.get_size()
-                size = (size * current_size[0], size * current_size[1])
+                size = (ir(size * current_size[0]), ir(size * current_size[1]))
+            # handle None
+            for i in (0, 1):
+                if size[i] is None:
+                    size = list(size)
+                    scale = float(size[not i]) / current_size[not i]
+                    size[i] = ir(current_size[i] * scale)
+                    size = tuple(size)
             img = pygame.transform.smoothscale(img, size)
         else:
             # speed up blitting (if not resized, this is already done)

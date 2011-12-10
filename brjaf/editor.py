@@ -1,4 +1,4 @@
-"""Brain requirement just a formality.  Copyright 2011 by J.
+"""Brain Requirement Just A Formality.  Copyright 2011 by J.
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -297,6 +297,7 @@ event_handler: as given.
 ID: as given.
 selector: puzzle used to select blocks/surfaces to add.
 editor: the puzzle being edited.
+editor_rect: the rect the editor puzzle is drawn in, or None if unknown.
 puzzle: the current visible puzzle (editor or selector).
 editing: whether the current puzzle is editor.
 changes: a list of changes that have been made to the puzzle.
@@ -379,6 +380,7 @@ defn: if ID is not given, load a level from this definition; if this is not
             self.editor.load(defn)
         else:
             self.editor = Puzzle(self.game, defn)
+        self.editor_rect = None
         self.editor.deselect()
         self.editor.select((0, 0))
         self.selector.deselect()
@@ -688,19 +690,56 @@ pos: on-screen position to try to perform the action at.
             s = self.selector.tiler
             if w1 != s.offset[0]:
                 # screen size changed: need to change puzzle positions
-                #e.offset = (pad, pad)
+                e.offset = (pad, pad)
                 s.offset = (w1, 0)
                 s.reset()
         # draw puzzles
-        drawn1 = self.editor.draw(screen, self.dirty, (w1, h))
-                                  #(w1 - 2 * pad, h - 2 * pad))
+        drawn1 = self.editor.draw(screen, self.dirty,
+                                  (w1 - 2 * pad, h - 2 * pad))
         drawn2 = self.selector.draw(screen, self.dirty, (w2, h))
         # and return the sum list of rects to draw in
         drawn = []
         for d in (drawn1, drawn2):
             if d:
                 drawn += d
+        # draw arrows
         if self.dirty:
+            self.editor_rect = drawn1
+            # TODO
+            to_draw = range(8)
+            special = []
             drawn = True
+        else:
+            # TODO
+            to_draw = []
+            special = []
+            drawn += []
+        if to_draw:
+            # get draw area position and size
+            l, t, w, h = self.editor_rect[0]
+            tl = (l - pad, t - pad)
+            br = (l + w, t + h)
+            sz = (w + 2 * pad, h + 2 * pad)
+            # generate required arrow images
+            fn = conf.IMG_DIR + conf.THEME + os.sep + '{0}.png'
+            imgs = []
+            for ID in ('arrow', 'arrow-special'):
+                imgs.append(self.game.img(fn.format(ID), (pad / 2, None)))
+                for i in xrange(1, 4):
+                    imgs.append(None)
+            img_s = [img for img in imgs if img is not None][0].get_size()
+            # draw
+            for i in to_draw:
+                p = [0, 0]
+                axis = (i / 2) % 2
+                p[axis] = (br if i > 3 else tl)[axis] + img_s[0] * (i % 2)
+                p[not axis] = tl[not axis] + (sz[not axis] - img_s[1]) / 2
+                img = (axis + 2 * (i % 2)) % 4
+                if i in special:
+                    img += 4
+                if imgs[img] is None:
+                    source = imgs[4 * (i in special)]
+                    imgs[img] = pygame.transform.rotate(source, -90 * img)
+                screen.blit(imgs[img], p)
         self.dirty = False
         return drawn

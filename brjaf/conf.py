@@ -1,4 +1,4 @@
-"""Brain requirement just a formality.  Copyright 2011 by J.
+"""Brain Requirement Just A Formality.  Copyright 2011 by J.
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -255,7 +255,7 @@ UNDO_LEVELS = get('undo_levels', 0)
 RESIZE_DEAD_ZONE_BOUNDARY = get('resize_dead_zone_boundary', .4)
 RESIZE_LENGTH = get('resize_speed', .07)
 LEVEL_NAME_LENGTH = get('level_name_length', 6)
-EDITOR_ARROW_PADDING = get('editor_arrow_padding', .03) # eats into editor
+EDITOR_ARROW_PADDING = get('editor_arrow_padding', .05) # eats into editor
 
 # IDs
 MIN_ID = -6
