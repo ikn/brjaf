@@ -39,6 +39,7 @@ import conf
 #   - maybe take snapshot of all blocks each time we try to get a working configuration and if doesn't change, break
 #     - do we even get to next time through loop, or do they just keep telling each other to calculate stuff?
 #     - just need dest, or forces too?
+# - autocrop just does surface.get_bounding_rect()
 
 byte_chars = [chr(i) for i in xrange(256)]
 

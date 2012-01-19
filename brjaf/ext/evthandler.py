@@ -3,7 +3,7 @@
 This module consists of the EventHandler class, which is used to assign
 callbacks to events and keypresses in Pygame.
 
-Release: 11.
+Release: 12.
 
 Licensed under the GNU General Public License, version 3; if this was not
 included, you can find it here:
@@ -14,6 +14,7 @@ included, you can find it here:
 # TODO:
 # - match keys by event.unicode
 # - ability to remove event/key/default handlers
+# - joystick stuff
 
 import sys
 
@@ -151,7 +152,7 @@ defaults_active: whether default handlers are called.
             extra_args = tuple(extra_args)
             cb(*(args + extra_args))
 
-    def _call_key_cbs (self, cbs, key_data, mode, current_mods):
+    def _call_key_cbs (self, cbs, key_data, press_type, current_mods):
         # call key callbacks in list of accepted format if modifiers match
         if isinstance(key_data, int):
             # just got a key ID
@@ -174,13 +175,14 @@ defaults_active: whether default handlers are called.
             match = current_mods & reduce(int.__or__, subtract)
             match = (current_mods - match) == 0
         if match:
-            self._call_cbs(cbs, key_data, mode, current_mods)
+            self._call_cbs(cbs, key_data, press_type, current_mods)
 
-    def _call_all_cbs (self, key, mode, mods):
+    def _call_all_cbs (self, key, press_type, modes, mods):
         # call all callbacks for a key
         for key_data, cb_data_sets in self.key_handlers[key].iteritems():
             for cb_data in cb_data_sets:
-                self._call_key_cbs(cb_data[0], key_data, mode, mods)
+                if cb_data[1] in modes:
+                    self._call_key_cbs(cb_data[0], key_data, press_type, mods)
 
     def add_event_handlers (self, event_handlers):
         """Add more event handlers.
@@ -216,9 +218,9 @@ Takes a key_handlers argument in the same form as expected by the constructor.
                 if k not in self.key_handlers:
                     self.key_handlers[k] = {}
                 if data not in self.key_handlers[k]:
-                    self.key_handlers[k][data] = [[cbs] + args]
+                    self.key_handlers[k][data] = [[cbs] + [mode] + args]
                 else:
-                    self.key_handlers[k][data].append([cbs] + args)
+                    self.key_handlers[k][data].append([cbs] + [mode] + args)
                 self._keys_handled[mode].add(k)
 
     def add_default_cbs (self, cbs):
@@ -276,20 +278,16 @@ Call this every frame.
             else:
                 self.repeat_count[k] = 0
         # call key callbacks
-        called = set()
         if keys_active:
             for k in self._keys_handled[0] & self.keys_pressed:
-                called.add(k)
-                self._call_all_cbs(k, -1, pressed_mods)
+                self._call_all_cbs(k, -1, (0,), pressed_mods)
             temp = self._keys_handled[1] | self._keys_handled[2]
+            called = set()
             for k in (temp | self._keys_handled[3] | self._keys_handled[4]) & self.keys_down:
-                if k not in called:
-                    called.add(k)
-                    self._call_all_cbs(k, 0, down_mods[k])
+                called.add(k)
+                self._call_all_cbs(k, 0, (1, 2, 3, 4), down_mods[k])
             for k in temp & self.keys_up:
-                if k not in called:
-                    called.add(k)
-                    self._call_all_cbs(k, 1, up_mods[k])
+                self._call_all_cbs(k, 1, (1, 2), up_mods[k])
             # keys might have callbacks with different repeat delays/rates, so
             # need to check each set of callbacks individually
             for k, count in self.repeat_count.iteritems():
@@ -298,7 +296,7 @@ Call this every frame.
                 for key_data, cb_data in self.key_handlers[k].iteritems():
                     for cb_datum in cb_data:
                         try:
-                            cbs, initial, repeat = cb_datum
+                            cbs, mode, initial, repeat = cb_datum
                         except ValueError:
                             # a key might be used for both repeating and not
                             # repeating modes, and both uses will end up here

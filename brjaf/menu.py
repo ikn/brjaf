@@ -1401,7 +1401,7 @@ to start with).
         """Draw the menu."""
         if self.dirty:
             # make sure the options fit nicely on the screen in both dimensions
-            res = self.game.res
+            res = conf.RES
             tile_size = min(float(res[0]) / self.w, float(res[1]) / self.h)
             grid_w = int(tile_size * self.grid_w)
             grid_h = int(tile_size * self.grid_h)

@@ -21,126 +21,13 @@ if os.name == 'nt':
     # for Windows freeze support
     import pygame._view
 from brjaf.ext import evthandler as eh
+from brjaf.ext.fonthandler import Fonts
 
 from brjaf.menu import MainMenu
-from brjaf.level import LevelBackend
 from brjaf import conf
 
+pygame.mixer.set_num_channels(conf.TOTAL_SIMUL_SNDS)
 ir = lambda x: int(round(x))
-
-class Fonts (object):
-    """Collection of pygame.font.Font instances."""
-
-    def __init__ (self, *fonts):
-        self.fonts = {}
-        for font in fonts:
-            self.add(font)
-
-    def add (self, font, force_reload = False):
-        """Load a font and add it to the collection."""
-        font = tuple(font)
-        if force_reload or font not in self.fonts:
-            fn, size, bold = font
-            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + fn, int(size),
-                                                bold = bold)
-        return self.fonts[font]
-
-    def text (self, font, text, colour, shadow = None, width = None, just = 0,
-              minimise = False, line_spacing = 0):
-        """Render text from a font.
-
-text(font, text, colour[, shadow][, width], just = 0, minimise = False,
-     line_spacing = 0) -> (surface, lines)
-
-font: (font name, size, is_bold) tuple.
-text: text to render.
-colour: (R, G, B[, A]) tuple.
-shadow: to draw a drop-shadow: (colour, offset) tuple, where offset is (x, y).
-width: maximum width of returned surface (wrap text).  ValueError is raised if
-       any words are too long to fit in this width.
-just: if the text has multiple lines, justify: 0 = left, 1 = centre, 2 = right.
-minimise: if width is set, treat it as a minimum instead of absolute width
-          (that is, shrink the surface after, if possible).
-line_spacing: space between lines, in pixels.
-
-surface: pygame.Surface containing the rendered text.
-lines: final number of lines of text.
-
-"""
-        font = tuple(font)
-        self.add(font)
-        font, lines = self.fonts[font], []
-        if shadow is None:
-            offset = (0, 0)
-        else:
-            shadow_colour, offset = shadow
-
-        # split into lines
-        text = text.splitlines()
-        if width is None:
-            width = max(font.size(line)[0] for line in text)
-            lines = text
-            minimise = True
-        else:
-            for line in text:
-                if font.size(line)[0] > width:
-                    # wrap
-                    words = line.split(' ')
-                    # check if any words won't fit
-                    for word in words:
-                        if font.size(word)[0] >= width:
-                            e = '\'{0}\' doesn\'t fit on one line'.format(word)
-                            raise ValueError(e)
-                    # build line
-                    build = ''
-                    for word in words:
-                        temp = build + ' ' if build else build
-                        temp += word
-                        if font.size(temp)[0] < width:
-                            build = temp
-                        else:
-                            lines.append(build)
-                            build = word
-                    lines.append(build)
-                else:
-                    lines.append(line)
-        if minimise:
-            width = max(font.size(line)[0] for line in lines)
-
-        # create surface
-        h = 0
-        for line in lines:
-            h += font.size(line)[1] + line_spacing
-        # last added gap was after the last line
-        h -= line_spacing
-        surface = pygame.Surface((width + offset[0], h + offset[1]))
-        surface = surface.convert_alpha()
-        surface.fill((0, 0, 0, 0))
-
-        # add text
-        todo = []
-        if shadow is not None:
-            todo.append((shadow_colour, 1))
-        todo.append((colour, -1))
-        num_lines = 0
-        for colour, mul in todo:
-            o = (max(mul * offset[0], 0), max(mul * offset[1], 0))
-            h = 0
-            for line in lines:
-                if line:
-                    num_lines += 1
-                    s = font.render(line, True, colour)
-                    if just == 2:
-                        surface.blit(s, (width - s.get_width() + o[0],
-                                         h + o[1]))
-                    elif just == 1:
-                        surface.blit(s, ((width - s.get_width()) / 2 + o[0],
-                                         h + o[1]))
-                    else:
-                        surface.blit(s, (o[0], h + o[1]))
-                h += font.size(line)[1] + line_spacing
-        return surface, num_lines
-
 
 class Game (object):
     """Handles backends.
@@ -169,7 +56,6 @@ minimise
 running: set to False to exit the main loop (Game.run).
 imgs: image cache.
 files: loaded image cache (before resize).
-sounds: sound effect cache.
 music: filenames for known music for the current theme.
 fonts: a Fonts instance.
 backend: the current running backend.
@@ -182,8 +68,8 @@ backends: a list of previous (nested) backends, most 'recent' last.
         self.files = {}
         self.imgs = {}
         self.set_icon()
-        self.sounds = {}
-        self._sounds = set()
+        self._sounds = []
+        self._current_snds = dict((s, []) for s in conf.SOUNDS)
         # start playing music
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         pygame.mixer.music.set_endevent(conf.EVENT_ENDMUSIC)
@@ -191,7 +77,7 @@ backends: a list of previous (nested) backends, most 'recent' last.
         self.play_music()
         # load display settings
         self.refresh_display()
-        self.fonts = Fonts()
+        self.fonts = Fonts(conf.FONT_DIR)
         # start first backend
         self.backends = []
         self.start_backend(cls, *args)
@@ -243,23 +129,27 @@ EventHandler_instance in its event_handler attribute.
         self.backend = cls(self, event_handler, *args)
         return self.backend
 
-    def quit_backend (self, depth = 1):
+    def quit_backend (self, depth = 1, no_quit = False):
         """Quit the currently running backend.
 
-quit_backend(depth = 1)
+quit_backend(depth = 1, no_quit = False)
 
 depth: quit this many backends.
+no_quit: if True, don't quit if this is the last backend.  Only pass this if
+         you're starting another backend in the same frame.
 
 If the running backend is the last (root) one, exit the game.
 
 """
-        depth = int(depth)
         if depth < 1:
             return
         try:
             self.backend = self.backends.pop()
         except IndexError:
-            self.quit()
+            if no_quit:
+                del self.backend
+            else:
+                self.quit()
         else:
             self.backend.dirty = True
         depth -= 1
@@ -315,11 +205,10 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
                 if len(size) == 4:
                     # rect
                     size = size[2:]
+                size = tuple(size)
             except TypeError:
                 # number
                 pass
-            else:
-                size = tuple(size)
         key = (data, size)
         if key in self.imgs:
             return self.imgs[key]
@@ -354,7 +243,7 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
             # speed up blitting (if not resized, this is already done)
             img = self.convert_img(img)
         result = (img, lines) if text else img
-        if not got_size:
+        if got_size or text:
             # add to cache (if not resized, this is in the file cache)
             self.imgs[key] = result
         return result
@@ -371,33 +260,58 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
                 pygame.display.set_icon(img)
                 break
 
-    def play_snd (self, ID):
-        """Play a sound with the given ID.
+    def play_snd (self, base_ID, volume = 1):
+        """Play a sound.
 
-Only one instance of a sound will be played each frame.
+play_snd(base_ID, volume = 1)
+
+base_ID: the ID of the sound to play (we look for base_ID + i for a number i,
+         as many sounds as conf.SOUNDS[base_ID]).
+volume: float to scale volume by.
 
 """
-        if ID in self.sounds:
-            snd = self.sounds[ID]
-        else:
-            # load sound
-            try:
-                snd = conf.SOUND_DIR + conf.SOUND_THEME + os.sep + ID + '.ogg'
-                snd = pygame.mixer.Sound(snd)
-                if snd.get_length() < 10 ** -3:
-                    # no way this is valid
-                    return
-                snd.set_volume(conf.SOUND_VOLUME * .01)
-            except KeyError:
-                return # just don't play the sound if it's not registered
-            self.sounds[ID] = snd
-        self._sounds.add(ID)
+        try:
+            n = conf.SOUNDS[base_ID]
+            assert conf.SOUND_THEME != 'none'
+        except (KeyError, AssertionError):
+            return
+        IDs = [base_ID + str(i) for i in xrange(n)]
+        ID = choice(IDs)
+        # load sound
+        snd = conf.SOUND_DIR + conf.SOUND_THEME + os.sep + ID + '.ogg'
+        snd = pygame.mixer.Sound(snd)
+        l = snd.get_length()
+        if l < 10 ** -3:
+            # no way this is valid
+            return
+        current = self._current_snds[base_ID]
+        if current and len(current) >= conf.SIMUL_SNDS:
+            # playing too many: stop the oldest
+            current[0][0].stop()
+            current.pop(0)
+        v = conf.SOUND_VOLUME * conf.SOUND_VOLUMES.get(base_ID, 1) * volume
+        snd.set_volume(v * .01)
+        self._sounds.append(snd)
+        # add to currently playing
+        l = ir(l / self.backend.FRAME)
+        if l > 0:
+            current.append([snd, l])
 
     def _play_snds (self):
         """Play queued up sounds for this frame."""
-        for ID in self._sounds:
-            self.sounds[ID].play()
-        self._sounds = set()
+        # play new sounds
+        for snd in self._sounds:
+            snd.play()
+        self._sounds = []
+        # purge finished sounds
+        for snds in self._current_snds.itervalues():
+            i = 0
+            while i < len(snds):
+                snds[i][1] -= 1
+                if snds[i][1] == 0:
+                    snds.pop(i)
+                else:
+                    i += 1
 
     def find_music (self):
         """Store a list of music files for the current theme."""
@@ -457,7 +371,7 @@ Only one instance of a sound will be played each frame.
             self._draw()
             # wait
             t1 = time()
-            t0 = t1 + wait(int(1000 * (self.backend.FRAME - t1 + t0))) / 1000.
+            t0 = t1 + wait(ir(1000 * (self.backend.FRAME - t1 + t0))) / 1000.
 
     def restart (self, *args):
         """Restart the game."""
@@ -467,19 +381,25 @@ Only one instance of a sound will be played each frame.
 
     def refresh_display (self, *args):
         """Update the display mode from conf, and notify the backend."""
-        flags = 0
+        # get resolution and flags
+        flags = conf.FLAGS
         if conf.FULLSCREEN:
             flags |= pygame.FULLSCREEN
-            self.res = conf.RES_F
+            r = conf.RES_F
         else:
             w = max(conf.MIN_RES_W[0], conf.RES_W[0])
             h = max(conf.MIN_RES_W[1], conf.RES_W[1])
-            w = min(w, int(h * conf.MAX_RATIO[0]))
-            h = min(h, int(w * conf.MAX_RATIO[1]))
-            self.res = (w, h)
+            r = (w, h)
         if conf.RESIZABLE:
             flags |= pygame.RESIZABLE
-        self.screen = pygame.display.set_mode(self.res, flags)
+        ratio = conf.ASPECT_RATIO
+        if ratio is not None:
+            # lock aspect ratio
+            r = list(r)
+            r[0] = min(r[0], r[1] * ratio)
+            r[1] = min(r[1], r[0] / ratio)
+        conf.RES = r
+        self.screen = pygame.display.set_mode(conf.RES, flags)
         try:
             self.backend.dirty = True
         except AttributeError:
@@ -494,7 +414,7 @@ Only one instance of a sound will be played each frame.
 
     def minimise (self, *args):
         """Minimise the display, pausing if possible (and necessary)."""
-        if isinstance(self.backend, LevelBackend):
+        if isinstance(self.backend, Level) and not isinstance(self.backend, Title):
              self.backend.pause()
         pygame.display.iconify()
 
@@ -506,6 +426,7 @@ Only one instance of a sound will be played each frame.
 if __name__ == '__main__':
     if conf.WINDOW_TITLE is not None:
         pygame.display.set_caption(conf.WINDOW_TITLE)
+    pygame.mouse.set_visible(conf.MOUSE_VISIBLE)
     restarting = True
     while restarting:
         restarting = False

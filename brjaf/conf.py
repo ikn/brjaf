@@ -7,6 +7,8 @@ version.
 
 """
 
+# TODO: more keyboard layouts: https://en.wikipedia.org/wiki/Keyboard_layout
+
 import os
 import sys
 import string
@@ -100,13 +102,16 @@ DEBUG = get('debug', False)
 SILENT = get('silent', True and not DEBUG)
 
 # window
-RES_F = get('res_f', pg.display.list_modes()[0])
-RES_W = get('res_w', (720, 480))
-MIN_RES_W = get('min_res_w', (320, 240))
-RESIZABLE = get('resizable', True)
-FULLSCREEN = get('fullscreen', False)
 WINDOW_ICON = get('window_icon', 'icon.png')
 WINDOW_TITLE = get('window_title', 'Brain requirement just a formality')
+MOUSE_VISIBLE = get('mouse_visible', True)
+RESIZABLE = get('resizable', True)
+FULLSCREEN = get('fullscreen', False)
+RES_F = get('res_f', pg.display.list_modes()[0])
+RES_W = get('res_w', (720, 480))
+FLAGS = get('flags', 0)
+MIN_RES_W = get('min_res_w', (320, 240))
+ASPECT_RATIO = get('aspect_ratio', None)
 MAX_RATIO = get('max_ratio', (3, 2))
 
 # input
@@ -369,6 +374,10 @@ for d in (SOUND_DIR, MUSIC_DIR):
 SOUND_THEMES.add('none')
 SOUND_THEMES = sorted(SOUND_THEMES)
 SOUND_THEME = get('sound_theme', 'default')
+SOUNDS = {'move': 1, 'hit': 1, 'wall': 1}
+SOUND_VOLUMES = {}
+SIMUL_SNDS = 5 # for same base ID
+TOTAL_SIMUL_SNDS = 8
 
 
 def set (**settings):

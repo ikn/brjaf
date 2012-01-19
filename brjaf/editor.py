@@ -650,7 +650,7 @@ pos: on-screen position to try to perform the action at.
                         # can't resize on this axis
                         continue
                     diff = pos[i] - old_pos[i]
-                    threshold = min(conf.RESIZE_LENGTH * self.game.res[0],
+                    threshold = min(conf.RESIZE_LENGTH * conf.RES[0],
                                     self.editor.tile_size(i))
                     while abs(diff) >= threshold:
                         # resize
