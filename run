@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python2
 
 """Brain Requirement Just A Formality.  Copyright 2011 by J.
 
@@ -371,7 +371,7 @@ volume: float to scale volume by.
             self._draw()
             # wait
             t1 = time()
-            t0 = t1 + wait(ir(1000 * (self.backend.FRAME - t1 + t0))) / 1000.
+            t0 = t1 + wait(int(1000 * (self.backend.FRAME - t1 + t0))) / 1000.
 
     def restart (self, *args):
         """Restart the game."""

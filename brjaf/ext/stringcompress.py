@@ -10,7 +10,7 @@ what those characters will be.
 This is useful for, for example, games, where you often have data in a specific
 format like this - lists of numbers, say.  If the numbers are small, treat each
 as a separate character by passing the list through the chr builtin, and
-compress as a string of characters in the known range.  If they're small, join
+compress as a string of characters in the known range.  If they're large, join
 them by some separator (' ', say) and compress as a string of characters in
 '0123456789 '.
 

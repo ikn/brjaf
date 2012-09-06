@@ -1392,7 +1392,7 @@ to start with).
             self.init()
             self.set_page(ID)
             self.set_selected(selected)
-            if self._then_click_next:
+            if hasattr(self, '_then_click_next') and self._then_click_next:
                 self.move_selection(1, 0, None, self._then_click_next)
                 self.select()
                 self._then_click_next = False
@@ -1401,8 +1401,8 @@ to start with).
         """Draw the menu."""
         if self.dirty:
             # make sure the options fit nicely on the screen in both dimensions
-            res = conf.RES
-            tile_size = min(float(res[0]) / self.w, float(res[1]) / self.h)
+            w, h = screen.get_size()
+            tile_size = min(float(w) / self.w, float(h) / self.h)
             grid_w = int(tile_size * self.grid_w)
             grid_h = int(tile_size * self.grid_h)
             self.grid.tiler.mode = ('grid', grid_w, grid_h)

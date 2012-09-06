@@ -266,7 +266,8 @@ Call this every frame.
                     self.keys_up.add(event.key)
                     up_mods[event.key] = event.mod
         pressed = pygame.key.get_pressed()
-        self.keys_pressed = set(i for i in xrange(len(pressed)) if pressed[i])
+        # form some reason this is faster than set(genexpr)
+        self.keys_pressed = set([i for i in xrange(len(pressed)) if pressed[i]])
         # update repeated key counts
         held = (self._keys_handled[2] | self._keys_handled[4]) & self.keys_pressed
         for k in set(self.repeat_count) - held:
